@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node server/server.js --no-open)",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"require\\('child_process'\\).execSync\\('powershell -Command \\\\\"Start-Process msedge \\\\\\\\\\\\\"http://127.0.0.1:5180/\\\\\\\\\\\\\"\\\\\"'\\)\")",
+      "Bash(where node *)",
+      "Bash(node -e \"require\\('fs'\\).existsSync\\(require\\('path'\\).join\\(require\\('os'\\).homedir\\(\\),'node_modules/.bin/playwright'\\)\\) ? console.log\\('found'\\) : console.log\\('not found'\\)\")",
+      "Bash(npm list *)",
+      "Bash(node *)",
+      "Skill(update-config)",
+      "Bash(curl -s http://127.0.0.1:5180/)",
+      "Bash(Start-Process msedge *)",
+      "Bash(cmd /c \"start msedge http://127.0.0.1:5181/\")"
+    ]
+  }
+}

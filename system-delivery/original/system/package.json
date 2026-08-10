@@ -1,0 +1,22 @@
+{
+  "name": "driver-fatigue-detection-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "基于面部多特征融合的 Web 端驾驶员疲劳检测系统（毕业设计）",
+  "scripts": {
+    "start": "node server/server.js",
+    "serve": "node server/server.js --no-open",
+    "vendor": "node tools/fetch-vendor.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "fatigue-detection",
+    "PERCLOS",
+    "mediapipe",
+    "face-landmark",
+    "multi-feature-fusion"
+  ],
+  "license": "MIT"
+}

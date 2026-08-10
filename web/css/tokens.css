@@ -1,0 +1,373 @@
+/**
+ * tokens.css — 设计令牌（Apple 设计语言）
+ *
+ * 取值不是凭感觉调的，来自两处实测：
+ *   1. DESIGN.md 规定的 Apple 设计规范
+ *   2. 用浏览器打开 apple.com/app-store 读 computed style 得到的真实数值
+ *
+ * 关键实测值（本次重设计的基准）：
+ *   动效曲线  cubic-bezier(0.4, 0, 0.6, 1)   ← Apple 全站统一用这一条
+ *   动效时长  0.24s 状态变化 / 0.32s 颜色与文字
+ *   顶栏      44px 高、17px 字号
+ *   胶囊按钮  背景 rgb(0,113,227)、圆角 980px
+ *   位移幅度  展开菜单只移动 8px、箭头 4px（Apple 的动画幅度极小）
+ *   按下反馈  transform: scale(0.95)
+ *
+ * 三条硬规则（来自 DESIGN.md，全站不得违反）：
+ *   · 只有一个强调色：#0071e3 按钮 / #0066cc 正文链接
+ *   · 不用任何装饰性渐变
+ *   · 阴影只留给浮在内容之上的图层（弹窗/吐司/警报），卡片一律靠描边分层
+ *
+ * ⚠️ JS 用 cssVar() 按名字读取下列变量，改名会让图表和关键点叠加层失色：
+ *   --accent --ok --warn --caution --danger 及其 -soft 变体
+ *   --lv-awake --lv-mild --lv-moderate --lv-severe
+ *   --chart-score --chart-ear --chart-mar --chart-grid --chart-axis
+ *   --mesh --mesh-eye --mesh-eye-closed --mesh-mouth --mesh-oval --mesh-iris
+ *   --text-secondary --text-tertiary --text-quaternary --fill-tertiary --bg-elevated
+ */
+
+:root {
+  /* ---------- 字体 ---------- */
+  --font-sans: "SF Pro SC", "SF Pro Text", "SF Pro Icons", "PingFang SC",
+    "Helvetica Neue", "Microsoft YaHei", Helvetica, Arial, sans-serif;
+  --font-display: "SF Pro Display", "SF Pro SC", "PingFang SC", var(--font-sans);
+  --font-mono: "SF Mono", ui-monospace, "JetBrains Mono", Menlo, Consolas, monospace;
+
+  /* ---------- 字号阶梯 ----------
+   * Apple 有两套字阶：营销页用 display 尺寸，界面内用 text 尺寸。
+   * 正文是 17px 而不是常见的 16px——这是 Apple 界面最容易被忽略的特征。 */
+  --fs-hero: clamp(40px, 5.2vw, 56px);
+  --fs-display: clamp(30px, 3.6vw, 40px);
+  --fs-title: clamp(24px, 2.4vw, 32px);
+  --fs-headline: 24px;
+  --fs-subhead: 19px;
+  --fs-body: 17px;
+  --fs-callout: 15px;
+  --fs-caption: 13px;
+  --fs-micro: 11px;
+
+  /* 字重阶梯：300 / 400 / 600 / 700，刻意没有 500。
+   * DESIGN.md 明确指出 Apple 不用 medium——常规与半粗之间的这一跳
+   * 本身就是它排版辨识度的来源，补上 500 反而会变平庸。 */
+  --fw-light: 300;
+  --fw-regular: 400;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  --lh-tight: 1.07;
+  --lh-display: 1.1;
+  --lh-snug: 1.24;
+  --lh-normal: 1.47;
+
+  /* Apple 的字距是按 px 给的负值，字号越大收得越紧 */
+  --ls-hero: -0.28px;
+  --ls-tight: -0.015em;
+  --ls-tighter: -0.025em;
+  --ls-body: -0.374px;
+
+  /* ---------- 颜色（浅色） ----------
+   * ink / canvas / parchment 三层是 Apple 页面的骨架色。 */
+  --bg: #f5f5f7;
+  --bg-elevated: #ffffff;
+  --bg-sunken: #ececf0;
+  --bg-inset: #fafafc;
+  --surface-glass: rgba(255, 255, 255, 0.72);
+  --surface-glass-strong: rgba(250, 250, 252, 0.86);
+
+  /* ---------- 全幅磁贴表面 ----------
+   * Apple 营销页的骨架：一屏一块磁贴，靠底色在浅/深之间交替产生节奏，
+   * 分隔线就是颜色本身——不画边框、不加阴影。
+   * 三个近黑色是 DESIGN.md 的实测值，彼此只差一两级明度：
+   * 两块深色磁贴相邻时，这点微差就是唯一的分界。 */
+  --tile-canvas: #ffffff;
+  --tile-parchment: #f5f5f7;
+  --tile-dark-1: #272729;
+  --tile-dark-2: #2a2a2c;
+  --tile-dark-3: #252527;
+  --tile-black: #000000;
+
+  /* 深色磁贴上的文字与链接。Action Blue 在近黑底上会沉下去，
+   * 所以 DESIGN.md 单独给了一支更亮的 Sky Link Blue。 */
+  --on-dark: #ffffff;
+  --on-dark-muted: #cccccc;
+  --link-on-dark: #2997ff;
+
+  --text: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --text-tertiary: #86868b;
+  --text-quaternary: #aeaeb2;
+  --text-on-accent: #ffffff;
+
+  /* 全站唯一强调色。按钮用 #0071e3，正文链接用更深的 #0066cc 保证对比度 */
+  --accent: #0071e3;
+  --accent-hover: #0077ed;
+  --accent-active: #006edb;
+  --link: #0066cc;
+  --accent-soft: rgba(0, 113, 227, 0.1);
+
+  --separator: #d2d2d7;
+  --separator-soft: rgba(0, 0, 0, 0.07);
+  --fill-quaternary: rgba(116, 116, 128, 0.08);
+  --fill-tertiary: rgba(116, 116, 128, 0.12);
+
+  /* 语义色沿用 Apple 系统色板，保证与 macOS / iOS 的视觉直觉一致 */
+  --ok: #1d9e4b;
+  --ok-soft: rgba(29, 158, 75, 0.12);
+  --warn: #d19a00;
+  --warn-soft: rgba(209, 154, 0, 0.14);
+  --caution: #e8730c;
+  --caution-soft: rgba(232, 115, 12, 0.14);
+  --danger: #e5322d;
+  --danger-soft: rgba(229, 50, 45, 0.13);
+  --info: #0071e3;
+  --info-soft: rgba(0, 113, 227, 0.12);
+
+  /* 疲劳等级配色（与语义色对应，单独命名便于图表复用） */
+  --lv-awake: #1d9e4b;
+  --lv-mild: #d19a00;
+  --lv-moderate: #e8730c;
+  --lv-severe: #e5322d;
+
+  /* 图表线色 */
+  --chart-ear: #0071e3;
+  --chart-mar: #9a4bd6;
+  --chart-score: #e8730c;
+  --chart-grid: rgba(0, 0, 0, 0.06);
+  --chart-axis: #aeaeb2;
+
+  /* 关键点叠加层（画在视频上，深浅两套通用） */
+  --mesh: rgba(0, 210, 255, 0.42);
+  --mesh-eye: #00e0a4;
+  --mesh-eye-closed: #ff453a;
+  --mesh-mouth: #ffd60a;
+  --mesh-oval: rgba(255, 255, 255, 0.55);
+  --mesh-iris: #64d2ff;
+
+  /* ---------- 圆角 ----------
+   * DESIGN.md 实测阶梯：0 / 5 / 8 / 11 / 18 / 胶囊。
+   * xl 与 2xl 是本项目为大尺寸视频画面和分区磁贴补的，Apple 大卡片同量级。 */
+  --r-xs: 5px;
+  --r-sm: 8px;
+  --r-md: 11px;
+  --r-lg: 18px;
+  --r-xl: 20px;
+  --r-2xl: 28px;
+  --r-pill: 980px;
+
+  /* ---------- 阴影 ----------
+   * DESIGN.md 的规矩：整套系统只有一个阴影，且只给产品图用，
+   * 卡片、按钮、文字一律不投影——层次靠描边和底色区分。
+   *
+   * 所以这里把 xs/sm/md 直接置为 none：它们散落在卡片和按钮上，
+   * 与其逐个删引用，不如让令牌本身失效，规则由一处强制。
+   * lg/xl 保留真实阴影，只服务于真正浮在内容之上的图层（弹窗/吐司/警报）——
+   * 那种场景下没有阴影会让人分不清哪一层可以点。 */
+  --sh-xs: none;
+  --sh-sm: none;
+  --sh-md: none;
+  --sh-lg: 0 12px 36px rgba(0, 0, 0, 0.1);
+  --sh-xl: rgba(0, 0, 0, 0.22) 3px 5px 30px;
+  --sh-focus: 0 0 0 4px rgba(0, 113, 227, 0.28);
+
+  /* ---------- 间距 ----------
+   * 8pt 网格 + Apple 的 17px（与正文字号同值，用于文字块的内边距）。
+   * --sp-section 是分区之间的呼吸：Apple 营销页固定 80px，留白即高级感。 */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+  --sp-20: 80px;
+  --sp-17: 17px;
+  --sp-section: 80px;
+
+  /* ---------- 动效 ----------
+   * --ease-apple 是从 apple.com 实测出来的那一条，全站状态变化都用它。
+   * --ease-out 用于入场（元素飞入后要"停稳"，末段更缓）。
+   * --ease-spring 只用于按钮回弹这种需要一点弹性的地方，别滥用。 */
+  --ease-apple: cubic-bezier(0.4, 0, 0.6, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-fast: 0.18s;
+  --dur-base: 0.24s;
+  --dur-slow: 0.32s;
+  --dur-hover: 0.32s;
+  --dur-reveal: 0.6s;
+
+  /* ---------- 滚动进场动效 ----------
+   * Apple 全站的进场动作是同一套：元素从下方轻推上来同时淡入，
+   * 位移幅度很小（不到一个字高），时长偏长，末段极缓——
+   * 观感是"内容浮上来停稳"，而不是"飞进来刹住"。
+   *
+   * --ease-reveal 末段几乎水平，是这条曲线的关键：
+   * 元素在最后 40% 的时间里只走完 5% 的距离，于是"停"得毫无痕迹。
+   * --reveal-stagger 是同组元素之间的错峰间隔，让一行卡片依次亮起
+   * 而不是齐刷刷地一起出现——这是 Apple 动效最容易被忽略的一层。 */
+  --ease-reveal: cubic-bezier(0.28, 0.11, 0.32, 1);
+  --dur-reveal-long: 1s;
+  --reveal-shift: 24px;
+  --reveal-stagger: 90ms;
+  /* 磁贴内的产品图比文字多走一点位移，形成极轻的景深差 */
+  --reveal-shift-lg: 40px;
+  /* 视差幅度：整段滚动过程中图层最多偏移这么多 */
+  --parallax-range: 48px;
+
+  /* Apple 的位移幅度极小，动画靠"轻推"而不是"甩出去" */
+  --shift-sm: 4px;
+  --shift-md: 8px;
+  --card-hover-lift: 6px;
+  --card-hover-scale: 1.008;
+  --press-scale: 0.95;
+
+  /* ---------- 布局 ----------
+   * 两层导航是 Apple 的招牌结构：
+   *   --nav-h     44px 纯黑全局条（apple.com 全站同一高度）
+   *   --subnav-h  52px 毛玻璃产品条，吸附在全局条下方
+   * --nav-h 保留原名，因为若干组件（吐司、报警横幅、锚点偏移）按它定位；
+   * 需要"两层总高"的地方用 --nav-total。 */
+  --nav-h: 44px;
+  --subnav-h: 52px;
+  --nav-total: calc(var(--nav-h) + var(--subnav-h));
+  --content-max: 1440px;
+  /* 文字型分区用更窄的栏宽：Apple 的正文段落从不铺满 1440 */
+  --content-narrow: 980px;
+}
+
+/* ---------- 深色模式 ----------
+ * DESIGN.md 只规定了浅色系统，深色部分按 Apple 官网深色页 + iOS 系统色推导：
+ *   底色纯黑 #000（Apple 深色页的基准），磁贴 #1c1c1e / #252527
+ *   链接 #2997ff（DESIGN.md 明确给出的 on-dark 链接色）
+ *   语义色换成 iOS 深色系统色，在纯黑上不会发灰
+ * 两份副本是有意为之：@media 跟随系统，[data-theme] 供设置面板手动覆盖。 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --bg: #000000;
+    --bg-elevated: #1c1c1e;
+    --bg-sunken: #0a0a0b;
+    --bg-inset: #252527;
+    --surface-glass: rgba(28, 28, 30, 0.72);
+    --surface-glass-strong: rgba(22, 22, 24, 0.9);
+
+    /* 深色模式下"浅色磁贴"不能真的是白的，否则整页闪。
+     * 改成两级近黑，保留浅/深交替的节奏感，只是整体压暗一档。 */
+    --tile-canvas: #000000;
+    --tile-parchment: #101012;
+    --tile-dark-1: #1c1c1e;
+    --tile-dark-2: #212123;
+    --tile-dark-3: #18181a;
+
+    --text: #f5f5f7;
+    --text-secondary: #98989d;
+    --text-tertiary: #7c7c80;
+    --text-quaternary: #5a5a5e;
+
+    --accent: #0a84ff;
+    --accent-hover: #3d9bff;
+    --accent-active: #0071e3;
+    --link: #2997ff;
+    --accent-soft: rgba(10, 132, 255, 0.16);
+
+    --separator: #38383a;
+    --separator-soft: rgba(255, 255, 255, 0.1);
+    --fill-quaternary: rgba(118, 118, 128, 0.18);
+    --fill-tertiary: rgba(118, 118, 128, 0.24);
+
+    --ok: #30d158;
+    --ok-soft: rgba(48, 209, 88, 0.16);
+    --warn: #ffd60a;
+    --warn-soft: rgba(255, 214, 10, 0.16);
+    --caution: #ff9f0a;
+    --caution-soft: rgba(255, 159, 10, 0.16);
+    --danger: #ff453a;
+    --danger-soft: rgba(255, 69, 58, 0.18);
+    --info: #0a84ff;
+    --info-soft: rgba(10, 132, 255, 0.16);
+
+    --lv-awake: #30d158;
+    --lv-mild: #ffd60a;
+    --lv-moderate: #ff9f0a;
+    --lv-severe: #ff453a;
+
+    --chart-ear: #0a84ff;
+    --chart-mar: #bf5af2;
+    --chart-score: #ff9f0a;
+    --chart-grid: rgba(255, 255, 255, 0.08);
+    --chart-axis: #5a5a5e;
+
+    --sh-lg: 0 12px 36px rgba(0, 0, 0, 0.6);
+    --sh-xl: rgba(0, 0, 0, 0.7) 3px 5px 30px;
+    --sh-focus: 0 0 0 4px rgba(10, 132, 255, 0.4);
+  }
+}
+
+/* 手动强制浅色：不写任何覆盖，:root 的默认值就是浅色 */
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+/* 手动强制深色（设置面板切换，覆盖系统偏好） */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #000000;
+  --bg-elevated: #1c1c1e;
+  --bg-sunken: #0a0a0b;
+  --bg-inset: #252527;
+  --surface-glass: rgba(28, 28, 30, 0.72);
+  --surface-glass-strong: rgba(22, 22, 24, 0.9);
+
+  --tile-canvas: #000000;
+  --tile-parchment: #101012;
+  --tile-dark-1: #1c1c1e;
+  --tile-dark-2: #212123;
+  --tile-dark-3: #18181a;
+
+  --text: #f5f5f7;
+  --text-secondary: #98989d;
+  --text-tertiary: #7c7c80;
+  --text-quaternary: #5a5a5e;
+
+  --accent: #0a84ff;
+  --accent-hover: #3d9bff;
+  --accent-active: #0071e3;
+  --link: #2997ff;
+  --accent-soft: rgba(10, 132, 255, 0.16);
+
+  --separator: #38383a;
+  --separator-soft: rgba(255, 255, 255, 0.1);
+  --fill-quaternary: rgba(118, 118, 128, 0.18);
+  --fill-tertiary: rgba(118, 118, 128, 0.24);
+
+  --ok: #30d158;
+  --ok-soft: rgba(48, 209, 88, 0.16);
+  --warn: #ffd60a;
+  --warn-soft: rgba(255, 214, 10, 0.16);
+  --caution: #ff9f0a;
+  --caution-soft: rgba(255, 159, 10, 0.16);
+  --danger: #ff453a;
+  --danger-soft: rgba(255, 69, 58, 0.18);
+  --info: #0a84ff;
+  --info-soft: rgba(10, 132, 255, 0.16);
+
+  --lv-awake: #30d158;
+  --lv-mild: #ffd60a;
+  --lv-moderate: #ff9f0a;
+  --lv-severe: #ff453a;
+
+  --chart-ear: #0a84ff;
+  --chart-mar: #bf5af2;
+  --chart-score: #ff9f0a;
+  --chart-grid: rgba(255, 255, 255, 0.08);
+  --chart-axis: #5a5a5e;
+
+  --sh-lg: 0 12px 36px rgba(0, 0, 0, 0.6);
+  --sh-xl: rgba(0, 0, 0, 0.7) 3px 5px 30px;
+  --sh-focus: 0 0 0 4px rgba(10, 132, 255, 0.4);
+}

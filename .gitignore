@@ -1,0 +1,8 @@
+# 依赖（本项目零安装运行，node_modules 仅开发者工具链可选生成）
+node_modules/
+
+# 本地临时产物
+*.log
+*.tmp
+.DS_Store
+Thumbs.db

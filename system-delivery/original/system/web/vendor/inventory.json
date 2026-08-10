@@ -1,0 +1,41 @@
+{
+  "mediapipeVersion": "1.0.0",
+  "fetchedAt": "2026-08-01T23:48:06.261Z",
+  "files": [
+    {
+      "file": "tasks-vision/vision_bundle.mjs",
+      "exists": true,
+      "size": 154839
+    },
+    {
+      "file": "tasks-vision/vision.d.ts",
+      "exists": true,
+      "size": 130563
+    },
+    {
+      "file": "tasks-vision/wasm/vision_wasm_internal.js",
+      "exists": true,
+      "size": 323343
+    },
+    {
+      "file": "tasks-vision/wasm/vision_wasm_internal.wasm",
+      "exists": true,
+      "size": 11532084
+    },
+    {
+      "file": "tasks-vision/wasm/vision_wasm_nosimd_internal.js",
+      "exists": true,
+      "size": 323146
+    },
+    {
+      "file": "tasks-vision/wasm/vision_wasm_nosimd_internal.wasm",
+      "exists": true,
+      "size": 10815273
+    },
+    {
+      "file": "models/face_landmarker.task",
+      "exists": true,
+      "size": 3758596
+    }
+  ]
+}

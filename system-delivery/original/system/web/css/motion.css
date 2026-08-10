@@ -1,0 +1,255 @@
+/**
+ * motion.css — 动效系统（复刻 apple.com 的滚动叙事）
+ *
+ * Apple 页面的"动"只有三件事，且始终是这三件：
+ *
+ *   1. 进场    元素从下方轻推上来同时淡入，一次性，不回退
+ *   2. 视差    图层随滚动缓慢反向偏移，制造极浅的景深
+ *   3. 按压    可点元素按下时 scale(0.95)
+ *
+ * 没有旋转、没有弹跳、没有循环动画、没有 hover 时的大幅位移。
+ * 克制本身就是这套动效语言的内容——一旦加了第四种动作，Apple 味立刻消失。
+ *
+ * 实现上分两条路：
+ *   · 进场用 IntersectionObserver（motion.js 加 .is-inview），因为要"只播一次"。
+ *     滚动驱动动画（animation-timeline）做不到这点——往回滚会倒放。
+ *   · 视差用原生滚动驱动动画（animation-timeline: view()），因为它需要连续跟随。
+ *     交给合成器算，比 rAF 里监听 scroll 更稳，也不会掉帧。
+ *
+ * 无障碍：整个文件的动效都包在 prefers-reduced-motion: no-preference 里，
+ * 用户在系统里关掉动效时，元素直接以终态渲染——不是"动得快一点"，是"不动"。
+ */
+
+/* ============================================================
+   1. 滚动进场
+   ------------------------------------------------------------
+   默认终态写在外面（无 JS、旧浏览器、关闭动效时都直接可见），
+   起始态只在支持动效且 JS 已接管时才施加——这样任何一环失效，
+   页面都是"没有动画的完好页面"，而不是"一片空白"。
+   motion.js 会在 <html> 上加 .has-motion 作为接管信号。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  /* 起始态：下移 + 透明。只在 JS 接管后生效 */
+  .has-motion [data-reveal] {
+    opacity: 0;
+    transform: translate3d(0, var(--reveal-shift), 0);
+    transition: opacity var(--dur-reveal-long) var(--ease-reveal),
+      transform var(--dur-reveal-long) var(--ease-reveal);
+    /* 错峰：--i 由 motion.js 按组内序号写入，同组元素依次亮起。
+       Apple 一行四张卡片不是齐刷刷出现的，差的就是这 90ms。 */
+    transition-delay: calc(var(--i, 0) * var(--reveal-stagger));
+  }
+
+  /* 终态：由 motion.js 加 .is-inview 触发 */
+  .has-motion [data-reveal].is-inview {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* ---- 变体 ---- */
+
+  /* 产品图/画面：位移更大 + 极轻微放大。
+     比文字多走一截，两者之间就有了景深差 */
+  .has-motion [data-reveal='rise'] {
+    transform: translate3d(0, var(--reveal-shift-lg), 0) scale(0.985);
+  }
+  .has-motion [data-reveal='rise'].is-inview {
+    transform: none;
+  }
+
+  /* 纯淡入：用于不该有位移的场合（背景层、已在视口内的首屏元素） */
+  .has-motion [data-reveal='fade'] {
+    transform: none;
+  }
+
+  /* 大标题：Apple 首屏标题带一层极轻的模糊消散，
+     像是从景深外对上焦。幅度必须小，超过 6px 就成了廉价特效 */
+  .has-motion [data-reveal='focus'] {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translate3d(0, 12px, 0);
+    transition: opacity var(--dur-reveal-long) var(--ease-reveal),
+      transform var(--dur-reveal-long) var(--ease-reveal),
+      filter var(--dur-reveal-long) var(--ease-reveal);
+  }
+  .has-motion [data-reveal='focus'].is-inview {
+    opacity: 1;
+    filter: none;
+    transform: none;
+  }
+
+  /* 从侧面推入：用于并排的图文分栏 */
+  .has-motion [data-reveal='left'] {
+    transform: translate3d(calc(var(--reveal-shift) * -1), 0, 0);
+  }
+  .has-motion [data-reveal='right'] {
+    transform: translate3d(var(--reveal-shift), 0, 0);
+  }
+  .has-motion [data-reveal='left'].is-inview,
+  .has-motion [data-reveal='right'].is-inview {
+    transform: none;
+  }
+}
+
+/* ============================================================
+   2. 视差
+   ------------------------------------------------------------
+   用原生滚动驱动动画：动画进度绑定元素在视口中的位置，
+   完全跑在合成器线程上，滚动多快都不掉帧。
+
+   view() 的时间轴含义：0% = 元素刚从下方进入视口，
+   100% = 元素刚从上方离开视口。所以整段行程就是元素可见的全过程。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    [data-parallax] {
+      animation: parallaxDrift linear both;
+      animation-timeline: view();
+      /* 缩短行程两端：只在元素居于视口中部时移动，
+         贴边时静止，避免进出视口的瞬间出现突跳 */
+      animation-range: entry 0% exit 100%;
+      will-change: transform;
+    }
+    @keyframes parallaxDrift {
+      from {
+        transform: translate3d(0, var(--parallax-range), 0);
+      }
+      to {
+        transform: translate3d(0, calc(var(--parallax-range) * -1), 0);
+      }
+    }
+
+    /* 反向：与相邻图层错开方向，景深更明显 */
+    [data-parallax='slow'] {
+      --parallax-range: 24px;
+    }
+    [data-parallax='reverse'] {
+      animation-name: parallaxDriftReverse;
+    }
+    @keyframes parallaxDriftReverse {
+      from {
+        transform: translate3d(0, calc(var(--parallax-range) * -1), 0);
+      }
+      to {
+        transform: translate3d(0, var(--parallax-range), 0);
+      }
+    }
+  }
+}
+
+/* ============================================================
+   3. 磁贴内容随滚动"沉入"
+   ------------------------------------------------------------
+   Apple 全幅磁贴滚出视口时，内容会轻微缩小并淡出，
+   像是被下一块磁贴推走。幅度很小，只在离场那一段发生。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    [data-tile-exit] {
+      animation: tileExit linear both;
+      animation-timeline: view();
+      animation-range: exit 0% exit 90%;
+    }
+    @keyframes tileExit {
+      from {
+        opacity: 1;
+        transform: scale(1);
+      }
+      to {
+        opacity: 0.55;
+        transform: scale(0.97);
+      }
+    }
+  }
+}
+
+/* ============================================================
+   4. 视图切换转场
+   ------------------------------------------------------------
+   首屏 → 工作台 → 报告 三个视图之间的切换。
+   原来是 10px 上移淡入；改成 Apple 的"推进"手感：
+   幅度更小、时长更长、末段更缓，配合极轻微的放大，
+   像是新一层内容从底下浮到最前面。
+   ============================================================ */
+
+.view {
+  display: none;
+}
+.view.active {
+  display: block;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .view.active {
+    animation: viewIn var(--dur-reveal) var(--ease-reveal) both;
+  }
+  @keyframes viewIn {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 12px, 0) scale(0.995);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+/* ============================================================
+   5. 数字滚动
+   ------------------------------------------------------------
+   报告页的大数字入场时从 0 递增到实际值（motion.js 驱动）。
+   等宽数字是前提，否则位数变化时整块会左右抖。
+   ============================================================ */
+
+[data-countup] {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* ============================================================
+   6. 导航滚动态
+   ------------------------------------------------------------
+   Apple 的顶栏在页面滚动后才浮现毛玻璃与分隔线；
+   停在最顶端时它与页面是同一片底色，看不出有条栏。
+   ============================================================ */
+
+.subnav {
+  transition: background-color var(--dur-slow) var(--ease-apple),
+    box-shadow var(--dur-slow) var(--ease-apple),
+    backdrop-filter var(--dur-slow) var(--ease-apple);
+}
+
+/* ============================================================
+   7. 按压反馈
+   ------------------------------------------------------------
+   全站统一 scale(0.95)。这是 Apple 唯一的"点击有回应"信号，
+   不用变色、不用涟漪、不用位移。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  .btn:active:not(:disabled),
+  .pill:active:not(:disabled),
+  .btn-icon:active:not(:disabled),
+  .tile-card:active {
+    transform: scale(var(--press-scale));
+  }
+}
+
+/* ============================================================
+   8. 兼容旧的 .visible 类
+   ------------------------------------------------------------
+   app.js 里针对 .feat 的那套 IntersectionObserver 早于本文件存在，
+   它加的是 .visible。保留这条等价规则，两套机制同时在跑也不会打架。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  .has-motion [data-reveal].visible {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}

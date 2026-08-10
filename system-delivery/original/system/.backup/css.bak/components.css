@@ -1,0 +1,1006 @@
+/** components.css — 通用组件（Apple 设计语言） */
+
+/* ============ 按钮 ============ */
+/**
+ * 通用按钮。
+ * 字重与内边距按 apps.apple.com 实测值调整：
+ * font-weight 由 500 提到 600（文字按钮字重不足会显得没有力量感），
+ * padding 由 11px 22px 收紧到 9px 18px，更接近 Apple 的紧凑观感。
+ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: 9px 18px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-callout);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  transition: background-color var(--dur-fast) var(--ease-apple),
+    color var(--dur-fast) var(--ease-apple), transform var(--dur-fast) var(--ease-apple),
+    opacity var(--dur-fast) var(--ease-apple), box-shadow var(--dur-fast) var(--ease-apple);
+  user-select: none;
+  -webkit-user-select: none;
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--text-on-accent);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.btn-secondary {
+  background: var(--fill-quaternary);
+  color: var(--text);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: var(--fill-tertiary);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--link);
+  padding: 8px 14px;
+}
+.btn-ghost:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+}
+.btn-danger:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--separator);
+}
+.btn-outline:hover:not(:disabled) {
+  background: var(--fill-quaternary);
+}
+
+.btn-lg {
+  padding: 13px 30px;
+  font-size: var(--fs-body);
+  font-weight: 600;
+}
+.btn-sm {
+  padding: 6px 14px;
+  font-size: var(--fs-caption);
+  font-weight: 700;
+}
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--fill-quaternary);
+  color: var(--text);
+}
+.btn-icon:hover:not(:disabled) {
+  background: var(--fill-tertiary);
+}
+.btn-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.btn-icon.is-on {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* ============ 卡片 ============ */
+.card {
+  background: var(--bg-elevated);
+  border-radius: var(--r-xl);
+  /* 浅色：极细内嵌轮廓，增加边缘感；深色：用半透明白边分层 */
+  box-shadow: var(--sh-sm), inset 0 0 0 0.5px var(--separator-soft);
+  padding: var(--sp-6);
+  transition: box-shadow var(--dur-base) var(--ease-apple), transform var(--dur-base) var(--ease-apple);
+}
+.card-hover:hover {
+  box-shadow: var(--sh-md), inset 0 0 0 0.5px var(--separator-soft);
+  transform: translateY(-2px);
+}
+.card-compact {
+  padding: var(--sp-5);
+}
+.card-flush {
+  padding: 0;
+  overflow: hidden;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+.card-title {
+  font-size: var(--fs-subhead);
+  font-weight: 600;
+  letter-spacing: var(--ls-tight);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+/* ============ 徽章 / 药丸标签 ============ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: var(--fill-quaternary);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.badge-ok {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+.badge-warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.badge-caution {
+  background: var(--caution-soft);
+  color: var(--caution);
+}
+.badge-danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.badge-info {
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+.dot-pulse {
+  animation: dotPulse 1.6s var(--ease-apple) infinite;
+}
+@keyframes dotPulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.72);
+  }
+}
+
+/* ============ 开关（iOS Switch） ============ */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 51px;
+  height: 31px;
+  flex: none;
+}
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+}
+.switch-track {
+  position: absolute;
+  inset: 0;
+  background: var(--fill-tertiary);
+  border-radius: var(--r-pill);
+  transition: background-color var(--dur-base) var(--ease-apple);
+  pointer-events: none;
+}
+.switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 0 1px 1px rgba(0, 0, 0, 0.16);
+  transition: transform var(--dur-base) var(--ease-apple);
+  pointer-events: none;
+}
+.switch input:checked ~ .switch-track {
+  background: var(--ok);
+}
+.switch input:checked ~ .switch-thumb {
+  transform: translateX(20px);
+}
+.switch input:focus-visible ~ .switch-track {
+  box-shadow: var(--sh-focus);
+}
+
+/* ============ 滑块 ============ */
+.slider-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--sp-2) var(--sp-3);
+  align-items: center;
+}
+/* 相邻滑块之间留出间距，否则滑块会紧贴下一行标签，看不出归属 */
+.slider-row + .slider-row {
+  margin-top: var(--sp-4);
+}
+.slider-row .slider-label {
+  font-size: var(--fs-callout);
+  color: var(--text);
+}
+.slider-row .slider-value {
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  min-width: 56px;
+  text-align: right;
+}
+/**
+ * 滑块轨道用渐变把「已填充」部分染成主色（--pct 由 JS 同步）。
+ * 原生 range 在深色模式下轨道与背景几乎同色，只剩一个白色圆点悬空，
+ * 用户无法判断当前值处于量程的哪个位置。加上填充色后位置一目了然。
+ */
+.slider {
+  grid-column: 1 / -1;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 5px;
+  border-radius: var(--r-pill);
+  background: linear-gradient(
+    to right,
+    var(--accent) 0%,
+    var(--accent) var(--pct, 50%),
+    var(--separator) var(--pct, 50%),
+    var(--separator) 100%
+  );
+  outline: none;
+  cursor: pointer;
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.24), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+  cursor: grab;
+  transition: transform var(--dur-fast) var(--ease-apple);
+}
+.slider::-webkit-slider-thumb:active {
+  transform: scale(1.15);
+  cursor: grabbing;
+}
+.slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.24);
+}
+
+/* ============ 分段控件（Segmented Control） ============ */
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  background: var(--fill-quaternary);
+  border-radius: var(--r-sm);
+  gap: 2px;
+}
+.segmented button {
+  padding: 5px 14px;
+  border-radius: 8px;
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: all var(--dur-fast) var(--ease-apple);
+}
+.segmented button[aria-selected='true'] {
+  background: var(--bg-elevated);
+  color: var(--text);
+  box-shadow: var(--sh-xs);
+}
+
+/* ============ 进度条 ============ */
+.progress {
+  height: 6px;
+  border-radius: var(--r-pill);
+  background: var(--fill-tertiary);
+  overflow: hidden;
+}
+.progress-bar {
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  transition: width 0.2s linear, background-color var(--dur-base) var(--ease-apple);
+}
+
+/* ============ 指标卡（仪表盘核心） ============ */
+.metric {
+  background: var(--bg-elevated);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4) var(--sp-5);
+  box-shadow: var(--sh-xs), inset 0 0 0 0.5px var(--separator-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  transition: box-shadow var(--dur-base) var(--ease-apple);
+  position: relative;
+  overflow: hidden;
+}
+.metric::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: transparent;
+  transition: background-color var(--dur-base) var(--ease-apple);
+}
+.metric[data-state='warn']::after {
+  background: var(--warn);
+}
+.metric[data-state='caution']::after {
+  background: var(--caution);
+}
+.metric[data-state='danger']::after {
+  background: var(--danger);
+}
+.metric-label {
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.metric-value {
+  font-family: var(--font-display);
+  font-size: 27px;
+  font-weight: 600;
+  letter-spacing: var(--ls-tight);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.metric-unit {
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  color: var(--text-tertiary);
+  letter-spacing: 0;
+}
+.metric-sub {
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+  min-height: 18px;
+}
+.metric-spark {
+  height: 3px;
+  border-radius: var(--r-pill);
+  background: var(--fill-tertiary);
+  overflow: hidden;
+  margin-top: 2px;
+}
+.metric-spark > i {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--accent);
+  transition: width 0.25s var(--ease-apple), background-color var(--dur-base) var(--ease-apple);
+}
+
+/* ============ 贡献度条（融合明细） ============ */
+.contrib {
+  display: grid;
+  grid-template-columns: 92px 1fr 62px;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 7px 0;
+}
+.contrib-name {
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.contrib-track {
+  height: 7px;
+  border-radius: var(--r-pill);
+  background: var(--fill-quaternary);
+  overflow: hidden;
+  position: relative;
+}
+.contrib-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: var(--r-pill);
+  background: linear-gradient(90deg, var(--accent), var(--caution));
+  transition: width 0.28s var(--ease-apple);
+}
+.contrib-val {
+  font-size: var(--fs-caption);
+  color: var(--text);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============ 事件时间轴 ============ */
+.timeline {
+  max-height: 320px;
+  overflow-y: auto;
+  margin: calc(var(--sp-2) * -1) calc(var(--sp-2) * -1) 0;
+  padding: var(--sp-2);
+}
+.tl-item {
+  display: grid;
+  grid-template-columns: 56px 22px 1fr;
+  gap: var(--sp-3);
+  align-items: start;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--separator-soft);
+  animation: tlIn var(--dur-base) var(--ease-out);
+}
+.tl-item:last-child {
+  border-bottom: none;
+}
+@keyframes tlIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.tl-time {
+  font-size: var(--fs-caption);
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+  padding-top: 1px;
+}
+.tl-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--fill-quaternary);
+  color: var(--text-secondary);
+  flex: none;
+}
+.tl-item[data-level='warn'] .tl-icon {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.tl-item[data-level='danger'] .tl-icon {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.tl-item[data-level='info'] .tl-icon {
+  background: var(--info-soft);
+  color: var(--info);
+}
+.tl-text {
+  font-size: var(--fs-callout);
+  min-width: 0;
+}
+.tl-text b {
+  font-weight: 600;
+}
+.tl-detail {
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+}
+
+/* ============ Toast 通知 ============ */
+.toast-host {
+  position: fixed;
+  top: calc(var(--nav-h) + var(--sp-4));
+  transition: top var(--dur-base) var(--ease-apple);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 400;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  pointer-events: none;
+  width: min(560px, calc(100vw - 32px));
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 12px 18px;
+  border-radius: var(--r-md);
+  background: var(--surface-glass-strong);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+  box-shadow: var(--sh-lg);
+  border: 0.5px solid var(--separator-soft);
+  font-size: var(--fs-callout);
+  pointer-events: auto;
+  animation: toastIn var(--dur-base) var(--ease-spring);
+}
+.toast.leaving {
+  animation: toastOut var(--dur-fast) var(--ease-apple) forwards;
+}
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes toastOut {
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.97);
+  }
+}
+.toast-icon {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--info);
+}
+.toast[data-kind='ok'] .toast-icon {
+  background: var(--ok);
+}
+.toast[data-kind='warn'] .toast-icon {
+  background: var(--caution);
+}
+.toast[data-kind='error'] .toast-icon {
+  background: var(--danger);
+}
+.toast-body {
+  flex: 1;
+  min-width: 0;
+}
+.toast-title {
+  font-weight: 600;
+}
+.toast-msg {
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+}
+
+/* ============ 模态 / 抽屉 ============ */
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: rgba(0, 0, 0, 0.34);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-base) var(--ease-apple);
+}
+.sheet-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.sheet {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(420px, 100vw);
+  z-index: 501;
+  background: var(--bg-elevated);
+  box-shadow: var(--sh-xl);
+  transform: translateX(100%);
+  transition: transform var(--dur-slow) var(--ease-out);
+  display: flex;
+  flex-direction: column;
+}
+.sheet.open {
+  transform: none;
+}
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-5) var(--sp-6);
+  border-bottom: 1px solid var(--separator-soft);
+  flex: none;
+}
+.sheet-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--sp-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+.sheet-foot {
+  flex: none;
+  padding: var(--sp-4) var(--sp-6);
+  border-top: 1px solid var(--separator-soft);
+  display: flex;
+  gap: var(--sp-3);
+  justify-content: flex-end;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+.field-group > .group-title {
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.field-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+}
+.field-row .field-label {
+  font-size: var(--fs-callout);
+}
+.field-row .field-desc {
+  font-size: var(--fs-caption);
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+select.select {
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--separator);
+  background: var(--bg-elevated);
+  font-size: var(--fs-caption);
+  max-width: 200px;
+}
+
+/* ============ 加载中 ============ */
+.spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--fill-tertiary);
+  border-top-color: var(--accent);
+  animation: spin 0.72s linear infinite;
+  flex: none;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============ 空状态 ============ */
+.empty {
+  padding: var(--sp-8) var(--sp-4);
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: var(--fs-callout);
+}
+
+/* ============ 提示气泡 ============ */
+.hint {
+  display: inline-grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--fill-tertiary);
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: help;
+  flex: none;
+}
+
+/* ============================================================
+   App Store 风格药丸按钮
+   ------------------------------------------------------------
+   取值来自对 apps.apple.com 的实测采样（computed style）：
+     border-radius : 1000px（完全药丸）
+     font-weight   : 700     ← 关键，文字按钮字重不够就没有力量感
+     font-size     : 13px（次级）/ 15px（主级）
+     padding       : 7px 16px（紧凑，非网页常见的宽松内边距）
+     高度          : 28 / 32 / 34px
+     主操作按钮    : 极淡主色底 rgba(0,122,255,0.06) + 主色文字
+                     （iOS 17+ 风格，而非实心蓝底白字）
+     过渡          : 只针对 background-color，0.14s ease-out
+   系统蓝取 iOS systemBlue #007aff，与网页版 #0071e3 略有差异。
+   ============================================================ */
+
+:root {
+  --ios-blue: #007aff;
+  --ios-blue-soft: rgba(0, 122, 255, 0.08);
+  --ios-blue-soft-hover: rgba(0, 122, 255, 0.14);
+  --pill-fill: rgba(0, 0, 0, 0.045);
+  --pill-fill-hover: rgba(0, 0, 0, 0.08);
+  --pill-ease: background-color 0.14s ease-out, color 0.14s ease-out, box-shadow 0.14s ease-out;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ios-blue: #0a84ff;
+    --ios-blue-soft: rgba(10, 132, 255, 0.16);
+    --ios-blue-soft-hover: rgba(10, 132, 255, 0.24);
+    --pill-fill: rgba(255, 255, 255, 0.08);
+    --pill-fill-hover: rgba(255, 255, 255, 0.14);
+  }
+}
+:root[data-theme='dark'] {
+  --ios-blue: #0a84ff;
+  --ios-blue-soft: rgba(10, 132, 255, 0.16);
+  --ios-blue-soft-hover: rgba(10, 132, 255, 0.24);
+  --pill-fill: rgba(255, 255, 255, 0.08);
+  --pill-fill-hover: rgba(255, 255, 255, 0.14);
+}
+/* 手动切换到浅色时显式还原，覆盖可能存在的系统深色媒体查询 */
+:root[data-theme='light'] {
+  --ios-blue: #007aff;
+  --ios-blue-soft: rgba(0, 122, 255, 0.08);
+  --ios-blue-soft-hover: rgba(0, 122, 255, 0.14);
+  --pill-fill: rgba(0, 0, 0, 0.045);
+  --pill-fill-hover: rgba(0, 0, 0, 0.08);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 7px 16px;
+  border-radius: 1000px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  background: var(--pill-fill);
+  color: var(--text);
+  transition: var(--pill-ease), transform 0.14s ease-out;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.pill:hover:not(:disabled) {
+  background: var(--pill-fill-hover);
+}
+.pill:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.pill:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+.pill svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+
+/** 开关型按钮的激活态：淡主色底 + 主色文字（App Store get-button gray 风格） */
+.pill.is-on {
+  background: var(--ios-blue-soft);
+  color: var(--ios-blue);
+}
+.pill.is-on:hover {
+  background: var(--ios-blue-soft-hover);
+}
+
+/** 主操作 */
+.pill-primary {
+  background: var(--ios-blue-soft);
+  color: var(--ios-blue);
+}
+.pill-primary:hover:not(:disabled) {
+  background: var(--ios-blue-soft-hover);
+}
+
+/** 强调实心（用于"结束检测"这类终结性操作） */
+.pill-solid {
+  background: var(--ios-blue);
+  color: #fff;
+}
+.pill-solid:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+/** 危险操作：淡红底红字，不用实心红以免过度抢注意力 */
+.pill-danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.pill-danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+  filter: brightness(0.96);
+}
+
+.pill-lg {
+  height: 38px;
+  padding: 10px 22px;
+  font-size: 15px;
+}
+.pill-sm {
+  height: 28px;
+  padding: 6px 13px;
+  font-size: 12px;
+}
+
+/** 视频内浮层用的深色药丸（保留给全屏等场景） */
+.pill-glass {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  -webkit-backdrop-filter: saturate(1.8) blur(10px);
+  backdrop-filter: saturate(1.8) blur(10px);
+}
+.pill-glass:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.34);
+}
+
+/* ---- 控制条（视频下方） ---- */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  padding: var(--sp-4) var(--sp-5);
+  background: var(--bg-elevated);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-xs);
+}
+.controls-group {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.controls-label {
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-right: 2px;
+}
+.controls-sep {
+  width: 1px;
+  align-self: stretch;
+  min-height: 24px;
+  background: var(--separator);
+  margin: 0 var(--sp-2);
+}
+.controls-spacer {
+  flex: 1;
+  min-width: 0;
+}
+@media (max-width: 560px) {
+  .controls-sep {
+    display: none;
+  }
+  .controls-spacer {
+    flex-basis: 100%;
+    height: 0;
+  }
+}
+
+/** 报警横幅占用顶部位置时，把 Toast 临时下移，避免两者重叠 */
+body.has-alarm .toast-host {
+  top: calc(var(--nav-h) + 74px);
+}
+
+/* ============================================================
+   专业模式显隐
+   ------------------------------------------------------------
+   默认（普通用户）只呈现能直接看懂的内容；带 .pro-only 的元素
+   是技术指标与实验工具，仅在 body.pro-mode 下出现。
+   这样做而不是直接删除，是因为这些功能是毕业设计的实验数据来源，
+   答辩与写论文时需要，但日常使用会造成认知负担。
+   ============================================================ */
+.pro-only {
+  display: none !important;
+}
+
+/* 兜底：revert 会退回浏览器默认 display（div→block、span→inline、button→inline-block），
+   对大多数元素够用。下面几条按组件实际的 display 显式覆盖，
+   否则 flex/grid 布局的元素在专业模式下会塌成普通块。 */
+body.pro-mode .pro-only {
+  display: revert !important;
+}
+body.pro-mode div.pro-only,
+body.pro-mode p.pro-only,
+body.pro-mode .pro-only.card,
+body.pro-mode .pro-only.stat-item {
+  display: block !important;
+}
+body.pro-mode .pro-only.metric,
+body.pro-mode .pro-only.hud-row,
+body.pro-mode .pro-only.controls,
+body.pro-mode .pro-only.controls-group,
+body.pro-mode .pro-only.field-row,
+body.pro-mode .pro-only.field-group,
+body.pro-mode .pro-only.card-head {
+  display: flex !important;
+}
+body.pro-mode .pro-only.btn,
+body.pro-mode .pro-only.pill,
+body.pro-mode .pro-only.stage-pill,
+body.pro-mode .pro-only.badge {
+  display: inline-flex !important;
+}
+body.pro-mode .pro-only.metric-grid,
+body.pro-mode .pro-only.stat-big {
+  display: grid !important;
+}
+body.pro-mode tr.pro-only {
+  display: table-row !important;
+}
+
+/* 打印时不能让上面的规则复活控制条与仅屏幕元素。
+   layout.css 里的 @media print 用的是 .controls / .no-print（低特异性），
+   会被 body.pro-mode .pro-only.controls 盖掉，所以这里补一条等特异性的兜底。 */
+@media print {
+  body.pro-mode .pro-only.controls,
+  body.pro-mode .pro-only.no-print,
+  body.pro-mode .pro-only .no-print {
+    display: none !important;
+  }
+}
+
+/* 专业模式开关的激活态 */
+#btnProMode.is-on {
+  background: var(--ios-blue-soft);
+  color: var(--ios-blue);
+}
