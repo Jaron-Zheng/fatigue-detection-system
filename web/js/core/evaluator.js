@@ -24,8 +24,8 @@ import { computeMetrics, computeLatency, sweepPositiveThreshold } from './evalua
 
 export class VideoEvaluator {
   /**
-   * @param {FaceEngine} engine 已初始化的推理引擎
-   * @param {VideoFileSource} source 已载入视频的输入源
+   * @param {import('./face-engine.js').FaceEngine} engine 已初始化的推理引擎
+   * @param {import('./video-source.js').VideoFileSource} source 已载入视频的输入源
    */
   constructor(engine, source) {
     this.engine = engine;
@@ -40,7 +40,7 @@ export class VideoEvaluator {
   /**
    * 执行评测。
    *
-   * @param {object} opts
+   * @param {{stepMs?:number, calibSec?:number, annotation?:any, positiveFrom?:string, onProgress?:Function}} opts
    *   stepMs       采样步长（毫秒），默认取 CONFIG.evaluation.stepMs
    *   calibSec     用于标定的时长（从视频开头算），0 表示跳过标定用通用阈值
    *   annotation   IntervalAnnotation 实例（可为 null，此时只出指标不出准确率）
@@ -90,6 +90,7 @@ export class VideoEvaluator {
     const evalTsBase = tsBase + calibSpanMs + 1000;
 
     /* ---------- 阶段一：个性化标定 ---------- */
+    /** @type {import('./calibration.js').CalibrationResult|null|undefined} */
     let calib;
     let calibInfo = { used: false };
     if (calibSec > 0) {

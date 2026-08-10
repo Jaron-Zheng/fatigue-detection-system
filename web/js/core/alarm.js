@@ -30,7 +30,7 @@ export class AlarmSystem {
   async unlock() {
     try {
       if (!this.ctx) {
-        const AC = window.AudioContext || window.webkitAudioContext;
+        const AC = window.AudioContext || /** @type {any} */ (window).webkitAudioContext;
         if (!AC) return false;
         this.ctx = new AC();
         this.masterGain = this.ctx.createGain();

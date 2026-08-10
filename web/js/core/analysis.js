@@ -87,11 +87,40 @@ export const SENSITIVITY_PARAMS = {
 };
 
 /**
+ * 离线重算的参数覆盖项，未给的字段沿用当前 CONFIG / 默认值。
+ * @typedef {object} ReplayPatch
+ * @property {Record<string, number>} [weights] 融合权重
+ * @property {number} [emaAlpha] EMA 平滑系数
+ * @property {number} [perclosLower] PERCLOS 隶属下界
+ * @property {number} [criticalClosureMs] 危险闭眼时长
+ * @property {number} [mildThreshold] 轻度等级阈值
+ * @property {number} [moderateThreshold] 中度等级阈值
+ * @property {number} [severeThreshold] 重度等级阈值
+ * @property {string} [ablateKey] 消融实验：扣除该权重键的贡献
+ */
+
+/**
+ * 离线重算结果。valid=false 时只有 reason，统计字段缺省。
+ * @typedef {object} ReplayResult
+ * @property {boolean} valid
+ * @property {string} [reason]
+ * @property {number} [sampleCount]
+ * @property {number} [avgScore]
+ * @property {number} [peakScore]
+ * @property {string} [worstLevel]
+ * @property {number} [alarms]
+ * @property {Record<string, number>} [durations] 各等级时长（毫秒）
+ * @property {Record<string, number>} [ratios] 各等级时长占比
+ * @property {number} [overrideRatio] 危险闭眼 override 占比
+ * @property {Array<{t:number, v:number}>} [curve] 重算后的分数曲线
+ */
+
+/**
  * 用一组参数对样本序列做离线重算。
  *
  * @param {Array} samples recorder.samples（指标时序）
- * @param {object} patch  参数覆盖 { perclosLower, criticalClosureMs, emaAlpha, mildThreshold, weights }
- * @returns {object} 该参数下的会话统计
+ * @param {ReplayPatch} patch  参数覆盖 { perclosLower, criticalClosureMs, emaAlpha, mildThreshold, weights }
+ * @returns {ReplayResult} 该参数下的会话统计
  */
 export function replaySession(samples, patch = {}) {
   if (!samples || samples.length < 2) {

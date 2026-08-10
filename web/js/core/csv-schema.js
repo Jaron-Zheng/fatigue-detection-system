@@ -13,6 +13,14 @@
  *   zh  —— 当前表头，带单位，给人看
  */
 
+/**
+ * 列定义：代码用 key、中文表头 zh、旧版英文表头 en（导入时三者都认）。
+ * @typedef {object} ColumnDef
+ * @property {string} key
+ * @property {string} en
+ * @property {string} zh
+ */
+
 /** 会话指标时序（报告页「指标表格」导出、离线复现导入） */
 export const SAMPLE_COLUMNS = [
   { key: 't', en: 't_ms', zh: '时间(毫秒)' },
@@ -85,7 +93,7 @@ export const TRUTH_KEY_TO_ZH = {
 /**
  * 在表头里定位某一列，中文名与旧英文名都认。
  * @param {string[]} header 已 trim 的表头数组
- * @param {object}   col    列定义 { zh, en }
+ * @param {ColumnDef} col   列定义 { zh, en }
  * @returns {number} 列下标，找不到返回 -1
  */
 export function findColumn(header, col) {

@@ -127,8 +127,9 @@ export class IndicatorEngine {
 
   /**
    * 处理一帧。
-   * @param {object} feat  FeatureExtractor.extract 的结果
-   * @param {object} calib Calibrator.result
+   * @param {import('./features.js').FeatureSample} feat FeatureExtractor.extract 的结果
+   * @param {import('./calibration.js').CalibrationResult|null} calib Calibrator.result
+   * @param {{face:{valid:boolean,reasons:string[],label:string}|null, lighting:{valid:boolean,label:string}|null}|null} [quality]
    */
   update(feat, calib, quality = null) {
     const ts = feat.ts;

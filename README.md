@@ -168,6 +168,26 @@ node tools/integration-test.mjs --port 5180
 
 ---
 
+## 开发者工具链（可选）
+
+以下命令仅供开发时使用，**需要先执行一次 `npm install`**（依赖全部在
+`devDependencies`，不进入运行路径）。答辩 / 评审现场与普通使用者
+**完全不需要**执行这一节里的任何命令：`npm start` / 一键启动保持零安装。
+
+```bash
+npm install           # 一次性安装开发依赖（typescript / eslint / prettier）
+npm run typecheck     # tsc --noEmit 类型检查（仅检查，不产出编译产物）
+npm run lint          # ESLint（flat config，重点拦截 == 误用/未用变量/数值陷阱）
+npm run format:check  # Prettier 格式检查（存量代码未强制重排，只约束新增代码）
+```
+
+类型检查覆盖范围：`web/js/config.js` + `web/js/core/` + `web/js/util/`
+（算法与数据链路；UI 层暂未纳入）。关键数据类型已 JSDoc 化：
+`AppConfig`（配置形状）、`FeatureSample`（特征层输出）、`CalibrationResult`（标定结果）、
+`ReplayPatch/ReplayResult`（离线重算）等。
+
+---
+
 ## 隐私
 
 - 视频帧只在浏览器内存中处理，不上传、不落盘

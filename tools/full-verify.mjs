@@ -85,7 +85,7 @@ async function main() {
     [path.join(ROOT, 'server', 'server.js'), '--no-open', '--port', String(PORT)],
     { cwd: ROOT, stdio: 'ignore', env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' } }
   );
-  let exitCode = 1;
+  let exitCode;
   try {
     const up = await waitForServer(PORT);
     if (!up) {
@@ -102,7 +102,7 @@ async function main() {
   } else {
     console.error('\n[full-verify] 集成测试失败。');
   }
-  process.exit(exitCode);
+  process.exit(exitCode ?? 1);
 }
 
 main();

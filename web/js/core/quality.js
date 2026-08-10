@@ -19,10 +19,11 @@ import { clamp } from '../util/math.js';
 
 /**
  * 评估人脸取景质量。
- * @param {Array} lm 归一化关键点
+ * @param {Array<{x:number,y:number}>|null} lm 归一化关键点
  * @param {number} aspect 画面宽高比
- * @param {object} feat 已提取的特征（用于取角度）
- * @param {object} calib 标定结果（角度以标定零点为基准）
+ * @param {import('./features.js').FeatureSample} feat 已提取的特征（用于取角度）
+ * @param {import('./calibration.js').CalibrationResult|null} calib 标定结果（角度以标定零点为基准）
+ * @returns {{valid:boolean, reasons:string[], label:string, faceWidthRatio?:number, centerOffset?:number, yawDev?:number, rollDev?:number}}
  */
 export function evaluateFaceQuality(lm, aspect, feat, calib) {
   const g = CONFIG.quality;

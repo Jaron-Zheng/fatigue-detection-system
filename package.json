@@ -11,7 +11,10 @@
     "test": "node tools/regression-test.mjs",
     "test:integration": "node tools/integration-test.mjs",
     "verify": "npm run check && npm run test",
-    "verify:full": "node tools/full-verify.mjs"
+    "verify:full": "node tools/full-verify.mjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format:check": "prettier --check \"web/js/**/*.js\" \"tools/**/*.mjs\" \"server/**/*.js\""
   },
   "engines": {
     "node": ">=18"
@@ -23,5 +26,13 @@
     "face-landmark",
     "multi-feature-fusion"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.1",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.9.0",
+    "prettier": "^3.9.6",
+    "typescript": "^7.0.2"
+  }
 }

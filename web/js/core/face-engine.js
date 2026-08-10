@@ -103,7 +103,7 @@ export class FaceEngine {
       this.initError = err;
       this.ready = false;
       console.error('[FaceEngine] 初始化失败：', err);
-      throw new Error(this._friendlyError(err));
+      throw new Error(this._friendlyError(err), { cause: err });
     }
   }
 
@@ -153,7 +153,7 @@ export class FaceEngine {
     this.lastTimestamp = ts;
 
     const t0 = performance.now();
-    let result = null;
+    let result;
     try {
       result = this.landmarker.detectForVideo(video, ts);
     } catch (err) {
@@ -232,7 +232,7 @@ export class CameraSource {
     try {
       this.stream = await navigator.mediaDevices.getUserMedia(constraints);
     } catch (err) {
-      throw new Error(CameraSource.friendlyError(err));
+      throw new Error(CameraSource.friendlyError(err), { cause: err });
     }
 
     this.deviceId = deviceId;
@@ -245,7 +245,7 @@ export class CameraSource {
         const to = setTimeout(() => reject(new Error('摄像头画面加载超时，请检查设备是否被其他程序占用。')), 12000);
         const onReady = () => {
           clearTimeout(to);
-          resolve();
+          resolve(undefined);
         };
         if (this.video.readyState >= 2) onReady();
         else this.video.addEventListener('loadeddata', onReady, { once: true });

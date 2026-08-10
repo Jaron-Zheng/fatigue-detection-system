@@ -221,16 +221,28 @@ export const CONFIG = {
   record: {
     /** 指标采样间隔（毫秒），用于生成会话报告与趋势 */
     sampleIntervalMs: 500,
-    /** 报告最多保留的样本数（约 1 小时 @0.5s） */
+    /** 报告最多保留的样本数（每 0.5s 一条，约可存 1 小时） */
     maxSamples: 7200,
     maxEvents: 2000,
   },
 };
 
+/**
+ * 完整配置形状。字段含义见上方各分组注释；
+ * 类型由对象字面量推导，本 typedef 供其他模块以
+ * `import('./config.js').AppConfig` 引用。
+ * @typedef {typeof CONFIG} AppConfig
+ */
+
 /** 深拷贝一份默认值，供「恢复默认」使用 */
 export const DEFAULT_CONFIG = JSON.parse(JSON.stringify(CONFIG));
 
-/** 从 localStorage 载入用户调整过的参数（仅覆盖已知字段，避免脏数据） */
+/**
+ * 从 localStorage 载入用户调整过的参数（仅覆盖已知字段，避免脏数据）。
+ * 类型不匹配的补丁值会被丢弃，`__proto__` 等危险键被忽略。
+ * @param {{ getItem(key: string): string | null }} [storage] 可注入的存储（测试用）
+ * @returns {void}
+ */
 export function loadUserConfig(storage = globalThis.localStorage) {
   try {
     const raw = storage && storage.getItem('fatigue.config.v1');
@@ -242,6 +254,10 @@ export function loadUserConfig(storage = globalThis.localStorage) {
   }
 }
 
+/**
+ * 保存当前用户可调分组参数到 localStorage。
+ * @returns {void}
+ */
 export function saveUserConfig() {
   try {
     localStorage.setItem(
@@ -260,6 +276,10 @@ export function saveUserConfig() {
   }
 }
 
+/**
+ * 恢复默认配置并清除本地存储。
+ * @returns {void}
+ */
 export function resetConfig() {
   deepMerge(CONFIG, DEFAULT_CONFIG);
   try {
@@ -269,6 +289,13 @@ export function resetConfig() {
   }
 }
 
+/**
+ * 类型安全的深合并：只接受纯对象补丁，只覆盖目标已有键，
+ * 数字字段必须为有限数值，原型污染键被忽略。
+ * @param {object} target
+ * @param {object} patch
+ * @returns {void}
+ */
 function deepMerge(target, patch) {
   if (!isPlainObject(target) || !isPlainObject(patch)) return;
   for (const k of Object.keys(patch)) {
@@ -284,12 +311,14 @@ function deepMerge(target, patch) {
   }
 }
 
+/** @param {unknown} value */
 function isPlainObject(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const proto = Object.getPrototypeOf(value);
   return proto === Object.prototype || proto === null;
 }
 
+/** @param {string} key */
 function isUnsafeKey(key) {
   return key === '__proto__' || key === 'constructor' || key === 'prototype';
 }

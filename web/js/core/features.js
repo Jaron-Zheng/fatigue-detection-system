@@ -16,6 +16,41 @@
  */
 
 import { dist2, matrixToEuler, normalizeAngle, MedianFilter, clamp } from '../util/math.js';
+
+/**
+ * FaceLandmarker.detectForVideo 的返回值形状（本地声明，不引入 vendor 类型）。
+ * @typedef {object} FaceEngineResult
+ * @property {Array<Array<{x:number,y:number,z:number}>>} [faceLandmarks]
+ * @property {Array<{data:ArrayLike<number>}>} [facialTransformationMatrixes]
+ * @property {Array<Array<{categoryName:string,score:number}>>} [faceBlendshapes]
+ */
+
+/**
+ * 特征层单帧输出，指标层/质量门控/融合层的共同输入。
+ * 无人脸时只返回 { ok:false, ts }，故数值字段均标注为可选。
+ * @typedef {object} FeatureSample
+ * @property {number} ts 时间戳（毫秒）
+ * @property {boolean} ok 是否检测到人脸
+ * @property {number} [ear] 眼纵横比（滤波后）
+ * @property {number} [earL] 左眼 EAR
+ * @property {number} [earR] 右眼 EAR
+ * @property {{l:number,r:number}} [earRaw] 未滤波的左右眼 EAR
+ * @property {number} [mar] 嘴纵横比
+ * @property {number} [pitch] 俯仰角（度）
+ * @property {number} [yaw] 偏航角（度）
+ * @property {number} [roll] 侧倾角（度）
+ * @property {number} [pitchVel] 俯仰角速度（度/秒）
+ * @property {string} [poseSource] 姿态解算来源
+ * @property {number} [scale] 人脸尺度
+ * @property {{h:number,v:number}} [gaze] 视线偏移（水平/垂直）
+ * @property {Record<string, number>} [blend] blendshape 全量
+ * @property {number} [blinkScore] 语义闭合度（blendshape 均值）
+ * @property {number} [squintScore] 眯眼系数
+ * @property {number} [browDown] 皱眉系数
+ * @property {number} [jawOpen] 张口系数
+ * @property {Array<{x:number,y:number,z?:number}>|null} [landmarks] 归一化关键点
+ */
+
 import {
   EAR_LEFT,
   EAR_RIGHT,
@@ -154,9 +189,10 @@ export class FeatureExtractor {
   }
 
   /**
-   * @param {object} result MediaPipe FaceLandmarker 的 detectForVideo 返回值
+   * @param {FaceEngineResult|null} result MediaPipe FaceLandmarker 的 detectForVideo 返回值
    * @param {number} ts     时间戳（毫秒，performance.now 基准）
    * @param {number} aspect 画面宽高比（width / height），用于修正归一化坐标的各向异性
+   * @returns {FeatureSample}
    */
   extract(result, ts, aspect) {
     const faces = result && result.faceLandmarks;

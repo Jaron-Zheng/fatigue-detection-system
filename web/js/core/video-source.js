@@ -51,11 +51,12 @@ export class VideoFileSource {
     v.playsInline = true;
     v.loop = false;
 
+    /** @type {Promise<void>} */
     await new Promise((resolve, reject) => {
       const to = setTimeout(() => reject(new Error('视频加载超时，可能是格式不受支持（建议 MP4/H.264）')), 20000);
       const ok = () => {
         clearTimeout(to);
-        resolve();
+        resolve(undefined);
       };
       const fail = () => {
         clearTimeout(to);
@@ -70,8 +71,9 @@ export class VideoFileSource {
 
     // 部分浏览器在 loadeddata 时 duration 仍为 Infinity，先等一次 durationchange
     if (!Number.isFinite(v.duration) || v.duration <= 0) {
+      /** @type {Promise<void>} */
       await new Promise((r) => {
-        v.addEventListener('durationchange', () => r(), { once: true });
+        v.addEventListener('durationchange', () => r(undefined), { once: true });
         setTimeout(r, 1200);
       });
     }
@@ -132,13 +134,14 @@ export class VideoFileSource {
   /** 精确定位到指定时刻并等待该帧解码完成 */
   seekTo(t) {
     const v = this.video;
+    /** @type {Promise<void>} */
     return new Promise((resolve) => {
       let settled = false;
       const done = () => {
         if (settled) return;
         settled = true;
         v.removeEventListener('seeked', done);
-        resolve();
+        resolve(undefined);
       };
       // seek 到完全相同的时间不会触发 seeked，这里做一个极小偏移兜底
       if (Math.abs(v.currentTime - t) < 1e-4) {

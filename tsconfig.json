@@ -1,0 +1,24 @@
+{
+  "$comment": "第三轮角色三：仅类型检查，不产出任何编译产物（noEmit），不改变项目运行方式。检查范围为核心算法层 + 工具层 + 配置中枢；UI 层暂不纳入（DOM 类型噪声大，留待后续轮次）。",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": false,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "types": []
+  },
+  "include": [
+    "web/js/config.js",
+    "web/js/core/**/*.js",
+    "web/js/util/**/*.js",
+    "web/js/types/**/*.d.ts"
+  ]
+}

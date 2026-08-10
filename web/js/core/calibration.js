@@ -23,6 +23,27 @@
 import { CONFIG } from '../config.js';
 import { median, stdev, mean } from '../util/math.js';
 
+/**
+ * 标定结果。失败/跳过时携带 reason 并回退通用阈值（fallback 字段）。
+ * @typedef {object} CalibrationResult
+ * @property {boolean} ok 是否成功
+ * @property {boolean} [skipped] 是否跳过校准直接用通用阈值
+ * @property {string} [reason] 失败原因
+ * @property {number} [quality] 标定质量 0-1
+ * @property {string} qualityLabel 质量文字标签
+ * @property {number} [sampleCount] 有效样本数
+ * @property {number} [faceLostRatio] 标定期间人脸丢失占比
+ * @property {number} earBaseline 睁眼 EAR 基线
+ * @property {number} [earStdev] 基线波动
+ * @property {number} earCloseThresh 闭眼判定阈值
+ * @property {number} earOpenThresh 睁眼恢复阈值
+ * @property {number} marBaseline 闭口 MAR 基线
+ * @property {number} marOpenThresh 张口阈值
+ * @property {number} pitch0 姿态零点（俯仰）
+ * @property {number} yaw0 姿态零点（偏航）
+ * @property {number} roll0 姿态零点（侧倾）
+ */
+
 export const CalibState = {
   IDLE: 'idle',
   COLLECTING: 'collecting',
