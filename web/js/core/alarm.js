@@ -37,7 +37,15 @@ export class AlarmSystem {
         this.masterGain.gain.value = 1;
         this.masterGain.connect(this.ctx.destination);
       }
-      if (this.ctx.state === 'suspended') await this.ctx.resume();
+      if (this.ctx.state === 'suspended') {
+        // 无用户手势时（如 CDP 自动化驱动），部分浏览器里 resume() 的
+        // Promise 会永不 settle，会把 start() 永久卡死在 await 上。
+        // 加 1.5s 超时保护：解锁失败只意味着无声，视觉报警不受影响。
+        await Promise.race([
+          this.ctx.resume(),
+          new Promise((resolve) => setTimeout(resolve, 1500)),
+        ]);
+      }
       return this.ctx.state === 'running';
     } catch {
       return false;

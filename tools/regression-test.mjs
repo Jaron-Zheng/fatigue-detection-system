@@ -479,6 +479,130 @@ console.log('\n[14] SessionRecorder 容量控制');
   performance.now = realNow;
 }
 
+// ── 15. SessionStateMachine：合法迁移全覆盖 + 非法迁移拒绝（第三轮角色二新增） ──
+console.log('\n[15] 会话状态机');
+{
+  const { SessionStateMachine, SessionState, SessionEvent } = await importFromWeb('core/session-state-machine.js');
+
+  // 完整合法路径：idle→booting→calibrating→running→paused→running→report→booting→error→booting
+  {
+    const sm = new SessionStateMachine();
+    const calibPayload = { calibration: { earBaseline: 0.3 } };
+    assert(sm.state === SessionState.IDLE, '初始状态为 IDLE');
+    assert(sm.send(SessionEvent.START), 'idle → start → booting');
+    assert(sm.state === SessionState.BOOTING, '当前状态 BOOTING');
+    assert(sm.send(SessionEvent.BEGIN_CALIBRATION), 'booting → beginCalibration → calibrating');
+    assert(sm.send(SessionEvent.CALIBRATION_DONE, calibPayload), 'calibrating → calibrationDone → running（带校准结果）');
+    assert(sm.send(SessionEvent.PAUSE), 'running → pause → paused');
+    assert(sm.send(SessionEvent.RESUME), 'paused → resume → running');
+    assert(sm.send(SessionEvent.RECALIBRATE), 'running → recalibrate → calibrating');
+    assert(sm.send(SessionEvent.BEGIN_RUNNING, calibPayload), 'calibrating → beginRunning（跳过校准）→ running');
+    assert(sm.send(SessionEvent.FINISH), 'running → finish → report');
+    assert(sm.send(SessionEvent.START), 'report → start → booting（报告页再次检测）');
+    assert(sm.send(SessionEvent.FAIL), 'booting → fail → error');
+    assert(sm.send(SessionEvent.START), 'error → start → booting（重试）');
+    assert(sm.send(SessionEvent.CANCEL), 'booting → cancel → idle');
+  }
+
+  // 演示模式迁移：会话中途切入/退出
+  {
+    const sm = new SessionStateMachine();
+    sm.send(SessionEvent.START);
+    sm.send(SessionEvent.BEGIN_RUNNING, { simulated: true });
+    assert(sm.state === SessionState.RUNNING, 'booting → beginRunning（演示模式）→ running');
+    assert(sm.send(SessionEvent.SIM_ENTER, { simulated: true }), 'running → simEnter 自迁移允许');
+    assert(sm.state === SessionState.RUNNING, 'simEnter 后仍为 RUNNING');
+    assert(sm.send(SessionEvent.SIM_EXIT), 'running → simExit → idle');
+    assert(sm.state === SessionState.IDLE, '退出演示模式回到 IDLE');
+  }
+
+  // 非法迁移：至少 5 种（均须返回 false 且状态不变）
+  {
+    const mk = async (to, events) => {
+      const sm = new SessionStateMachine();
+      for (const [ev, payload] of events) assert(sm.send(ev, payload), `前置迁移 ${ev} 成功`);
+      return sm;
+    };
+    const calibPayload = { calibration: { earBaseline: 0.3 } };
+    let sm = new SessionStateMachine();
+    assert(!sm.send(SessionEvent.PAUSE), '非法①：IDLE 时 pause 被拒绝');
+    assert(!sm.send(SessionEvent.FINISH), '非法②：IDLE 时 finish 被拒绝');
+    assert(sm.state === SessionState.IDLE, '非法迁移不改变状态');
+
+    sm.send(SessionEvent.START);
+    sm.send(SessionEvent.BEGIN_RUNNING, calibPayload);
+    assert(!sm.send(SessionEvent.START), '非法③：RUNNING 时重复 start 被拒绝');
+    assert(!sm.send(SessionEvent.BEGIN_CALIBRATION), '非法④：RUNNING 时 beginCalibration 被拒绝');
+
+    sm = new SessionStateMachine();
+    sm.send(SessionEvent.START);
+    assert(!sm.send(SessionEvent.PAUSE), '非法⑤：BOOTING 时 pause 被拒绝');
+    sm.send(SessionEvent.BEGIN_CALIBRATION);
+    assert(!sm.send(SessionEvent.PAUSE), '非法⑥：CALIBRATING 时 pause 被拒绝');
+    assert(!sm.send(SessionEvent.RESUME), '非法⑦：CALIBRATING 时 resume 被拒绝');
+
+    sm = await mk(SessionState.REPORT, [[SessionEvent.START], [SessionEvent.BEGIN_RUNNING, calibPayload], [SessionEvent.FINISH]]);
+    assert(!sm.send(SessionEvent.PAUSE), '非法⑧：REPORT 时 pause 被拒绝');
+    assert(!sm.send(SessionEvent.RESUME), '非法⑨：REPORT 时 resume 被拒绝');
+  }
+
+  // guard：未校准不得进入 RUNNING
+  {
+    const sm = new SessionStateMachine();
+    sm.send(SessionEvent.START);
+    sm.send(SessionEvent.BEGIN_CALIBRATION);
+    assert(!sm.send(SessionEvent.CALIBRATION_DONE), 'guard：无校准载荷时 calibrationDone 被拒绝');
+    assert(!sm.can(SessionEvent.BEGIN_RUNNING), 'guard：can() 同样反映 guard 结果');
+    assert(sm.state === SessionState.CALIBRATING, 'guard 拒绝后状态保持 CALIBRATING');
+    assert(sm.send(SessionEvent.CALIBRATION_DONE, { calibration: { earBaseline: 0.3 } }), 'guard：带校准载荷后迁移成功');
+  }
+
+  // onChange 钩子：迁移成功才触发，拒绝不触发
+  {
+    const sm = new SessionStateMachine();
+    const seen = [];
+    const off = sm.onChange((from, to, event) => seen.push(`${from}>${to}:${event}`));
+    sm.send(SessionEvent.START);
+    sm.send(SessionEvent.PAUSE); // 非法，不应触发
+    assert(seen.length === 1 && seen[0] === 'idle>booting:start', 'onChange 只记录成功迁移');
+    off();
+    sm.send(SessionEvent.BEGIN_CALIBRATION);
+    assert(seen.length === 1, '取消订阅后不再收到钩子');
+    assert(sm.history.length === 2, 'history 记录全部成功迁移');
+  }
+}
+
+// ── 16. RenderLoop：启动/停止/帧回调（第三轮角色二新增） ──
+console.log('\n[16] RenderLoop 主循环调度');
+{
+  const { RenderLoop } = await importFromWeb('core/render-loop.js');
+  let frames = 0;
+  const loop = new RenderLoop({ onFrame: () => { frames++; }, targetFps: () => 60 });
+  assert(!loop.running, '初始未运行');
+  loop.start();
+  loop.start(); // 重复 start 不应叠加定时器
+  assert(loop.running, 'start 后 running=true');
+  await new Promise((r) => setTimeout(r, 220));
+  assert(frames >= 4, `目标 60fps 下 220ms 内至少 4 帧 (got ${frames})`);
+  loop.stop();
+  assert(!loop.running, 'stop 后 running=false');
+  const after = frames;
+  await new Promise((r) => setTimeout(r, 120));
+  assert(frames === after, 'stop 后不再产生新帧');
+  // 帧回调抛异常不得杀死主循环
+  let errors = 0;
+  let frames2 = 0;
+  const loop2 = new RenderLoop({
+    onFrame: () => { frames2++; if (frames2 === 1) throw new Error('boom'); },
+    targetFps: () => 60,
+    onError: () => { errors++; },
+  });
+  loop2.start();
+  await new Promise((r) => setTimeout(r, 200));
+  loop2.stop();
+  assert(errors >= 1 && frames2 >= 2, `帧异常被捕获且循环继续 (errors=${errors}, frames=${frames2})`);
+}
+
 // ── 结果汇总 ──
 console.log('\n=== 结果: ' + passed + ' 通过, ' + failed + ' 失败 ===\n');
 process.exit(failed > 0 ? 1 : 0);
