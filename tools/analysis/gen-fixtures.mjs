@@ -43,7 +43,7 @@ const { SessionRecorder, csvCell } = await importFromWeb('core/recorder.js');
 const { SENSITIVITY_PARAMS, runSensitivity, runAblation } = await importFromWeb('core/analysis.js');
 const { computeMetrics } = await importFromWeb('core/evaluation.js');
 const { AlarmSystem } = await importFromWeb('core/alarm.js');
-const { SAMPLE_COLUMNS, EVAL_SAMPLE_COLUMNS, LEVEL_KEY_TO_ZH, TRUTH_KEY_TO_ZH } = await importFromWeb('core/csv-schema.js');
+const { EVAL_SAMPLE_COLUMNS, LEVEL_KEY_TO_ZH, TRUTH_KEY_TO_ZH } = await importFromWeb('core/csv-schema.js');
 
 const LEVEL_LABEL = { awake: '清醒', mild: '轻度', moderate: '中度', severe: '重度' };
 

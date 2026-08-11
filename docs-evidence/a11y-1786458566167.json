@@ -1,0 +1,192 @@
+{
+  "date": "2026-08-11T14:28:58.971Z",
+  "url": "http://127.0.0.1:5180/",
+  "scenarios": [
+    {
+      "name": "首页 · 浅色",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "help": "ARIA role should be appropriate for the element",
+          "nodes": 1,
+          "target": [
+            "figure"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "首页 · 深色",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "help": "ARIA role should be appropriate for the element",
+          "nodes": 1,
+          "target": [
+            "figure"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "工作台 · 普通 · 浅色",
+      "violations": [
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "工作台 · 普通 · 深色",
+      "violations": [
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "工作台 · 专业 · 浅色",
+      "violations": [
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "工作台 · 专业 · 深色",
+      "violations": [
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "报告页 · 浅色",
+      "violations": [
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "报告页 · 深色",
+      "violations": [
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "设置抽屉 · 浅色",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "help": "ARIA role should be appropriate for the element",
+          "nodes": 1,
+          "target": [
+            "#sheet"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "设置抽屉 · 深色",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "help": "ARIA role should be appropriate for the element",
+          "nodes": 1,
+          "target": [
+            "#sheet"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    }
+  ]
+}

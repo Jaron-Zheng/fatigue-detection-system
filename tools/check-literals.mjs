@@ -19,7 +19,6 @@
  *   node tools/check-literals.mjs --selftest 自检：构造违规样例验证拦截能力
  */
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 

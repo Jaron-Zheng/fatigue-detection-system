@@ -19,7 +19,7 @@
 const CACHE_VERSION = 'fatigue-v3-r1';
 const CACHE_NAME = `fatigue-cache-${CACHE_VERSION}`;
 
-self.addEventListener('install', (event) => {
+self.addEventListener('install', () => {
   // 不做静态预缓存：首次在线访问时运行时缓存自动填充全部资源
   self.skipWaiting();
 });

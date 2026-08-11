@@ -55,6 +55,18 @@ export default [
       'no-debugger': 'warn',
     },
   },
+  // Service Worker 运行在 worker 作用域，用专属全局集（第三轮角色十二）
+  {
+    files: ['web/sw.js'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'script',
+      globals: {
+        ...globals.serviceworker,
+        ...globals.browser,
+      },
+    },
+  },
   // 关闭与 Prettier 冲突的规则（必须放最后）
   prettier,
 ];

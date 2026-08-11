@@ -198,7 +198,7 @@ try {
       if (!rules) continue;
       for (const r of rules) {
         if (!r.selectorText || !r.cssText.includes('link-on-dark')) continue;
-        if (/^\.vision-/.test(r.selectorText.trim())) continue; // 插画暗色内部豁免
+        if (/^\\.vision-/.test(r.selectorText.trim())) continue; // 插画暗色内部豁免
         const inDarkCtx = /tile-dark|on-dark|data-theme=['"]dark|prefers-color-scheme/.test(r.selectorText)
           || r.selectorText.includes(':root');
         if (!inDarkCtx) bad.push(r.selectorText);
