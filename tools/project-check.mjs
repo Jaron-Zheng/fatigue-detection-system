@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { scanLiterals } from './check-literals.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const failures = [];
@@ -97,11 +98,25 @@ function checkSecurityBaselines() {
   }
 }
 
+/** 设计令牌落地一致性：样式文件不得绕开令牌直接写字面量颜色（第三轮角色十五） */
+function checkDesignTokenLiterals() {
+  const files = ['base.css', 'components.css', 'layout.css', 'motion.css'];
+  let count = 0;
+  for (const name of files) {
+    for (const v of scanLiterals(read(`web/css/${name}`))) {
+      fail(`字面量颜色绕开令牌：web/css/${name}:${v.line} ${v.match}（改令牌或加 lit-ok 标记）`);
+      count++;
+    }
+  }
+  if (!count) pass(`设计令牌一致性检查通过（${files.length} 个样式文件无字面量颜色）`);
+}
+
 console.log('\n=== 项目静态检查 ===\n');
 checkRequiredFiles();
 checkJavaScriptSyntax();
 checkHtml();
 checkSecurityBaselines();
+checkDesignTokenLiterals();
 
 if (failures.length) {
   console.error(`\n=== 结果：${failures.length} 项失败 ===`);

@@ -61,7 +61,7 @@
 
 .btn-danger {
   background: var(--danger);
-  color: #fff;
+  color: #fff; /* lit-ok: 语义色实心底上的白字，主题无关 */
 }
 .btn-danger:hover:not(:disabled) {
   filter: brightness(1.08);
@@ -103,7 +103,7 @@
 }
 .btn-icon.is-on {
   background: var(--accent);
-  color: #fff;
+  color: #fff; /* lit-ok: 强调色实心底上的白字，主题无关 */
 }
 
 /* ============ 卡片 ============ */
@@ -244,7 +244,7 @@
   left: 2px;
   width: 27px;
   height: 27px;
-  background: #fff;
+  background: #fff; /* lit-ok: 开关滑块永远白色（Apple 开关外观），主题无关 */
   border-radius: 50%;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 0 1px 1px rgba(0, 0, 0, 0.16);
   transition: transform var(--dur-base) var(--ease-apple);
@@ -312,7 +312,7 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #fff;
+  background: #fff; /* lit-ok: 滑块把手永远白色（Apple 滑块外观），主题无关 */
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.24), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
   cursor: grab;
   transition: transform var(--dur-fast) var(--ease-apple);
@@ -326,7 +326,7 @@
   height: 20px;
   border: none;
   border-radius: 50%;
-  background: #fff;
+  background: #fff; /* lit-ok: 同上（Firefox 版滑块把手） */
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.24);
 }
 
@@ -620,7 +620,7 @@
   border-radius: 50%;
   font-size: 12px;
   font-weight: 700;
-  color: #fff;
+  color: #fff; /* lit-ok: 语义色实心圆底上的白字（吐司图标） */
   background: var(--info);
 }
 .toast[data-kind='ok'] .toast-icon {
@@ -865,7 +865,7 @@ select.select {
 /** 强调实心（用于“结束检测”这类终结性操作）：白字对比度同样走 --btn-bg */
 .pill-solid {
   background: var(--btn-bg);
-  color: #fff;
+  color: #fff; /* lit-ok: 主按钮实心底上的白字，主题无关 */
 }
 .pill-solid:hover:not(:disabled) {
   filter: brightness(1.06);
@@ -895,7 +895,7 @@ select.select {
 /** 视频内浮层用的深色药丸（保留给全屏等场景） */
 .pill-glass {
   background: rgba(255, 255, 255, 0.22);
-  color: #fff;
+  color: #fff; /* lit-ok: 视频画面上的玻璃药丸，永远白字 */
   -webkit-backdrop-filter: saturate(1.8) blur(10px);
   backdrop-filter: saturate(1.8) blur(10px);
 }

@@ -303,7 +303,7 @@
   stroke-width: 1;
 }
 .vision-viewport {
-  fill: #111113;
+  fill: #111113; /* lit-ok: 首页插画的固定暗色视窗，不是页面底色 */
 }
 .vision-face,
 .vision-face-detail,
@@ -331,8 +331,8 @@
   opacity: 0.6;
 }
 .vision-status {
-  fill: rgba(41, 151, 255, 0.16);
-  stroke: rgba(41, 151, 255, 0.34);
+  fill: rgba(var(--link-on-dark-rgb), 0.16);
+  stroke: rgba(var(--link-on-dark-rgb), 0.34);
   stroke-width: 1;
 }
 .vision-status-dot,
@@ -351,7 +351,7 @@
   stroke-width: 1;
 }
 .vision-metric .vision-metric-value {
-  fill: #fff;
+  fill: #fff; /* lit-ok: 暗色插画上的白色数字，主题无关 */
   font-family: var(--font-display);
   font-size: 28px;
   font-weight: var(--fw-semibold);
@@ -484,7 +484,7 @@
 .tile-dark-1 .feat-icon,
 .tile-dark-2 .feat-icon,
 .tile-dark-3 .feat-icon {
-  background: rgba(41, 151, 255, 0.16);
+  background: rgba(var(--link-on-dark-rgb), 0.16);
   color: var(--link-on-dark);
 }
 .feat-icon svg {
@@ -601,7 +601,7 @@
   position: relative;
   border-radius: var(--r-xl);
   overflow: hidden;
-  background: #0a0a0b;
+  background: #0a0a0b; /* lit-ok: 视频舞台两主题都保持近黑（视频容器） */
   box-shadow: var(--sh-xl);
   aspect-ratio: 4 / 3;
 }
@@ -638,7 +638,7 @@
   background: rgba(0, 0, 0, 0.44);
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
-  color: #fff;
+  color: #fff; /* lit-ok: 视频画面上半透明黑底的白字，主题无关 */
   font-size: var(--fs-caption);
   font-variant-numeric: tabular-nums;
   line-height: 1.45;
@@ -678,7 +678,7 @@
   background: rgba(0, 0, 0, 0.46);
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
-  color: #fff;
+  color: #fff; /* lit-ok: 视频画面上半透明黑底的白字（状态药丸） */
   font-size: var(--fs-caption);
   font-weight: var(--fw-semibold);
   white-space: nowrap;
@@ -701,7 +701,7 @@
   background: rgba(10, 10, 11, 0.90);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
-  color: #fff;
+  color: #fff; /* lit-ok: 近黑遮罩上的白字（舞台遮罩） */
   transition: opacity var(--dur-base) var(--ease-apple);
 }
 .stage-overlay[hidden] {
@@ -925,13 +925,13 @@
   animation: veilPulse 0.85s var(--ease-apple) infinite;
 }
 .alarm-veil[data-level='mild'] {
-  box-shadow: inset 0 0 0 5px var(--warn), inset 0 0 90px rgba(122, 90, 0, 0.28);
+  box-shadow: inset 0 0 0 5px var(--warn), inset 0 0 90px rgba(var(--glow-warn), 0.28);
 }
 .alarm-veil[data-level='moderate'] {
-  box-shadow: inset 0 0 0 6px var(--caution), inset 0 0 120px rgba(179, 78, 0, 0.34);
+  box-shadow: inset 0 0 0 6px var(--caution), inset 0 0 120px rgba(var(--glow-caution), 0.34);
 }
 .alarm-veil[data-level='severe'] {
-  box-shadow: inset 0 0 0 8px var(--danger), inset 0 0 160px rgba(193, 31, 26, 0.44);
+  box-shadow: inset 0 0 0 8px var(--danger), inset 0 0 160px rgba(var(--glow-danger), 0.44);
 }
 @keyframes veilPulse {
   0%,
@@ -963,8 +963,8 @@
   padding: 11px 20px;
   border-radius: var(--r-pill);
   background: var(--danger);
-  color: #fff;
-  box-shadow: 0 12px 34px rgba(193, 31, 26, 0.42);
+  color: #fff; /* lit-ok: 报警横幅白字，两主题底都是深色语义色 */
+  box-shadow: 0 12px 34px rgba(var(--glow-danger), 0.42);
   font-size: var(--fs-callout);
   font-weight: 700;
   /* 未触发时彻底不可见且不可达：避免 role="alert" 被读屏软件误读 */
@@ -984,24 +984,24 @@
 .alarm-banner[data-level='mild'] {
   background: var(--warn);
   /* --warn 加深后黑字只剩 4.0，改白字（6.5）；与其余等级保持一致 */
-  color: #fff;
-  box-shadow: 0 16px 44px rgba(122, 90, 0, 0.4);
+  color: #fff; /* lit-ok: 同上，白字对加深后的语义色底达标 */
+  box-shadow: 0 16px 44px rgba(var(--glow-warn), 0.4);
 }
 .alarm-banner[data-level='moderate'] {
   background: var(--caution);
-  box-shadow: 0 16px 44px rgba(179, 78, 0, 0.42);
+  box-shadow: 0 16px 44px rgba(var(--glow-caution), 0.42);
 }
 /* 深色模式下四级底色都是高明度 iOS 深色系统色（#ffd60a/#ff9f0a/#ff554b），
  * 白字会跌到 3.2 以下，统一改近黑字（≥6.4）。两份写法对应 tokens.css 的双轨深色块。 */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) .alarm-banner,
   :root:not([data-theme='light']) .alarm-banner[data-level='mild'] {
-    color: #1d1d1f;
+    color: #1d1d1f; /* lit-ok: 深色下高明度语义色底配近黑字（对比度见角色六） */
   }
 }
 :root[data-theme='dark'] .alarm-banner,
 :root[data-theme='dark'] .alarm-banner[data-level='mild'] {
-  color: #1d1d1f;
+  color: #1d1d1f; /* lit-ok: 同上（手动强制深色路径） */
 }
 .alarm-banner .ab-icon {
   width: 20px;
@@ -1340,7 +1340,7 @@
     display: none !important;
   }
   body {
-    background: #fff;
+    background: #fff; /* lit-ok: 打印固定白纸底 */
   }
   .card {
     box-shadow: none;
@@ -1353,8 +1353,8 @@
   /* 磁贴的通栏底色在纸上没有意义，只会浪费墨与版面 */
   .tile {
     padding: 0;
-    background: #fff;
-    color: #000;
+    background: #fff; /* lit-ok: 打印固定白底黑字 */
+    color: #000; /* lit-ok: 同上 */
   }
 }
 

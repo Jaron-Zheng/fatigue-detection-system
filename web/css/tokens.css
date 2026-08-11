@@ -133,6 +133,22 @@
   --danger-soft: rgba(193, 31, 26, 0.13);
   --info: #0057b8;
   --info-soft: rgba(0, 87, 184, 0.12);
+  /* RGB 分量三元组：供发光阴影写 rgba(var(--danger-rgb), 0.42)，
+   * 这样阴影颜色随主题自动切换，不必在两处分别维护同一个色值
+   * （第三轮角色十五）。 */
+  --ok-rgb: 20, 106, 56;
+  --warn-rgb: 122, 90, 0;
+  --caution-rgb: 179, 78, 0;
+  --danger-rgb: 193, 31, 26;
+  --accent-rgb: 0, 113, 227;
+  --link-on-dark-rgb: 41, 151, 255;
+  /* 报警发光专用色：横幅/光幕的底色两主题都是暗的（深色 iOS 系统色
+   * 高明度，发光若跟着换会在深底上消失），所以发光色不随主题变，
+   * 取的是能在两种底色上都看清的深暗版语义色。 */
+  --glow-ok: 20, 106, 56;
+  --glow-warn: 122, 90, 0;
+  --glow-caution: 179, 78, 0;
+  --glow-danger: 193, 31, 26;
 
   /* 疲劳等级配色（与语义色对应，单独命名便于图表复用） */
   --lv-awake: #146a38;
@@ -311,6 +327,18 @@
     --danger-soft: rgba(255, 85, 75, 0.14);
     --info: #2997ff;
     --info-soft: rgba(10, 132, 255, 0.16);
+    /* RGB 分量：深色下语义色是高明度 iOS 系统色，发光阴影跟着换 */
+    --ok-rgb: 48, 209, 88;
+    --warn-rgb: 255, 214, 10;
+    --caution-rgb: 255, 159, 10;
+    --danger-rgb: 255, 85, 75;
+    --accent-rgb: 10, 132, 255;
+    --link-on-dark-rgb: 41, 151, 255;
+    /* 报警发光不随主题变（理由见浅色块同名注释） */
+    --glow-ok: 20, 106, 56;
+    --glow-warn: 122, 90, 0;
+    --glow-caution: 179, 78, 0;
+    --glow-danger: 193, 31, 26;
 
     --lv-awake: #30d158;
     --lv-mild: #ffd60a;
@@ -387,6 +415,18 @@
   --danger-soft: rgba(255, 85, 75, 0.14);
   --info: #2997ff;
   --info-soft: rgba(10, 132, 255, 0.16);
+  /* RGB 分量：深色下语义色是高明度 iOS 系统色，发光阴影跟着换 */
+  --ok-rgb: 48, 209, 88;
+  --warn-rgb: 255, 214, 10;
+  --caution-rgb: 255, 159, 10;
+  --danger-rgb: 255, 85, 75;
+  --accent-rgb: 10, 132, 255;
+  --link-on-dark-rgb: 41, 151, 255;
+  /* 报警发光不随主题变（理由见浅色块同名注释） */
+  --glow-ok: 20, 106, 56;
+  --glow-warn: 122, 90, 0;
+  --glow-caution: 179, 78, 0;
+  --glow-danger: 193, 31, 26;
 
   --lv-awake: #30d158;
   --lv-mild: #ffd60a;
