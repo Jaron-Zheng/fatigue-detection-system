@@ -186,6 +186,37 @@ npm run format:check  # Prettier 格式检查（存量代码未强制重排，�
 `AppConfig`（配置形状）、`FeatureSample`（特征层输出）、`CalibrationResult`（标定结果）、
 `ReplayPatch/ReplayResult`（离线重算）等。
 
+### 第三轮新增自动化脚本（无需 npm install，Node 直接跑）
+
+```bash
+node tools/a11y-test.mjs        # axe-core 无障碍扫描（10 场景×浅深主题）
+node tools/fuzz-test.mjs        # 算法模糊测试（默认 1000 轮随机剧本，--seed 可复现）
+node tools/perf-profile.mjs     # 长会话内存/长任务采样（--mode memory|infer）
+node tools/design-audit.mjs     # DESIGN.md Do's/Don'ts 保真度审计（computed style 逐条核对）
+node tools/check-literals.mjs   # 字面量色值检测（已接入 npm run check；--selftest 验证拦截能力）
+node tools/pwa-offline-test.mjs # PWA 断网实测（SW 注册→断网→重载→演示模式）
+node tools/analysis/gen-fixtures.mjs  # 生成论文图表脚本的示例数据
+```
+
+---
+
+## PWA：离线安装与演示模式（可选）
+
+系统可"安装"为独立窗口的本地应用，并在断网时继续运行。**默认关闭**，
+避免与开发模式的 `no-store` 缓存策略冲突：
+
+| 操作 | 效果 |
+|---|---|
+| 访问 `/?pwa=1` | 注册 Service Worker 并记住开关；之后可经浏览器"安装应用"入口装为独立窗口 |
+| 访问 `/?pwa=0` | 注销 SW、清空缓存、关闭开关（回到开发模式，改完代码刷新即生效） |
+
+- 缓存策略：源码 network-first（在线永远拿最新代码，离线回退缓存）；
+  `vendor/` 模型与 WASM cache-first（锁定版本不变，离线免下载 26MB）。
+  缓存版本号在 `web/sw.js` 的 `CACHE_VERSION`，升级时改它即可自动清旧缓存。
+- 断网能力已实测：`node tools/pwa-offline-test.mjs`（12/12 通过，
+  含断网重载首页与断网跑演示模式）。
+- 开发时若发现页面"不更新"：大概率是 SW 开着——访问 `/?pwa=0` 即可。
+
 ---
 
 ## 隐私

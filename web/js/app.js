@@ -449,6 +449,35 @@ class App {
 const app = new App();
 installTestHooks(app, SessionState);
 
+/* ==================== PWA（可选，默认关闭） ====================
+ * 日常开发不注册 Service Worker（源码 no-store，改完刷新即生效）；
+ * 答辩演示/断网场景显式开启：
+ *   ?pwa=1  注册 SW 并记住开关（之后普通访问也保持离线能力）
+ *   ?pwa=0  注销 SW、清空缓存并关闭开关（回到开发模式）
+ * 详见 README "开发者与演示工具链" 一节。 */
+(async () => {
+  if (!('serviceWorker' in navigator)) return;
+  const params = new URLSearchParams(location.search);
+  try {
+    if (params.get('pwa') === '0') {
+      localStorage.removeItem('fatigue.pwa');
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map((r) => r.unregister()));
+      if ('caches' in window) {
+        for (const key of await caches.keys()) await caches.delete(key);
+      }
+      console.log('[PWA] 已注销 Service Worker 并清空缓存（开发模式）');
+      return;
+    }
+    if (params.get('pwa') === '1') localStorage.setItem('fatigue.pwa', '1');
+    if (localStorage.getItem('fatigue.pwa') !== '1') return;
+    const reg = await navigator.serviceWorker.register('./sw.js');
+    console.log('[PWA] Service Worker 已注册（演示/离线模式）', reg.scope);
+  } catch (err) {
+    console.warn('[PWA] Service Worker 注册失败（不影响正常使用）:', err);
+  }
+})();
+
 console.log(
   '%c驾驶员疲劳检测系统 %c已就绪 · 全部推理在本地浏览器完成',
   'font-weight:600;color:#0071e3',
