@@ -1,0 +1,262 @@
+{
+  "date": "2026-08-11T12:56:05.128Z",
+  "url": "http://127.0.0.1:5180/",
+  "scenarios": [
+    {
+      "name": "首页 · 浅色",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "help": "ARIA role should be appropriate for the element",
+          "nodes": 1,
+          "target": [
+            "figure"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "首页 · 深色",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "help": "ARIA role should be appropriate for the element",
+          "nodes": 1,
+          "target": [
+            "figure"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "工作台 · 普通 · 浅色",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 1,
+          "target": [
+            "#levelText"
+          ],
+          "details": [
+            {
+              "t": "#levelText",
+              "m": "Element has insufficient color contrast of 4.44 (foreground color: #1a7c40, background color: #e3efe8, font size: 11.3pt (15px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "工作台 · 普通 · 深色",
+      "violations": [
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "工作台 · 专业 · 浅色",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 1,
+          "target": [
+            "#btnProMode"
+          ],
+          "details": [
+            {
+              "t": "#btnProMode",
+              "m": "Element has insufficient color contrast of 3.78 (foreground color: #0071e3, background color: #dde8f5, font size: 9.0pt (12px), font weight: bold). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "工作台 · 专业 · 深色",
+      "violations": [
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "报告页 · 浅色",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 2,
+          "target": [
+            "#btnProMode",
+            ".dist-seg"
+          ],
+          "details": [
+            {
+              "t": "#btnProMode",
+              "m": "Element has insufficient color contrast of 3.78 (foreground color: #0071e3, background color: #dde8f5, font size: 9.0pt (12px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "t": ".dist-seg",
+              "m": "Element has insufficient color contrast of 2.02 (foreground color: #ffffff, background color: #30d158, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "报告页 · 深色",
+      "violations": [
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "设置抽屉 · 浅色",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "help": "ARIA role should be appropriate for the element",
+          "nodes": 1,
+          "target": [
+            "#sheet"
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 2,
+          "target": [
+            "#btnProMode",
+            ".dist-seg"
+          ],
+          "details": [
+            {
+              "t": "#btnProMode",
+              "m": "Element has insufficient color contrast of 3.78 (foreground color: #0071e3, background color: #dde8f5, font size: 9.0pt (12px), font weight: bold). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "t": ".dist-seg",
+              "m": "Element has insufficient color contrast of 2.02 (foreground color: #ffffff, background color: #30d158, font size: 8.3pt (11px), font weight: bold). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "设置抽屉 · 深色",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "help": "ARIA role should be appropriate for the element",
+          "nodes": 1,
+          "target": [
+            "#sheet"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    }
+  ]
+}

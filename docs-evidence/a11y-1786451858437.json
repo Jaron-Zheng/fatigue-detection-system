@@ -1,0 +1,360 @@
+{
+  "date": "2026-08-11T12:37:16.457Z",
+  "url": "http://127.0.0.1:5180/",
+  "scenarios": [
+    {
+      "name": "首页 · 浅色",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "help": "ARIA role should be appropriate for the element",
+          "nodes": 1,
+          "target": [
+            "figure"
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 3,
+          "target": [
+            ".subnav-sub",
+            "p:nth-child(1)",
+            "footer > p:nth-child(2)"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "首页 · 深色",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "help": "ARIA role should be appropriate for the element",
+          "nodes": 1,
+          "target": [
+            "figure"
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 1,
+          "target": [
+            "#btnStart"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "工作台 · 普通 · 浅色",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 22,
+          "target": [
+            ".subnav-sub",
+            "div[role=\"toolbar\"] > .controls-group:nth-child(1) > .controls-label[aria-hidden=\"true\"]",
+            "#btnMesh"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "工作台 · 普通 · 深色",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 18,
+          "target": [
+            "#overlayActions > .btn-primary.btn",
+            "div[role=\"toolbar\"] > .controls-group:nth-child(1) > .controls-label[aria-hidden=\"true\"]",
+            "#btnMesh"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "工作台 · 专业 · 浅色",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 32,
+          "target": [
+            ".subnav-sub",
+            "#btnProMode",
+            "div[role=\"toolbar\"] > .controls-group:nth-child(1) > .controls-label[aria-hidden=\"true\"]"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "工作台 · 专业 · 深色",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 27,
+          "target": [
+            "#overlayActions > .btn-primary.btn",
+            "div[role=\"toolbar\"] > .controls-group:nth-child(1) > .controls-label[aria-hidden=\"true\"]",
+            "#btnMesh"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "报告页 · 浅色",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 40,
+          "target": [
+            ".subnav-sub",
+            "#btnProMode",
+            ".report-head > .hero-eyebrow"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        },
+        {
+          "id": "select-name",
+          "impact": "critical",
+          "help": "Select element must have an accessible name",
+          "nodes": 1,
+          "target": [
+            "#selSensParam"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "报告页 · 深色",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 27,
+          "target": [
+            "#btnPrint",
+            ".dist-seg",
+            ".dist-stat-item:nth-child(1) > .l"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        },
+        {
+          "id": "select-name",
+          "impact": "critical",
+          "help": "Select element must have an accessible name",
+          "nodes": 1,
+          "target": [
+            "#selSensParam"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "设置抽屉 · 浅色",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "help": "ARIA role should be appropriate for the element",
+          "nodes": 1,
+          "target": [
+            "#sheet"
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 43,
+          "target": [
+            ".subnav-sub",
+            "#btnProMode",
+            ".report-head > .hero-eyebrow"
+          ]
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "help": "Form elements must have labels",
+          "nodes": 5,
+          "target": [
+            "#swAlarm",
+            "#swSpeech",
+            "#swMesh"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        },
+        {
+          "id": "select-name",
+          "impact": "critical",
+          "help": "Select element must have an accessible name",
+          "nodes": 2,
+          "target": [
+            "#selSensParam",
+            "#selCamera"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "设置抽屉 · 深色",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "help": "ARIA role should be appropriate for the element",
+          "nodes": 1,
+          "target": [
+            "#sheet"
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 31,
+          "target": [
+            "#btnPrint",
+            ".dist-seg",
+            ".dist-stat-item:nth-child(1) > .l"
+          ]
+        },
+        {
+          "id": "label",
+          "impact": "critical",
+          "help": "Form elements must have labels",
+          "nodes": 5,
+          "target": [
+            "#swAlarm",
+            "#swSpeech",
+            "#swMesh"
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        },
+        {
+          "id": "select-name",
+          "impact": "critical",
+          "help": "Select element must have an accessible name",
+          "nodes": 2,
+          "target": [
+            "#selSensParam",
+            "#selCamera"
+          ]
+        }
+      ]
+    }
+  ]
+}

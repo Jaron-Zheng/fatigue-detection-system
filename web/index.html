@@ -325,7 +325,7 @@
 
         <div class="stage" id="stage">
           <video id="video" playsinline muted autoplay class="mirrored"></video>
-          <canvas id="overlay"></canvas>
+          <canvas id="overlay" aria-hidden="true"></canvas>
 
           <div class="hud" id="hud">
             <div class="hud-row"><span>眼睛闭合</span><b class="tnum" id="hudClosure">--</b></div>
@@ -424,7 +424,7 @@
               <span class="pro-only"><i style="background:var(--text-quaternary)"></i>平滑前原始值</span>
             </div>
           </div>
-          <div class="chart-box"><canvas id="chartScore" aria-label="疲劳指数随时间变化曲线"></canvas></div>
+          <div class="chart-box"><canvas id="chartScore" role="img" aria-label="疲劳指数随时间变化曲线，纵轴 0 到 100，越高越疲劳"></canvas></div>
         </div>
 
         <!-- 眼/嘴波形图（专业模式） -->
@@ -440,7 +440,7 @@
               <span><i style="background:var(--danger)"></i>闭眼阈值</span>
             </div>
           </div>
-          <div class="chart-box"><canvas id="chartEye" aria-label="眼纵横比与嘴纵横比波形"></canvas></div>
+          <div class="chart-box"><canvas id="chartEye" role="img" aria-label="眼纵横比 EAR 与嘴纵横比 MAR 的实时波形，用于观察眨眼与哈欠特征"></canvas></div>
         </div>
 
         <!-- 融合贡献度（专业模式） -->
@@ -667,7 +667,7 @@
 
       <div class="card" style="grid-column:1/-1">
         <div class="card-head"><div class="card-title">全程疲劳指数曲线</div></div>
-        <div class="chart-box" style="height:220px"><canvas id="rpChart" aria-label="全程疲劳指数曲线"></canvas></div>
+        <div class="chart-box" style="height:220px"><canvas id="rpChart" role="img" aria-label="本次会话全程疲劳指数曲线，含轻中重三级阈值参考线"></canvas></div>
       </div>
 
       <div class="card" style="grid-column:1/-1">
@@ -689,7 +689,7 @@
           结论对参数不敏感的区间称为<b>稳定平台区</b>，默认值应落在其中——这比只引用文献范围更有说服力。
         </p>
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px" class="no-print">
-          <select class="select" id="selSensParam" style="max-width:240px"></select>
+          <select class="select" id="selSensParam" style="max-width:240px" aria-label="敏感性分析参数选择"></select>
           <button class="btn btn-primary btn-sm" id="btnRunSens" type="button">运行敏感性分析</button>
           <button class="btn btn-secondary btn-sm" id="btnRunAblation" type="button">运行权重消融实验</button>
           <button class="btn btn-outline btn-sm" id="btnExportAnalysis" type="button">导出分析结果 CSV</button>
@@ -883,11 +883,11 @@
       <div class="group-title">提醒方式</div>
       <div class="field-row">
         <div><div class="field-label">声音与闪屏提醒</div><div class="field-desc">越困提醒越强烈</div></div>
-        <label class="switch"><input type="checkbox" id="swAlarm" checked><span class="switch-track"></span><span class="switch-thumb"></span></label>
+        <label class="switch"><input type="checkbox" id="swAlarm" checked aria-label="声音与闪屏提醒"><span class="switch-track"></span><span class="switch-thumb"></span></label>
       </div>
       <div class="field-row">
         <div><div class="field-label">语音提示</div><div class="field-desc">用说话的方式提醒你休息</div></div>
-        <label class="switch"><input type="checkbox" id="swSpeech" checked><span class="switch-track"></span><span class="switch-thumb"></span></label>
+        <label class="switch"><input type="checkbox" id="swSpeech" checked aria-label="语音提示"><span class="switch-track"></span><span class="switch-thumb"></span></label>
       </div>
       <div class="field-row">
         <div><div class="field-label">听一下提醒声</div><div class="field-desc">按中度疲劳的强度播放一次</div></div>
@@ -899,15 +899,15 @@
       <div class="group-title">画面</div>
       <div class="field-row">
         <div><div class="field-label">摄像头</div><div class="field-desc">换了之后需要重新测一次基准</div></div>
-        <select class="select" id="selCamera"></select>
+        <select class="select" id="selCamera" aria-label="摄像头选择"></select>
       </div>
       <div class="field-row">
         <div><div class="field-label">在脸上显示识别点</div></div>
-        <label class="switch"><input type="checkbox" id="swMesh" checked><span class="switch-track"></span><span class="switch-thumb"></span></label>
+        <label class="switch"><input type="checkbox" id="swMesh" checked aria-label="在脸上显示识别点"><span class="switch-track"></span><span class="switch-thumb"></span></label>
       </div>
       <div class="field-row">
         <div><div class="field-label">画面左右翻转</div><div class="field-desc">像照镜子一样，动作更好对应</div></div>
-        <label class="switch"><input type="checkbox" id="swMirror" checked><span class="switch-track"></span><span class="switch-thumb"></span></label>
+        <label class="switch"><input type="checkbox" id="swMirror" checked aria-label="画面左右翻转"><span class="switch-track"></span><span class="switch-thumb"></span></label>
       </div>
       <div class="field-row pro-only">
         <div><div class="field-label">推理委托</div><div class="field-desc">GPU 更快，CPU 兼容性更好</div></div>
@@ -922,7 +922,7 @@
       <div class="group-title">演示</div>
       <div class="field-row">
         <div><div class="field-label">演示模式</div><div class="field-desc">不用摄像头，用一段模拟的疲劳过程走通完整流程</div></div>
-        <label class="switch"><input type="checkbox" id="swSimulate"><span class="switch-track"></span><span class="switch-thumb"></span></label>
+        <label class="switch"><input type="checkbox" id="swSimulate" aria-label="演示模式"><span class="switch-track"></span><span class="switch-thumb"></span></label>
       </div>
     </div>
   </div>

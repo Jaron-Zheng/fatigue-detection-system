@@ -43,6 +43,8 @@ export class ReportView {
    */
   render(summary, samples) {
     const g = (id) => document.getElementById(id);
+    /* 留一份供 redraw 重取色用（主题切换后色带要重新取内联色） */
+    this._lastSummary = summary;
 
     /* ---------- 标题 ----------
      * 结论取本次达到过的最高等级；结束时的即时状态在副标题里单独说明，
@@ -121,13 +123,7 @@ export class ReportView {
     this._renderCoverage(summary);
 
     /* ---------- 状态时间分布 ---------- */
-    const colors = {
-      awake: cssVar('--lv-awake', '#1d9e4b'),
-      mild: cssVar('--lv-mild', '#d19a00'),
-      moderate: cssVar('--lv-moderate', '#e8730c'),
-      severe: cssVar('--lv-severe', '#e5322d'),
-    };
-    renderDistribution(g('rpDist'), summary.levelRatios, LEVEL_LABELS, colors);
+    this._renderDist(g('rpDist'), summary);
     for (const [k, id] of [
       ['awake', 'rpdAwake'],
       ['mild', 'rpdMild'],
@@ -243,8 +239,24 @@ export class ReportView {
     this.chart = { chart, data, durationMs: Math.max(10000, lastT) };
   }
 
+  /**
+   * 状态时间分布色带。颜色是渲染时写入内联样式的，
+   * 主题切换后必须由 redraw 重新取色重渲染，否则会残留上一主题的色值。
+   */
+  _renderDist(host, summary) {
+    if (!host) return;
+    const colors = {
+      awake: cssVar('--lv-awake', '#146a38'),
+      mild: cssVar('--lv-mild', '#7a5a00'),
+      moderate: cssVar('--lv-moderate', '#b34e00'),
+      severe: cssVar('--lv-severe', '#c11f1a'),
+    };
+    renderDistribution(host, summary.levelRatios, LEVEL_LABELS, colors);
+  }
+
   /** 主题切换或窗口缩放后重绘 */
   redraw() {
+    if (this._lastSummary) this._renderDist(document.getElementById('rpDist'), this._lastSummary);
     if (!this.chart) return;
     this.chart.chart.resize();
     this.chart.chart.render(this.chart.data, this.chart.durationMs);

@@ -93,8 +93,11 @@
   --link-on-dark: #2997ff;
 
   --text: #1d1d1f;
-  --text-secondary: #6e6e73;
-  --text-tertiary: #86868b;
+  /* 第三轮角色六：对比度按 WCAG AA（≥4.5:1）重新校准。
+   * 原值 #6e6e73/#86868b 在白底上只有 4.2/3.5，axe-core 大面积报 serious；
+   * 两级各加深一档，层级关系保留，安全相关的小字标签（指标名/表头）从此达标。 */
+  --text-secondary: #515154;
+  --text-tertiary: #6e6e73;
   --text-quaternary: #aeaeb2;
   --text-on-accent: #ffffff;
 
@@ -102,6 +105,13 @@
   --accent: #0071e3;
   --accent-hover: #0077ed;
   --accent-active: #006edb;
+  /* 强调色作为文字/芯片文字时用：#0071e3 在浅底上只有 4.7，
+   * 碰见浅色软底（accent-soft/parchment）就跌破 4.5，文字场景一律用这支更深的蓝 */
+  --accent-text: #0057b8;
+  /* 主按钮底色单独成令牌：浅色下白字对 #0071e3 有 4.7 够用；
+   * 深色下白字对 #0a84ff 只有 3.6，需要换更深的蓝（见深色块） */
+  --btn-bg: var(--accent);
+  --btn-bg-hover: var(--accent-hover);
   --link: #0066cc;
   --accent-soft: rgba(0, 113, 227, 0.1);
 
@@ -110,23 +120,27 @@
   --fill-quaternary: rgba(116, 116, 128, 0.08);
   --fill-tertiary: rgba(116, 116, 128, 0.12);
 
-  /* 语义色沿用 Apple 系统色板，保证与 macOS / iOS 的视觉直觉一致 */
-  --ok: #1d9e4b;
-  --ok-soft: rgba(29, 158, 75, 0.12);
-  --warn: #d19a00;
-  --warn-soft: rgba(209, 154, 0, 0.14);
-  --caution: #e8730c;
-  --caution-soft: rgba(232, 115, 12, 0.14);
-  --danger: #e5322d;
-  --danger-soft: rgba(229, 50, 45, 0.13);
-  --info: #0071e3;
-  --info-soft: rgba(0, 113, 227, 0.12);
+  /* 语义色沿用 Apple 系统色板；浅色下的文字场景（徽章/等级芯片/时间线图标）
+   * 需要 ≥4.5:1，原色直接上浅底只有 2.4~4.2，这里统一加深一档（色相不变）。
+   * 实心填充（报警横幅/分布色带）配白字同样达标，见各组件注释。 */
+  --ok: #146a38;
+  --ok-soft: rgba(20, 106, 56, 0.12);
+  --warn: #7a5a00;
+  --warn-soft: rgba(122, 90, 0, 0.14);
+  --caution: #b34e00;
+  --caution-soft: rgba(179, 78, 0, 0.14);
+  --danger: #c11f1a;
+  --danger-soft: rgba(193, 31, 26, 0.13);
+  --info: #0057b8;
+  --info-soft: rgba(0, 87, 184, 0.12);
 
   /* 疲劳等级配色（与语义色对应，单独命名便于图表复用） */
-  --lv-awake: #1d9e4b;
-  --lv-mild: #d19a00;
-  --lv-moderate: #e8730c;
-  --lv-severe: #e5322d;
+  --lv-awake: #146a38;
+  --lv-mild: #7a5a00;
+  --lv-moderate: #b34e00;
+  --lv-severe: #c11f1a;
+  /* 等级色实心填充上的文字色：浅色下四档加深后白字都≥4.5，统一白字 */
+  --on-lv: #ffffff;
 
   /* 图表线色 */
   --chart-ear: #0071e3;
@@ -265,12 +279,18 @@
 
     --text: #f5f5f7;
     --text-secondary: #98989d;
-    --text-tertiary: #7c7c80;
+    /* 原 #7c7c80 在 #1c1c1e 上只有 4.09，加深一档到 5.2 */
+    --text-tertiary: #8e8e93;
     --text-quaternary: #5a5a5e;
 
     --accent: #0a84ff;
     --accent-hover: #3d9bff;
     --accent-active: #0071e3;
+    /* 深色下芯片/标签文字用 Sky Link Blue：#0a84ff 上 accent-soft 底只有 3.85 */
+    --accent-text: #2997ff;
+    /* 白字主按钮底色：#0a84ff 对白字只有 3.64，换深一档的蓝 */
+    --btn-bg: #0064d2;
+    --btn-bg-hover: #0071e3;
     --link: #2997ff;
     --accent-soft: rgba(10, 132, 255, 0.16);
 
@@ -285,15 +305,19 @@
     --warn-soft: rgba(255, 214, 10, 0.16);
     --caution: #ff9f0a;
     --caution-soft: rgba(255, 159, 10, 0.16);
-    --danger: #ff453a;
-    --danger-soft: rgba(255, 69, 58, 0.18);
-    --info: #0a84ff;
+    /* #ff453a 在 #252527 上 4.49 差一点，提亮一档；danger-soft 透明度同步降低，
+     * 否则重度芯片文字在软底上又会跌回 4.39 */
+    --danger: #ff554b;
+    --danger-soft: rgba(255, 85, 75, 0.14);
+    --info: #2997ff;
     --info-soft: rgba(10, 132, 255, 0.16);
 
     --lv-awake: #30d158;
     --lv-mild: #ffd60a;
     --lv-moderate: #ff9f0a;
-    --lv-severe: #ff453a;
+    --lv-severe: #ff554b;
+    /* 深色下四档等级色都是高明度，白字全不达标，色带文字改用近黑 */
+    --on-lv: #1d1d1f;
 
     --chart-ear: #0a84ff;
     --chart-mar: #bf5af2;
@@ -331,12 +355,18 @@
 
   --text: #f5f5f7;
   --text-secondary: #98989d;
-  --text-tertiary: #7c7c80;
+  /* 原 #7c7c80 在 #1c1c1e 上只有 4.09，加深一档到 5.2 */
+  --text-tertiary: #8e8e93;
   --text-quaternary: #5a5a5e;
 
   --accent: #0a84ff;
   --accent-hover: #3d9bff;
   --accent-active: #0071e3;
+  /* 深色下芯片/标签文字用 Sky Link Blue：#0a84ff 上 accent-soft 底只有 3.85 */
+  --accent-text: #2997ff;
+  /* 白字主按钮底色：#0a84ff 对白字只有 3.64，换深一档的蓝 */
+  --btn-bg: #0064d2;
+  --btn-bg-hover: #0071e3;
   --link: #2997ff;
   --accent-soft: rgba(10, 132, 255, 0.16);
 
@@ -351,15 +381,19 @@
   --warn-soft: rgba(255, 214, 10, 0.16);
   --caution: #ff9f0a;
   --caution-soft: rgba(255, 159, 10, 0.16);
-  --danger: #ff453a;
-  --danger-soft: rgba(255, 69, 58, 0.18);
-  --info: #0a84ff;
+  /* #ff453a 在 #252527 上 4.49 差一点，提亮一档；danger-soft 透明度同步降低，
+   * 否则重度芯片文字在软底上又会跌回 4.39 */
+  --danger: #ff554b;
+  --danger-soft: rgba(255, 85, 75, 0.14);
+  --info: #2997ff;
   --info-soft: rgba(10, 132, 255, 0.16);
 
   --lv-awake: #30d158;
   --lv-mild: #ffd60a;
   --lv-moderate: #ff9f0a;
-  --lv-severe: #ff453a;
+  --lv-severe: #ff554b;
+  /* 深色下四档等级色都是高明度，白字全不达标，色带文字改用近黑 */
+  --on-lv: #1d1d1f;
 
   --chart-ear: #0a84ff;
   --chart-mar: #bf5af2;

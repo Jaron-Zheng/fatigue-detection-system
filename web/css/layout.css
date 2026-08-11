@@ -423,12 +423,13 @@
   }
 }
 
-/* 眉标：Apple 用它承载产品线名称，纯色文字，无底色无描边 */
+/* 眉标：Apple 用它承载产品线名称，纯色文字，无底色无描边。
+ * 文字用 --accent-text：#0071e3 在 parchment 底上只有 4.3，达不到 4.5 */
 .hero-eyebrow {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  color: var(--accent);
+  color: var(--accent-text);
   font-size: var(--fs-subhead);
   font-weight: var(--fw-semibold);
   letter-spacing: var(--ls-tight);
@@ -924,13 +925,13 @@
   animation: veilPulse 0.85s var(--ease-apple) infinite;
 }
 .alarm-veil[data-level='mild'] {
-  box-shadow: inset 0 0 0 5px var(--warn), inset 0 0 90px rgba(209, 154, 0, 0.28);
+  box-shadow: inset 0 0 0 5px var(--warn), inset 0 0 90px rgba(122, 90, 0, 0.28);
 }
 .alarm-veil[data-level='moderate'] {
-  box-shadow: inset 0 0 0 6px var(--caution), inset 0 0 120px rgba(232, 115, 12, 0.34);
+  box-shadow: inset 0 0 0 6px var(--caution), inset 0 0 120px rgba(179, 78, 0, 0.34);
 }
 .alarm-veil[data-level='severe'] {
-  box-shadow: inset 0 0 0 8px var(--danger), inset 0 0 160px rgba(229, 50, 45, 0.44);
+  box-shadow: inset 0 0 0 8px var(--danger), inset 0 0 160px rgba(193, 31, 26, 0.44);
 }
 @keyframes veilPulse {
   0%,
@@ -963,7 +964,7 @@
   border-radius: var(--r-pill);
   background: var(--danger);
   color: #fff;
-  box-shadow: 0 12px 34px rgba(229, 50, 45, 0.42);
+  box-shadow: 0 12px 34px rgba(193, 31, 26, 0.42);
   font-size: var(--fs-callout);
   font-weight: 700;
   /* 未触发时彻底不可见且不可达：避免 role="alert" 被读屏软件误读 */
@@ -982,12 +983,25 @@
 }
 .alarm-banner[data-level='mild'] {
   background: var(--warn);
-  color: #1d1d1f;
-  box-shadow: 0 16px 44px rgba(209, 154, 0, 0.4);
+  /* --warn 加深后黑字只剩 4.0，改白字（6.5）；与其余等级保持一致 */
+  color: #fff;
+  box-shadow: 0 16px 44px rgba(122, 90, 0, 0.4);
 }
 .alarm-banner[data-level='moderate'] {
   background: var(--caution);
-  box-shadow: 0 16px 44px rgba(232, 115, 12, 0.42);
+  box-shadow: 0 16px 44px rgba(179, 78, 0, 0.42);
+}
+/* 深色模式下四级底色都是高明度 iOS 深色系统色（#ffd60a/#ff9f0a/#ff554b），
+ * 白字会跌到 3.2 以下，统一改近黑字（≥6.4）。两份写法对应 tokens.css 的双轨深色块。 */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .alarm-banner,
+  :root:not([data-theme='light']) .alarm-banner[data-level='mild'] {
+    color: #1d1d1f;
+  }
+}
+:root[data-theme='dark'] .alarm-banner,
+:root[data-theme='dark'] .alarm-banner[data-level='mild'] {
+  color: #1d1d1f;
 }
 .alarm-banner .ab-icon {
   width: 20px;
@@ -1218,7 +1232,9 @@
   place-items: center;
   font-size: var(--fs-micro);
   font-weight: 700;
-  color: #fff;
+  /* 文字色由令牌分主题决定：浅色下四档等级色加深后白字达标；
+   * 深色下等级色高明度，白字只有 2.0，改用近黑（见 tokens.css --on-lv） */
+  color: var(--on-lv);
   transition: flex-basis var(--dur-slow) var(--ease-apple);
   overflow: hidden;
   white-space: nowrap;

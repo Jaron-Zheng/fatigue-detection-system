@@ -1,0 +1,1052 @@
+{
+  "date": "2026-08-11T12:40:12.753Z",
+  "url": "http://127.0.0.1:5180/",
+  "scenarios": [
+    {
+      "name": "首页 · 浅色",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "help": "ARIA role should be appropriate for the element",
+          "nodes": 1,
+          "target": [
+            "figure"
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 3,
+          "target": [
+            ".subnav-sub",
+            "p:nth-child(1)",
+            "footer > p:nth-child(2)"
+          ],
+          "details": [
+            {
+              "t": ".subnav-sub"
+            },
+            {
+              "t": "p:nth-child(1)"
+            },
+            {
+              "t": "footer > p:nth-child(2)"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "首页 · 深色",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "help": "ARIA role should be appropriate for the element",
+          "nodes": 1,
+          "target": [
+            "figure"
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 1,
+          "target": [
+            "#btnStart"
+          ],
+          "details": [
+            {
+              "t": "#btnStart"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "工作台 · 普通 · 浅色",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 22,
+          "target": [
+            ".subnav-sub",
+            "div[role=\"toolbar\"] > .controls-group:nth-child(1) > .controls-label[aria-hidden=\"true\"]",
+            "#btnMesh"
+          ],
+          "details": [
+            {
+              "t": ".subnav-sub"
+            },
+            {
+              "t": "div[role=\"toolbar\"] > .controls-group:nth-child(1) > .controls-label[aria-hidden=\"true\"]"
+            },
+            {
+              "t": "#btnMesh"
+            },
+            {
+              "t": "#btnMirror"
+            },
+            {
+              "t": "#btnHud"
+            },
+            {
+              "t": ".controls-group:nth-child(3) > .controls-label[aria-hidden=\"true\"]"
+            },
+            {
+              "t": "#pauseLabel"
+            },
+            {
+              "t": "#btnStop"
+            },
+            {
+              "t": "#levelText"
+            },
+            {
+              "t": "div:nth-child(1) > .k"
+            },
+            {
+              "t": "div:nth-child(2) > .k"
+            },
+            {
+              "t": "div:nth-child(3) > .k"
+            },
+            {
+              "t": "#mPerclos > .metric-label"
+            },
+            {
+              "t": "#mClosure > .metric-label"
+            },
+            {
+              "t": "#mYawn > .metric-label"
+            },
+            {
+              "t": "#mMicro > .metric-label"
+            },
+            {
+              "t": "#mNod > .metric-label"
+            },
+            {
+              "t": "#mHeadDev > .metric-label"
+            },
+            {
+              "t": "#eventCount"
+            },
+            {
+              "t": ".empty"
+            },
+            {
+              "t": "p:nth-child(1)"
+            },
+            {
+              "t": "footer > p:nth-child(2)"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "工作台 · 普通 · 深色",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 18,
+          "target": [
+            "#overlayActions > .btn-primary.btn",
+            "div[role=\"toolbar\"] > .controls-group:nth-child(1) > .controls-label[aria-hidden=\"true\"]",
+            "#btnMesh"
+          ],
+          "details": [
+            {
+              "t": "#overlayActions > .btn-primary.btn"
+            },
+            {
+              "t": "div[role=\"toolbar\"] > .controls-group:nth-child(1) > .controls-label[aria-hidden=\"true\"]"
+            },
+            {
+              "t": "#btnMesh"
+            },
+            {
+              "t": "#btnMirror"
+            },
+            {
+              "t": "#btnHud"
+            },
+            {
+              "t": ".controls-group:nth-child(3) > .controls-label[aria-hidden=\"true\"]"
+            },
+            {
+              "t": "#pauseLabel"
+            },
+            {
+              "t": "#btnStop"
+            },
+            {
+              "t": "div:nth-child(1) > .k"
+            },
+            {
+              "t": "div:nth-child(2) > .k"
+            },
+            {
+              "t": "div:nth-child(3) > .k"
+            },
+            {
+              "t": "#mPerclos > .metric-label"
+            },
+            {
+              "t": "#mClosure > .metric-label"
+            },
+            {
+              "t": "#mYawn > .metric-label"
+            },
+            {
+              "t": "#mMicro > .metric-label"
+            },
+            {
+              "t": "#mNod > .metric-label"
+            },
+            {
+              "t": "#mHeadDev > .metric-label"
+            },
+            {
+              "t": ".empty"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "工作台 · 专业 · 浅色",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 32,
+          "target": [
+            ".subnav-sub",
+            "#btnProMode",
+            "div[role=\"toolbar\"] > .controls-group:nth-child(1) > .controls-label[aria-hidden=\"true\"]"
+          ],
+          "details": [
+            {
+              "t": ".subnav-sub"
+            },
+            {
+              "t": "#btnProMode"
+            },
+            {
+              "t": "div[role=\"toolbar\"] > .controls-group:nth-child(1) > .controls-label[aria-hidden=\"true\"]"
+            },
+            {
+              "t": "#btnMesh"
+            },
+            {
+              "t": "#btnMirror"
+            },
+            {
+              "t": "#btnHud"
+            },
+            {
+              "t": ".controls-group:nth-child(3) > .controls-label[aria-hidden=\"true\"]"
+            },
+            {
+              "t": "#pauseLabel"
+            },
+            {
+              "t": "#btnStop"
+            },
+            {
+              "t": "#levelText"
+            },
+            {
+              "t": "div:nth-child(1) > .k"
+            },
+            {
+              "t": "div:nth-child(2) > .k"
+            },
+            {
+              "t": "div:nth-child(3) > .k"
+            },
+            {
+              "t": "#mPerclos > .metric-label"
+            },
+            {
+              "t": "#mClosure > .metric-label"
+            },
+            {
+              "t": "#mYawn > .metric-label"
+            },
+            {
+              "t": "#mMicro > .metric-label"
+            },
+            {
+              "t": "#mNod > .metric-label"
+            },
+            {
+              "t": "#mHeadDev > .metric-label"
+            },
+            {
+              "t": "#mBlink > .metric-label"
+            },
+            {
+              "t": "#mBlink > .metric-value > .metric-unit"
+            },
+            {
+              "t": "#mBlinkDur > .metric-label"
+            },
+            {
+              "t": "#mBlinkDur > .metric-value > .metric-unit"
+            },
+            {
+              "t": ".empty"
+            },
+            {
+              "t": "tbody > tr:nth-child(1) > th"
+            },
+            {
+              "t": "tr:nth-child(2) > th"
+            },
+            {
+              "t": "tr:nth-child(3) > th"
+            },
+            {
+              "t": "tr:nth-child(4) > th"
+            },
+            {
+              "t": "tr:nth-child(5) > th"
+            },
+            {
+              "t": "p:nth-child(1)"
+            },
+            {
+              "t": "footer > p:nth-child(2)"
+            },
+            {
+              "t": "#footEnv"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "工作台 · 专业 · 深色",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 27,
+          "target": [
+            "#overlayActions > .btn-primary.btn",
+            "div[role=\"toolbar\"] > .controls-group:nth-child(1) > .controls-label[aria-hidden=\"true\"]",
+            "#btnMesh"
+          ],
+          "details": [
+            {
+              "t": "#overlayActions > .btn-primary.btn"
+            },
+            {
+              "t": "div[role=\"toolbar\"] > .controls-group:nth-child(1) > .controls-label[aria-hidden=\"true\"]"
+            },
+            {
+              "t": "#btnMesh"
+            },
+            {
+              "t": "#btnMirror"
+            },
+            {
+              "t": "#btnHud"
+            },
+            {
+              "t": ".controls-group:nth-child(3) > .controls-label[aria-hidden=\"true\"]"
+            },
+            {
+              "t": "#pauseLabel"
+            },
+            {
+              "t": "#btnStop"
+            },
+            {
+              "t": "div:nth-child(1) > .k"
+            },
+            {
+              "t": "div:nth-child(2) > .k"
+            },
+            {
+              "t": "div:nth-child(3) > .k"
+            },
+            {
+              "t": "#mPerclos > .metric-label"
+            },
+            {
+              "t": "#mClosure > .metric-label"
+            },
+            {
+              "t": "#mYawn > .metric-label"
+            },
+            {
+              "t": "#mMicro > .metric-label"
+            },
+            {
+              "t": "#mNod > .metric-label"
+            },
+            {
+              "t": "#mHeadDev > .metric-label"
+            },
+            {
+              "t": "#mBlink > .metric-label"
+            },
+            {
+              "t": "#mBlink > .metric-value > .metric-unit"
+            },
+            {
+              "t": "#mBlinkDur > .metric-label"
+            },
+            {
+              "t": "#mBlinkDur > .metric-value > .metric-unit"
+            },
+            {
+              "t": ".empty"
+            },
+            {
+              "t": "tbody > tr:nth-child(1) > th"
+            },
+            {
+              "t": "tr:nth-child(2) > th"
+            },
+            {
+              "t": "tr:nth-child(3) > th"
+            },
+            {
+              "t": "tr:nth-child(4) > th"
+            },
+            {
+              "t": "tr:nth-child(5) > th"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "报告页 · 浅色",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 40,
+          "target": [
+            ".subnav-sub",
+            "#btnProMode",
+            ".report-head > .hero-eyebrow"
+          ],
+          "details": [
+            {
+              "t": ".subnav-sub"
+            },
+            {
+              "t": "#btnProMode"
+            },
+            {
+              "t": ".report-head > .hero-eyebrow"
+            },
+            {
+              "t": "#rpSubtitle"
+            },
+            {
+              "t": ".report-meta-pill:nth-child(1)"
+            },
+            {
+              "t": ".report-meta-pill:nth-child(2)"
+            },
+            {
+              "t": ".report-meta-pill:nth-child(3)"
+            },
+            {
+              "t": ".report-meta-pill:nth-child(4)"
+            },
+            {
+              "t": "#rpLevelBadge"
+            },
+            {
+              "t": ".dist-seg"
+            },
+            {
+              "t": "#rpdAwakeVal"
+            },
+            {
+              "t": ".dist-stat-item:nth-child(1) > .l"
+            },
+            {
+              "t": "#rpdMildVal"
+            },
+            {
+              "t": ".dist-stat-item:nth-child(2) > .l"
+            },
+            {
+              "t": "#rpdModerateVal"
+            },
+            {
+              "t": ".dist-stat-item:nth-child(3) > .l"
+            },
+            {
+              "t": "#rpdSevereVal"
+            },
+            {
+              "t": ".dist-stat-item:nth-child(4) > .l"
+            },
+            {
+              "t": "thead > tr > th:nth-child(1)"
+            },
+            {
+              "t": "th:nth-child(2)"
+            },
+            {
+              "t": "th:nth-child(3)"
+            },
+            {
+              "t": ".card.pro-only:nth-child(6) > .card-head > .badge-info.badge"
+            },
+            {
+              "t": "#evalBadge"
+            },
+            {
+              "t": ".controls.no-print > .controls-group > .controls-label[aria-hidden=\"true\"]"
+            },
+            {
+              "t": "#btnPickVideo"
+            },
+            {
+              "t": "#rpParams > tbody > tr:nth-child(1) > th"
+            },
+            {
+              "t": "#rpParams > tbody > tr:nth-child(2) > th"
+            },
+            {
+              "t": "#rpParams > tbody > tr:nth-child(3) > th"
+            },
+            {
+              "t": "#rpParams > tbody > tr:nth-child(4) > th"
+            },
+            {
+              "t": "#rpParams > tbody > tr:nth-child(5) > th"
+            },
+            {
+              "t": "tr:nth-child(6) > th"
+            },
+            {
+              "t": "tr:nth-child(7) > th"
+            },
+            {
+              "t": "tr:nth-child(8) > th"
+            },
+            {
+              "t": "tr:nth-child(9) > th"
+            },
+            {
+              "t": "tr:nth-child(10) > th"
+            },
+            {
+              "t": "tr:nth-child(11) > th"
+            },
+            {
+              "t": "tr:nth-child(12) > th"
+            },
+            {
+              "t": "p:nth-child(1)"
+            },
+            {
+              "t": "footer > p:nth-child(2)"
+            },
+            {
+              "t": "#footEnv"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "报告页 · 深色",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 27,
+          "target": [
+            "#btnPrint",
+            ".dist-seg",
+            ".dist-stat-item:nth-child(1) > .l"
+          ],
+          "details": [
+            {
+              "t": "#btnPrint"
+            },
+            {
+              "t": ".dist-seg"
+            },
+            {
+              "t": ".dist-stat-item:nth-child(1) > .l"
+            },
+            {
+              "t": ".dist-stat-item:nth-child(2) > .l"
+            },
+            {
+              "t": ".dist-stat-item:nth-child(3) > .l"
+            },
+            {
+              "t": "#rpdSevereVal"
+            },
+            {
+              "t": ".dist-stat-item:nth-child(4) > .l"
+            },
+            {
+              "t": "thead > tr > th:nth-child(1)"
+            },
+            {
+              "t": "th:nth-child(2)"
+            },
+            {
+              "t": "th:nth-child(3)"
+            },
+            {
+              "t": ".card.pro-only:nth-child(6) > .card-head > .badge-info.badge"
+            },
+            {
+              "t": "#btnRunSens"
+            },
+            {
+              "t": "#evalBadge"
+            },
+            {
+              "t": ".controls.no-print > .controls-group > .controls-label[aria-hidden=\"true\"]"
+            },
+            {
+              "t": "#btnPickVideo"
+            },
+            {
+              "t": "#rpParams > tbody > tr:nth-child(1) > th"
+            },
+            {
+              "t": "#rpParams > tbody > tr:nth-child(2) > th"
+            },
+            {
+              "t": "#rpParams > tbody > tr:nth-child(3) > th"
+            },
+            {
+              "t": "#rpParams > tbody > tr:nth-child(4) > th"
+            },
+            {
+              "t": "#rpParams > tbody > tr:nth-child(5) > th"
+            },
+            {
+              "t": "tr:nth-child(6) > th"
+            },
+            {
+              "t": "tr:nth-child(7) > th"
+            },
+            {
+              "t": "tr:nth-child(8) > th"
+            },
+            {
+              "t": "tr:nth-child(9) > th"
+            },
+            {
+              "t": "tr:nth-child(10) > th"
+            },
+            {
+              "t": "tr:nth-child(11) > th"
+            },
+            {
+              "t": "tr:nth-child(12) > th"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "设置抽屉 · 浅色",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "help": "ARIA role should be appropriate for the element",
+          "nodes": 1,
+          "target": [
+            "#sheet"
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 43,
+          "target": [
+            ".subnav-sub",
+            "#btnProMode",
+            ".report-head > .hero-eyebrow"
+          ],
+          "details": [
+            {
+              "t": ".subnav-sub"
+            },
+            {
+              "t": "#btnProMode"
+            },
+            {
+              "t": ".report-head > .hero-eyebrow"
+            },
+            {
+              "t": "#rpSubtitle"
+            },
+            {
+              "t": ".report-meta-pill:nth-child(1)"
+            },
+            {
+              "t": ".report-meta-pill:nth-child(2)"
+            },
+            {
+              "t": ".report-meta-pill:nth-child(3)"
+            },
+            {
+              "t": ".report-meta-pill:nth-child(4)"
+            },
+            {
+              "t": "#rpLevelBadge"
+            },
+            {
+              "t": ".dist-seg"
+            },
+            {
+              "t": "#rpdAwakeVal"
+            },
+            {
+              "t": ".dist-stat-item:nth-child(1) > .l"
+            },
+            {
+              "t": "#rpdMildVal"
+            },
+            {
+              "t": ".dist-stat-item:nth-child(2) > .l"
+            },
+            {
+              "t": "#rpdModerateVal"
+            },
+            {
+              "t": ".dist-stat-item:nth-child(3) > .l"
+            },
+            {
+              "t": "#rpdSevereVal"
+            },
+            {
+              "t": ".dist-stat-item:nth-child(4) > .l"
+            },
+            {
+              "t": "thead > tr > th:nth-child(1)"
+            },
+            {
+              "t": "th:nth-child(2)"
+            },
+            {
+              "t": "th:nth-child(3)"
+            },
+            {
+              "t": ".card.pro-only:nth-child(6) > .card-head > .badge-info.badge"
+            },
+            {
+              "t": "#evalBadge"
+            },
+            {
+              "t": ".controls.no-print > .controls-group > .controls-label[aria-hidden=\"true\"]"
+            },
+            {
+              "t": "#btnPickVideo"
+            },
+            {
+              "t": "#rpParams > tbody > tr:nth-child(1) > th"
+            },
+            {
+              "t": "#rpParams > tbody > tr:nth-child(2) > th"
+            },
+            {
+              "t": "#rpParams > tbody > tr:nth-child(3) > th"
+            },
+            {
+              "t": "#rpParams > tbody > tr:nth-child(4) > th"
+            },
+            {
+              "t": "#rpParams > tbody > tr:nth-child(5) > th"
+            },
+            {
+              "t": "tr:nth-child(6) > th"
+            },
+            {
+              "t": "tr:nth-child(7) > th"
+            },
+            {
+              "t": "tr:nth-child(8) > th"
+            },
+            {
+              "t": "tr:nth-child(9) > th"
+            },
+            {
+              "t": "tr:nth-child(10) > th"
+            },
+            {
+              "t": "tr:nth-child(11) > th"
+            },
+            {
+              "t": "tr:nth-child(12) > th"
+            },
+            {
+              "t": "p:nth-child(1)"
+            },
+            {
+              "t": "footer > p:nth-child(2)"
+            },
+            {
+              "t": "#footEnv"
+            },
+            {
+              "t": ".field-group.pro-only:nth-child(1) > .group-title"
+            },
+            {
+              "t": ".field-group.pro-only:nth-child(2) > .group-title"
+            },
+            {
+              "t": ".field-group.pro-only:nth-child(3) > .group-title"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "设置抽屉 · 深色",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "help": "ARIA role should be appropriate for the element",
+          "nodes": 1,
+          "target": [
+            "#sheet"
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 31,
+          "target": [
+            "#btnPrint",
+            ".dist-seg",
+            ".dist-stat-item:nth-child(1) > .l"
+          ],
+          "details": [
+            {
+              "t": "#btnPrint"
+            },
+            {
+              "t": ".dist-seg"
+            },
+            {
+              "t": ".dist-stat-item:nth-child(1) > .l"
+            },
+            {
+              "t": ".dist-stat-item:nth-child(2) > .l"
+            },
+            {
+              "t": ".dist-stat-item:nth-child(3) > .l"
+            },
+            {
+              "t": "#rpdSevereVal"
+            },
+            {
+              "t": ".dist-stat-item:nth-child(4) > .l"
+            },
+            {
+              "t": "thead > tr > th:nth-child(1)"
+            },
+            {
+              "t": "th:nth-child(2)"
+            },
+            {
+              "t": "th:nth-child(3)"
+            },
+            {
+              "t": ".card.pro-only:nth-child(6) > .card-head > .badge-info.badge"
+            },
+            {
+              "t": "#btnRunSens"
+            },
+            {
+              "t": "#evalBadge"
+            },
+            {
+              "t": ".controls.no-print > .controls-group > .controls-label[aria-hidden=\"true\"]"
+            },
+            {
+              "t": "#btnPickVideo"
+            },
+            {
+              "t": "#rpParams > tbody > tr:nth-child(1) > th"
+            },
+            {
+              "t": "#rpParams > tbody > tr:nth-child(2) > th"
+            },
+            {
+              "t": "#rpParams > tbody > tr:nth-child(3) > th"
+            },
+            {
+              "t": "#rpParams > tbody > tr:nth-child(4) > th"
+            },
+            {
+              "t": "#rpParams > tbody > tr:nth-child(5) > th"
+            },
+            {
+              "t": "tr:nth-child(6) > th"
+            },
+            {
+              "t": "tr:nth-child(7) > th"
+            },
+            {
+              "t": "tr:nth-child(8) > th"
+            },
+            {
+              "t": "tr:nth-child(9) > th"
+            },
+            {
+              "t": "tr:nth-child(10) > th"
+            },
+            {
+              "t": "tr:nth-child(11) > th"
+            },
+            {
+              "t": "tr:nth-child(12) > th"
+            },
+            {
+              "t": ".field-group.pro-only:nth-child(1) > .group-title"
+            },
+            {
+              "t": ".field-group.pro-only:nth-child(2) > .group-title"
+            },
+            {
+              "t": ".field-group.pro-only:nth-child(3) > .group-title"
+            },
+            {
+              "t": "#btnSaveCfg"
+            }
+          ]
+        },
+        {
+          "id": "region",
+          "impact": "moderate",
+          "help": "All page content should be contained by landmarks",
+          "nodes": 2,
+          "target": [
+            ".subnav-title",
+            ".subnav-sub"
+          ]
+        }
+      ]
+    }
+  ]
+}

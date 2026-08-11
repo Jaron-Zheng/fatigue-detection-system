@@ -287,7 +287,8 @@ export function renderDistribution(container, ratios, labels, colors) {
     seg.style.background = colors[k];
     seg.textContent = pct >= 8 ? `${pct.toFixed(0)}%` : '';
     seg.title = `${labels[k]} ${pct.toFixed(1)}%`;
-    if (k === 'mild') seg.style.color = '#1d1d1f';
+    /* 文字色不再在这里硬编码：CSS 的 .dist-seg 用 --on-lv 分主题给出
+     * （浅色四档加深后配白字，深色高明度色配近黑字） */
     container.appendChild(seg);
   }
   if (!container.children.length) {

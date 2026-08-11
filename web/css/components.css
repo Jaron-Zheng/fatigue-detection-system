@@ -34,11 +34,12 @@
 }
 
 .btn-primary {
-  background: var(--accent);
+  /* 白字对比度由 --btn-bg 分主题保证（深色下 #0a84ff 对白字只有 3.6，换成更深的蓝） */
+  background: var(--btn-bg);
   color: var(--text-on-accent);
 }
 .btn-primary:hover:not(:disabled) {
-  background: var(--accent-hover);
+  background: var(--btn-bg-hover);
 }
 
 .btn-secondary {
@@ -842,10 +843,11 @@ select.select {
   flex: none;
 }
 
-/** 开关型按钮的激活态：淡主色底 + 主色文字（App Store get-button gray 风格） */
+/** 开关型按钮的激活态：淡主色底 + 主色文字（App Store get-button gray 风格）。
+ * 文字用 --accent-text：浅底上 #0071e3 碰见 accent-soft 底会跌破 4.5:1 */
 .pill.is-on {
   background: var(--ios-blue-soft);
-  color: var(--ios-blue);
+  color: var(--accent-text);
 }
 .pill.is-on:hover {
   background: var(--ios-blue-soft-hover);
@@ -854,15 +856,15 @@ select.select {
 /** 主操作 */
 .pill-primary {
   background: var(--ios-blue-soft);
-  color: var(--ios-blue);
+  color: var(--accent-text);
 }
 .pill-primary:hover:not(:disabled) {
   background: var(--ios-blue-soft-hover);
 }
 
-/** 强调实心（用于"结束检测"这类终结性操作） */
+/** 强调实心（用于“结束检测”这类终结性操作）：白字对比度同样走 --btn-bg */
 .pill-solid {
-  background: var(--ios-blue);
+  background: var(--btn-bg);
   color: #fff;
 }
 .pill-solid:hover:not(:disabled) {
@@ -1010,8 +1012,8 @@ body.pro-mode tr.pro-only {
   }
 }
 
-/* 专业模式开关的激活态 */
+/* 专业模式开关的激活态：文字同样走 --accent-text，避免浅底上跌破 4.5 */
 #btnProMode.is-on {
   background: var(--ios-blue-soft);
-  color: var(--ios-blue);
+  color: var(--accent-text);
 }
