@@ -76,21 +76,29 @@ function parseEnvSummary(ua) {
 }
 
 export class ReportView {
-  constructor() {
+  /**
+   * @param {object} [hooks] 可选外部回调
+   * @param {() => void} [hooks.onStart] 空态"开始一次检测"的启动动作。
+   *   E10 解耦：ReportView 是纯 UI 类，此前直接转触发 #btnStart 的 click
+   *   来复用启动链路；改为优先走注入的 onStart（由 app.js 提供完整链路），
+   *   未注入时保留转触发回退，向后兼容旧用法。
+   */
+  constructor(hooks = {}) {
+    this.hooks = hooks;
     this.chart = null;
     // 是否已渲染过至少一份报告：直接进入报告页且从未渲染时显示空态引导卡
     this.hasReport = false;
 
     /* ---------- 空态引导卡按钮 ----------
-     * 触发方式说明：ReportView 是纯 UI 类、不持有 app 引用；
-     * #btnStart 的监听器由 app.js 绑定，自带完整启动链路
-     * （状态机裁决、音频解锁、视图切换），转触发该按钮的 click
-     * 可以零重复地复用整条链路——比自定义事件协议再让 app.js
-     * 适配的做法侵入更小，也贴合本工程"按钮行为集中在 app.js"的分工。 */
+     * E10：优先走 hooks.onStart（app.js 注入，直接持有启动链路）；
+     * 未注入时回退转触发 #btnStart 的 click——该按钮的监听器由 app.js
+     * 绑定，自带完整启动链路（状态机裁决、音频解锁、视图切换），
+     * 转触发可以零重复地复用整条链路。 */
     const startBtn = document.getElementById('rpEmptyStart');
     if (startBtn) {
       startBtn.addEventListener('click', () => {
-        document.getElementById('btnStart')?.click();
+        if (typeof this.hooks.onStart === 'function') this.hooks.onStart();
+        else document.getElementById('btnStart')?.click();
       });
     }
     // 演示模式：app.js 已内置 ?demo= 处理（不认识的值回退完整剧本），
@@ -315,34 +323,69 @@ export class ReportView {
       { from: 52, to: 74, color: 'rgba(232,115,12,0.10)' },
       { from: 74, to: 100, color: 'rgba(229,50,45,0.10)' },
     ];
-    const chart = new LineChart(canvas, {
-      yMin: 0,
-      yMax: 100,
-      windowMs: Math.max(10000, durationMs),
-      yTicks: 5,
-      bands,
-      // 报告图是静态历史数据，开启悬停十字准线 + 数值气泡便于逐点读数；
-      // 实时工作台图不传该选项，保持轻量
-      interactive: true,
-      series: [
-        {
-          key: 'score',
-          color: cssVar('--chart-score', '#e8730c'),
-          width: 2,
-          fill: 'rgba(232,115,12,0.22)',
-        },
-      ],
-      refLines: [
-        { y: 30, color: cssVar('--lv-mild', '#d19a00'), label: '轻度 30' },
-        { y: 52, color: cssVar('--lv-moderate', '#e8730c'), label: '中度 52' },
-        { y: 74, color: cssVar('--lv-severe', '#e5322d'), label: '重度 74' },
-      ],
-    });
-    chart.resize();
     // 用最后一个样本的时间作为右边界，保证图形从 x=0 画到 x=duration
     const lastT = samples.length ? samples[samples.length - 1].t : durationMs;
-    chart.render(data, Math.max(10000, lastT));
-    this.chart = { chart, data, durationMs: Math.max(10000, lastT) };
+    const nowTs = Math.max(10000, lastT);
+    const winMs = Math.max(10000, durationMs);
+
+    /* E1 监听器累积修复：此前每次 render() 都 new LineChart(canvas,
+     * {interactive:true})，构造函数会往同一个 canvas 上再挂一对
+     * mousemove/mouseleave 监听且从不解绑——多轮会话后同 canvas 累积
+     * N 对监听器，旧实例闭包引用的数据无法回收，悬停一次触发 N 次
+     * 全量重绘。改为缓存实例（this._lineChart）：LineChart 本就把
+     * 配置（opts）与数据（render 参数）分离，重复渲染只需重设 opts
+     * 中的窗宽与取色再 render，监听器全生命周期只挂一次。 */
+    if (!this._lineChart) {
+      this._lineChart = new LineChart(canvas, {
+        yMin: 0,
+        yMax: 100,
+        windowMs: winMs,
+        yTicks: 5,
+        bands,
+        // 报告图是静态历史数据，开启悬停十字准线 + 数值气泡便于逐点读数；
+        // 实时工作台图不传该选项，保持轻量
+        interactive: true,
+        series: [
+          {
+            key: 'score',
+            color: cssVar('--chart-score', '#e8730c'),
+            width: 2,
+            fill: 'rgba(232,115,12,0.22)',
+          },
+        ],
+        refLines: [
+          { y: 30, color: cssVar('--lv-mild', '#d19a00'), label: '轻度 30' },
+          { y: 52, color: cssVar('--lv-moderate', '#e8730c'), label: '中度 52' },
+          { y: 74, color: cssVar('--lv-severe', '#e5322d'), label: '重度 74' },
+        ],
+      });
+    } else {
+      // 复用实例：窗宽随本次会话时长变化，颜色可能停在旧主题上，重渲前刷新
+      this._lineChart.opts.windowMs = winMs;
+      this._refreshChartColors();
+    }
+    this._lineChart.resize();
+    this._lineChart.render(data, nowTs);
+    this.chart = { chart: this._lineChart, data, durationMs: nowTs };
+  }
+
+  /**
+   * 重新读取报告图的 CSS 变量取色（曲线色与三条等级参考线）。
+   * 颜色是构造时从 CSS 变量解析成具体色值缓存在 opts 里的，
+   * 主题切换后 CSS 变量已换值、缓存仍是旧主题的，必须重取后重渲。
+   */
+  _refreshChartColors() {
+    if (!this._lineChart) return;
+    const o = this._lineChart.opts;
+    o.series[0].color = cssVar('--chart-score', '#e8730c');
+    const colors = [
+      cssVar('--lv-mild', '#d19a00'),
+      cssVar('--lv-moderate', '#e8730c'),
+      cssVar('--lv-severe', '#e5322d'),
+    ];
+    o.refLines.forEach((rl, i) => {
+      if (colors[i]) rl.color = colors[i];
+    });
   }
 
   /**
@@ -368,6 +411,8 @@ export class ReportView {
     }
     if (this._lastSummary) this._renderDist(document.getElementById('rpDist'), this._lastSummary);
     if (!this.chart) return;
+    // 主题切换后图表缓存的是旧主题的具体色值，重渲前重取（见 _refreshChartColors）
+    this._refreshChartColors();
     this.chart.chart.resize();
     this.chart.chart.render(this.chart.data, this.chart.durationMs);
   }

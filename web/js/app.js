@@ -124,7 +124,8 @@ class App {
     this.overlay = new Overlay($('#overlay'));
     this.dash = new Dashboard();
     this.timeline = new Timeline('timeline', 'eventCount');
-    this.report = new ReportView();
+    // 空态"开始一次检测"走与首页主按钮完全相同的启动链路（E10 解耦注入）
+    this.report = new ReportView({ onStart: () => this.start(false) });
     this.analysis = new AnalysisPanel(() => this.recorder.samples);
     /**
      * 视频离线评测面板。

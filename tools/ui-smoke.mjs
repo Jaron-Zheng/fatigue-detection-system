@@ -78,8 +78,16 @@ try {
   await sleep(800);
   assert(await evalJs(cdp, 'window.__fatigue.state') === 'report', '结束后进入 report 状态');
   assert(await evalJs(cdp, 'document.getElementById("viewReport").classList.contains("active")'), '报告视图已激活');
+  // 【F3a·审计加固】锁 switchView 下沉后的导航高亮：结束会话走 router.switchView
+  // 而非 gotoView，若高亮更新没下沉到统一出口，此处会漏高亮（view-router.js 单一事实来源）
+  assert(await evalJs(cdp, `(()=>document.querySelector('.gn-links a[data-goto="viewReport"]').getAttribute('aria-current') === 'page')()`),
+    '报告导航高亮 aria-current="page"');
   const reportTitle = await evalJs(cdp, 'document.getElementById("rpTitle")?.textContent || ""');
   assert(reportTitle.length > 0, `报告标题已渲染 (${reportTitle})`);
+  // 【F3b·审计加固】锁报告数值口径：rpAvgScore 必须是 toFixed(1) 的一位小数
+  // 或数据不足时的 '--'（report.js render 的两种合法输出），拦截整数/多位小数回归
+  const avgScore = await evalJs(cdp, `(()=>document.getElementById('rpAvgScore')?.textContent || '')()`);
+  assert(avgScore === '--' || /^\d+\.\d$/.test(avgScore), `平均疲劳指数为一位小数或 '--' (got '${avgScore}')`);
 
   console.log('\n[6] 控制台错误');
   assert(cdp.consoleErrors.length === 0, `无控制台错误 (${cdp.consoleErrors.length} 条)`);

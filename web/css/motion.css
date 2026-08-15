@@ -86,15 +86,6 @@
     color var(--dur-base) var(--ease);
 }
 
-/* ============================================================
-   5. 兼容旧的 .visible 类
-   ------------------------------------------------------------
-   app.js 里针对 .feat 的那套 IntersectionObserver 早于本文件存在，
-   它加的是 .visible。保留这条等价规则，两套机制同时在跑也不会打架。
-   ============================================================ */
-
-@media (prefers-reduced-motion: no-preference) {
-  .has-motion [data-reveal].visible {
-    opacity: 1;
-  }
-}
+/* （原第 5 节"兼容旧的 .visible 类"已删：它指向的 app.js 旧版
+ *  IntersectionObserver 代码已不存在（.feat 进场现走 data-reveal /
+ *  .is-inview 机制），该规则成为指向已删除代码的死规则。） */

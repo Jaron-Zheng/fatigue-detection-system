@@ -86,13 +86,18 @@ export class Overlay {
 
     // ---- 稀疏网格 ----
     if (r.showMesh) {
+      /* E4 批量绘制：156 个网格点原先逐点 beginPath/arc/fill（156 次
+       * 绘制调用）；改为单个 Path2D 收拢全部圆弧后一次 fill。每个圆弧
+       * 前先 moveTo 到圆心右侧（x+r, y），避免上一段弧的终点与下一段
+       * 弧的起点之间被补出连线。点还是那些点，肉眼完全等价。 */
       ctx.fillStyle = c.mesh;
+      const dots = new Path2D();
       for (const i of MESH_SPARSE) {
         const p = map(lm[i]);
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 1.15, 0, Math.PI * 2);
-        ctx.fill();
+        dots.moveTo(p.x + 1.15, p.y);
+        dots.arc(p.x, p.y, 1.15, 0, Math.PI * 2);
       }
+      ctx.fill(dots);
     }
 
     // ---- 轮廓 ----
@@ -114,11 +119,15 @@ export class Overlay {
       ctx.stroke();
 
       // 眼睛：闭眼变红并加粗，配合发光提升可读性
+      /* E4：shadowBlur 只在闭眼（异常告警）时开启——常态睁眼每帧
+       * 给两条眼轮廓开 5px 高斯模糊是纯开销（GPU 按像素扩散），
+       * 且睁眼本就绿色细线、无需强调；闭眼时的 12px 红色发光是
+       * 告警视觉强调，语义保留。 */
       const eyeColor = state && state.closed ? c.eyeClosed : c.eye;
       ctx.strokeStyle = eyeColor;
       ctx.lineWidth = state && state.closed ? 2.6 : 1.9;
       ctx.shadowColor = eyeColor;
-      ctx.shadowBlur = state && state.closed ? 12 : 5;
+      ctx.shadowBlur = state && state.closed ? 12 : 0;
       this._path(ctx, lm, CONTOUR_LEFT_EYE, map, true);
       ctx.stroke();
       this._path(ctx, lm, CONTOUR_RIGHT_EYE, map, true);

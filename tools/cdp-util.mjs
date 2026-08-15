@@ -122,7 +122,10 @@ export async function launchHeadless({ debugPort = 9333, width = 1920, height = 
     cdp.close();
     try { process.kill(-proc.pid); } catch { proc.kill(); }
     await sleep(1200); // 等浏览器进程完全释放临时目录
-    fs.rmSync(userDataDir, { recursive: true, force: true });
+    // 【F6·审计加固】Windows 上浏览器进程偶发未死透，rmSync 会抛 EBUSY/EPERM，
+    // 把已经全部通过的测试翻转成非零退出码。临时目录清理失败只应留下垃圾文件，
+    // 不应影响测试结论本身，故吞掉清理异常。
+    try { fs.rmSync(userDataDir, { recursive: true, force: true }); } catch { /* noop */ }
   }
 
   return { cdp, proc, userDataDir, close };

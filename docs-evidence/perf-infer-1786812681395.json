@@ -1,0 +1,110 @@
+{
+  "mode": "infer",
+  "minutes": 3,
+  "date": "2026-08-15T16:51:21.392Z",
+  "samples": [
+    {
+      "tMin": 0.59,
+      "jsHeapUsedMB": 6.7,
+      "jsHeapTotalMB": 11.69,
+      "domNodes": 3710,
+      "listeners": 84,
+      "state": "running",
+      "score": 9.783986862697486,
+      "phase": "清醒",
+      "samples": 33,
+      "inferMs": 69.96525096525096,
+      "frames": 259,
+      "longTasks": 159
+    },
+    {
+      "tMin": 1.09,
+      "jsHeapUsedMB": 5.6,
+      "jsHeapTotalMB": 17.44,
+      "domNodes": 3068,
+      "listeners": 84,
+      "state": "running",
+      "score": 9.999999999999995,
+      "phase": "清醒",
+      "samples": 87,
+      "inferMs": 61.44543828264759,
+      "frames": 559,
+      "longTasks": 353
+    },
+    {
+      "tMin": 1.59,
+      "jsHeapUsedMB": 5.47,
+      "jsHeapTotalMB": 18.19,
+      "domNodes": 3299,
+      "listeners": 84,
+      "state": "running",
+      "score": 9.999999999999995,
+      "phase": "清醒",
+      "samples": 141,
+      "inferMs": 58.39186046511628,
+      "frames": 860,
+      "longTasks": 527
+    },
+    {
+      "tMin": 2.09,
+      "jsHeapUsedMB": 10.81,
+      "jsHeapTotalMB": 26.44,
+      "domNodes": 3935,
+      "listeners": 84,
+      "state": "running",
+      "score": 9.999999999999995,
+      "phase": "清醒",
+      "samples": 195,
+      "inferMs": 57.92413793103448,
+      "frames": 1160,
+      "longTasks": 745
+    },
+    {
+      "tMin": 2.59,
+      "jsHeapUsedMB": 5.33,
+      "jsHeapTotalMB": 27.44,
+      "domNodes": 2932,
+      "listeners": 84,
+      "state": "running",
+      "score": 9.999999999999995,
+      "phase": "清醒",
+      "samples": 249,
+      "inferMs": 57.74366004112406,
+      "frames": 1459,
+      "longTasks": 949
+    },
+    {
+      "tMin": 3.09,
+      "jsHeapUsedMB": 8.22,
+      "jsHeapTotalMB": 27.69,
+      "domNodes": 3071,
+      "listeners": 84,
+      "state": "running",
+      "score": 9.999999999999995,
+      "phase": "清醒",
+      "samples": 304,
+      "inferMs": 57.1325369738339,
+      "frames": 1758,
+      "longTasks": 1130
+    }
+  ],
+  "longTaskStats": {
+    "count": 1130,
+    "dropped": 0,
+    "maxMs": 4210,
+    "p50Ms": 57,
+    "p95Ms": 84,
+    "p99Ms": 112,
+    "over200Ms": 1,
+    "totalBlockedMs": 73164
+  },
+  "final": {
+    "state": "running",
+    "inferMs": 57.1325369738339,
+    "delegate": "GPU",
+    "samples": 304
+  },
+  "heapFirstMB": 6.7,
+  "heapLastMB": 8.22,
+  "heapMaxMB": 10.81
+}

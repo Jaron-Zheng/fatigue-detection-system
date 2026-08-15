@@ -41,6 +41,10 @@ const SECURITY_HEADERS = {
   ].join('; '),
   'Cross-Origin-Opener-Policy': 'same-origin',
   'Cross-Origin-Resource-Policy': 'same-origin',
+  /* E8 纵深防御：全部资源同源且已发 CORP，补启 COEP require-corp
+   * 后浏览器会强制校验每个子资源携带 CORP 头，即使未来某个入口
+   * 意外引入了跨源资源也会被明确拦截，而非静默加载。 */
+  'Cross-Origin-Embedder-Policy': 'require-corp',
   'Permissions-Policy': 'camera=(self), microphone=(), geolocation=(), payment=(), usb=()',
   'Referrer-Policy': 'no-referrer',
 };
@@ -69,7 +73,9 @@ const MIME = {
   '.binarypb': 'application/octet-stream',
   '.txt': 'text/plain; charset=utf-8',
   '.md': 'text/markdown; charset=utf-8',
-  '.d.ts': 'text/plain; charset=utf-8',
+  /* 死配置清理：原 '.d.ts' 条目永不命中——path.extname('x.d.ts')
+   * 只取最后一个点、返回 '.ts'，因此任何 .d.ts 请求实际查的是 '.ts'
+   * 键（表中不存在，回落 application/octet-stream），'.d.ts' 键纯占位。 */
 };
 
 function contentType(filePath) {

@@ -228,9 +228,6 @@ strong {
 .t-body {
   font-size: var(--fs-body);
 }
-.t-callout {
-  font-size: var(--fs-callout);
-}
 .t-caption {
   font-size: var(--fs-caption);
   color: var(--text-secondary);
@@ -248,9 +245,7 @@ strong {
 .t-tertiary {
   color: var(--text-tertiary);
 }
-.t-center {
-  text-align: center;
-}
+/* （.t-center 已删：与 .ts-center 完全重复，HTML 实际用的是 .ts-center） */
 .ts-center {
   text-align: center;
 }

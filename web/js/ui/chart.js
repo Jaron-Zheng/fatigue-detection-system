@@ -283,17 +283,35 @@ export class LineChart {
 
   /**
    * 悬停交互（仅 interactive: true 的静态图，见构造函数注释）。
-   * 每次 mousemove 全量重绘一次：报告数据是静态数组、单次绘制成本低，
-   * 复用 render() 比另做增量图层简单，且天然继承主题/尺寸变化后的重绘。
+   * 报告数据是静态数组、单次绘制成本低，复用 render() 比另做增量
+   * 图层简单，且天然继承主题/尺寸变化后的重绘。
+   *
+   * E2 rAF 合帧节流：mousemove 事件最高可达 125Hz（高刷鼠标），
+   * 原先每次事件都全量重绘（7200 点报告图单次 2~6ms），一秒内白做
+   * 上百次。改为事件里只记录 _hoverX，pending 标志保证同一帧内多次
+   * 事件合并为下一次 rAF 的一次重绘——"每帧至多重绘一次"正好是屏幕
+   * 实际呈现上限，比 util/dom.js 的定时 throttle(ms) 更贴合该语义
+   * （throttle 的固定间隔与刷新率脱节，仍可能一帧画两次或跳帧）。
    */
   _bindHover() {
+    this._repaintPending = false;
     this.canvas.addEventListener('mousemove', (e) => {
       // offsetX 即相对 canvas 左上角的 CSS 像素坐标，与 this.w 同一坐标系
       this._hoverX = Math.max(0, Math.min(this.w, e.offsetX));
-      this._repaint();
+      this._scheduleRepaint();
     });
     this.canvas.addEventListener('mouseleave', () => {
       this._hoverX = null;
+      this._scheduleRepaint();
+    });
+  }
+
+  /** 把悬停重绘合并到下一动画帧；已有排程则直接复用 */
+  _scheduleRepaint() {
+    if (this._repaintPending) return;
+    this._repaintPending = true;
+    requestAnimationFrame(() => {
+      this._repaintPending = false;
       this._repaint();
     });
   }

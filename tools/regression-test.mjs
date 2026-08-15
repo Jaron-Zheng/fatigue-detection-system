@@ -185,17 +185,30 @@ assert(replay.valid, '离线重算成功');
 assert(replay.sampleCount === parsed.samples.length, '重算样本数一致');
 
 // pitch 负数在 CSV 中保持数值
+// 【F4·审计加固】原断言 assert(true, '...跳过') 恒真、零防护力；模拟链路的
+// pitch 符号不受控，不能作为断言依据。改为塞入受控负 pitch 样本走完整
+// 导出→解析→往返：csvCell（recorder.js）对数值与纯数字字面量一律放行、
+// 只对非数字文本套公式注入防护，断言口径与其一致——负数必须以 '-' 开头
+// 且不被误加 "'" 前缀（加了前缀 Excel 会把整列当文本，无法求平均/画图）。
 const pitchIdx = findColumn(headers, SAMPLE_COLUMNS.find((c) => c.key === 'pitch'));
-if (pitchIdx >= 0) {
-  const dataLines = csv.split('\r\n').slice(1).filter(Boolean);
-  const hasNegativePitch = dataLines.some((line) => {
-    const cols = line.split(',');
-    const v = cols[pitchIdx];
-    return v && v.startsWith('-') && !v.startsWith("'-");
-  });
-  // 模拟数据可能有负 pitch
-  assert(true, `pitch 列索引 ${pitchIdx}（负数检查跳过：${hasNegativePitch ? '有负数且格式正确' : '无负数样本'}）`);
-}
+assert(pitchIdx >= 0, `CSV 表头含 pitch 列 (idx=${pitchIdx})`);
+const recNeg = new SessionRecorder();
+recNeg.begin(calib, null);
+recNeg.sample(
+  { ts: 1000, sessionMs: 1000, perclos: 0.02, perclosReady: true, dataValid: true,
+    facePresent: true, closure: 0, maxClosureMs: 0, currentClosureMs: 0,
+    blinkRate: 15, avgBlinkMs: 120, yawnRate: 0, nodRate: 0, headDevRatio: 0 },
+  { score: 12.5, raw: 10.1, level: 'awake' },
+  { ear: 0.3, mar: 0.08, pitch: -3.86, yaw: 0.5, roll: -1.25 },
+);
+const csvNeg = recNeg.toCSV();
+const negCell = csvNeg.split('\r\n')[1].split(',')[pitchIdx];
+assert(negCell === '-3.86', `受控负 pitch 样本原样导出 '-3.86' (got '${negCell}')`);
+assert(negCell.startsWith('-') && !negCell.startsWith("'"), `负 pitch 未被 csvCell 误加 "'" 前缀 (got '${negCell}')`);
+const parsedNeg = parseSessionCsv(csvNeg);
+assert(!parsedNeg.error && parsedNeg.samples.length === 1,
+  `负 pitch 样本 CSV 往返解析成功 (${parsedNeg.error || parsedNeg.samples.length + ' 条'})`);
+assert(parsedNeg.samples[0]?.pitch === -3.86, `往返后 pitch 保持数值 -3.86 (got ${parsedNeg.samples[0]?.pitch})`);
 
 // ── 5. 语义否决：姿态假阳性不应锁死闭眼 ──
 console.log('\n[5] 语义否决（姿态 EAR 假阳性）');

@@ -100,6 +100,29 @@ async function setMetrics(cdp, width, height) {
   await sleep(600);
 }
 
+/**
+ * 【F1a·审计加固 P0】导航后校验页面真正加载，而不是盲等 4 秒就开拍。
+ * 服务器未启动/URL 写错时，浏览器会停留在 Chrome 错误页（ERR_CONNECTION_REFUSED），
+ * readyState 同样会到 complete，所以必须再断言业务标题；失败时给出可行动的
+ * 错误信息并以非零码退出，避免把错误页截图当成有效证据归档。
+ */
+async function assertPageLoaded(cdp) {
+  let readyState = '';
+  const deadline = Date.now() + 10000; // 上限 10s
+  while (Date.now() < deadline) {
+    readyState = await evalJs(cdp, `(()=>document.readyState)()`);
+    if (readyState === 'complete') break;
+    await sleep(300); // 轮询间隔 300ms
+  }
+  const title = String(await evalJs(cdp, `(()=>document.title)()`));
+  console.log('页面标题:', title);
+  if (readyState !== 'complete' || !title.includes('疲劳检测')) {
+    // 错误页（如 ERR_CONNECTION_REFUSED）会走到这里：标题不含「疲劳检测」
+    throw new Error(`页面未正确加载，标题=${title}——服务器是否启动？URL 是否正确？(readyState=${readyState})`);
+  }
+  return title;
+}
+
 async function main() {
   const targets = await waitForDebugger();
   const page = targets.find((t) => t.type === 'page');
@@ -112,78 +135,90 @@ async function main() {
 
   console.log('导航到', URL_TARGET);
   await cdp.send('Page.navigate', { url: URL_TARGET });
+  await assertPageLoaded(cdp); // 【F1a】替代原来的盲等 4s
   await sleep(4000); // 等字体/动效首屏稳定
 
-  console.log('页面标题:', await evalJs(cdp, 'document.title'));
+  /* 【F1c·审计加固】以下所有 evalJs 片段一律包 IIFE（(()=>{...})()）：
+     历史上 `var b` 在全局作用域与浏览器错误页脚本的真实变量冲突过，
+     IIFE 把所有临时变量圈在函数作用域内，杜绝全局污染。 */
 
   /* ---------- 首页 ---------- */
-  await evalJs(cdp, `document.documentElement.dataset.theme='light'`);
+  await evalJs(cdp, `(()=>{ document.documentElement.dataset.theme='light'; })()`);
   await sleep(400);
   await shot(cdp, 'home-light.png');
 
-  await evalJs(cdp, `window.scrollTo({top: Math.max(600, document.body.scrollHeight*0.45), behavior:'instant'})`);
+  await evalJs(cdp, `(()=>{ window.scrollTo({top: Math.max(600, document.body.scrollHeight*0.45), behavior:'instant'}); })()`);
   await sleep(1400); // 等滚动进场动效
   await shot(cdp, 'home-scroll-light.png');
 
-  await evalJs(cdp, `window.scrollTo({top: document.body.scrollHeight, behavior:'instant'})`);
+  await evalJs(cdp, `(()=>{ window.scrollTo({top: document.body.scrollHeight, behavior:'instant'}); })()`);
   await sleep(1400);
   await shot(cdp, 'home-bottom-light.png');
 
-  await evalJs(cdp, `window.scrollTo({top:0,behavior:'instant'}); document.documentElement.dataset.theme='dark'`);
+  await evalJs(cdp, `(()=>{ window.scrollTo({top:0,behavior:'instant'}); document.documentElement.dataset.theme='dark'; })()`);
   await sleep(500);
   await shot(cdp, 'home-dark.png');
 
   /* ---------- 工作台 ---------- */
-  await evalJs(cdp, `document.documentElement.dataset.theme='light'; document.querySelector('a[data-goto="viewWork"]')?.click()`);
+  await evalJs(cdp, `(()=>{ document.documentElement.dataset.theme='light'; document.querySelector('a[data-goto="viewWork"]')?.click(); })()`);
   await sleep(1200);
   await shot(cdp, 'workbench-light.png');
 
-  await evalJs(cdp, `document.documentElement.dataset.theme='dark'`);
+  await evalJs(cdp, `(()=>{ document.documentElement.dataset.theme='dark'; })()`);
   await sleep(400);
   await shot(cdp, 'workbench-dark.png');
 
-  /* 专业模式（在工作台打开） */
-  await evalJs(cdp, `document.documentElement.dataset.theme='light'; try{ var b=document.getElementById('btnProMode'); if(b && (b.getAttribute('aria-pressed')!=='true')) b.click(); }catch(e){}`);
+  /* 专业模式（在工作台打开）——原 var b 全局泄漏点，已圈进 IIFE 作用域 */
+  await evalJs(cdp, `(()=>{ document.documentElement.dataset.theme='light'; try{ const b=document.getElementById('btnProMode'); if(b && (b.getAttribute('aria-pressed')!=='true')) b.click(); }catch(e){} })()`);
   await sleep(800);
   await shot(cdp, 'workbench-pro-light.png');
 
   /* ---------- 设置抽屉 ---------- */
-  await evalJs(cdp, `try{ document.getElementById('btnSettings')?.click(); }catch(e){}`);
+  await evalJs(cdp, `(()=>{ try{ document.getElementById('btnSettings')?.click(); }catch(e){} })()`);
   await sleep(900);
   await shot(cdp, 'settings-drawer.png');
-  await evalJs(cdp, `try{ document.getElementById('btnCloseSheet')?.click(); }catch(e){}`);
+  await evalJs(cdp, `(()=>{ try{ document.getElementById('btnCloseSheet')?.click(); }catch(e){} })()`);
   await sleep(600);
 
   /* ---------- 报告页 ---------- */
-  await evalJs(cdp, `document.querySelector('a[data-goto="viewReport"]')?.click()`);
+  await evalJs(cdp, `(()=>{ document.querySelector('a[data-goto="viewReport"]')?.click(); })()`);
   await sleep(1200);
   await shot(cdp, 'report-light.png');
 
-  await evalJs(cdp, `document.documentElement.dataset.theme='dark'`);
+  await evalJs(cdp, `(()=>{ document.documentElement.dataset.theme='dark'; })()`);
   await sleep(400);
   await shot(cdp, 'report-dark.png');
 
   /* ---------- 1366×768 响应式 ---------- */
   await setMetrics(cdp, 1366, 768);
-  await evalJs(cdp, `document.documentElement.dataset.theme='light'; document.querySelector('a[data-goto="viewHome"]')?.click(); window.scrollTo({top:0,behavior:'instant'})`);
+  await evalJs(cdp, `(()=>{ document.documentElement.dataset.theme='light'; document.querySelector('a[data-goto="viewHome"]')?.click(); window.scrollTo({top:0,behavior:'instant'}); })()`);
   await sleep(1200);
   await shot(cdp, 'home-1366x768.png');
-  await evalJs(cdp, `document.querySelector('a[data-goto="viewWork"]')?.click()`);
+  await evalJs(cdp, `(()=>{ document.querySelector('a[data-goto="viewWork"]')?.click(); })()`);
   await sleep(1200);
   await shot(cdp, 'workbench-1366x768.png');
 
   /* ---------- 移动端 390×844 ---------- */
   await setMetrics(cdp, 390, 844);
-  await evalJs(cdp, `document.querySelector('a[data-goto="viewHome"]')?.click(); window.scrollTo({top:0,behavior:'instant'})`);
+  await evalJs(cdp, `(()=>{ document.querySelector('a[data-goto="viewHome"]')?.click(); window.scrollTo({top:0,behavior:'instant'}); })()`);
   await sleep(1200);
   await shot(cdp, 'home-mobile-390.png');
 
+  /* 【F1b·审计加固】控制台错误必须影响退出码：带错误跑完的截图链路
+     产出的是不可信证据，不能以 0 退出码混进"全绿"结果。 */
   console.log('控制台错误:', cdp.consoleErrors.length ? JSON.stringify(cdp.consoleErrors, null, 2) : '无');
+  const hadConsoleErrors = cdp.consoleErrors.length > 0;
   cdp.close();
   try { process.kill(-proc.pid); } catch { proc.kill(); }
   await sleep(1200); // 等浏览器进程完全释放临时目录
-  fs.rmSync(userDataDir, { recursive: true, force: true });
+  // 同 F6 审计结论：Windows 上浏览器未死透时 rmSync 抛 EBUSY，
+  // 不应把已完成的运行翻转成非零退出码
+  try { fs.rmSync(userDataDir, { recursive: true, force: true }); } catch { /* noop */ }
   console.log('截图完成 →', OUT_DIR);
+  if (hadConsoleErrors) {
+    console.error(`【F1b】检测到 ${cdp.consoleErrors.length} 条控制台错误（明细见上），判定为失败`);
+    process.exit(1);
+  }
 }
 
 main().catch(async (e) => { console.error('失败:', e.message); try { proc.kill(); } catch { /* noop */ } process.exit(1); });

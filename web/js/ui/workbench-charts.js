@@ -70,6 +70,15 @@ export class WorkbenchCharts {
     this.score.opts.series[1].color = cssVar('--chart-score', '#e8730c');
     this.eye.opts.series[0].color = cssVar('--chart-ear', '#0071e3');
     this.eye.opts.series[1].color = cssVar('--chart-mar', '#9a4bd6');
+    /* E3：疲劳指数图的三条等级参考线同样是构造时取色的，主题切换后
+     * 会残留旧主题色值，一并重取（眼图的阈值参考线由 draw() 每次用
+     * cssVar 现取，无需在此处理） */
+    const rl = this.score.opts.refLines;
+    if (rl.length >= 3) {
+      rl[0].color = cssVar('--lv-mild', '#d19a00');
+      rl[1].color = cssVar('--lv-moderate', '#e8730c');
+      rl[2].color = cssVar('--lv-severe', '#e5322d');
+    }
   }
 
   /**

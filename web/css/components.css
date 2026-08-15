@@ -127,14 +127,8 @@
   padding: var(--sp-6);
   transition: background-color var(--dur-base) var(--ease);
 }
-/* 可交互卡片：只过渡底色 */
-.card-hover {
-  cursor: pointer;
-  transition: background-color var(--dur-hover) var(--ease);
-}
-.card-hover:hover {
-  background: var(--bg-inset);
-}
+/* （.card-hover 已删：可交互卡片场景不存在，全站 HTML/JS 零引用；
+ *  hover 态由 .feat 等结构类自带。 */
 .card-compact {
   padding: var(--sp-5);
 }
@@ -695,6 +689,12 @@ body.pro-mode .metric-grid .metric:nth-last-child(-n + 2) {
   gap: var(--sp-3);
   justify-content: flex-end;
 }
+/* E7：设置抽屉底部那行即时生效提示（原内联样式收进类）。
+ * .sheet-foot 是右对齐 flex，说明文字需要垂直居中并压回次级灰。 */
+.sheet-foot-note {
+  align-self: center;
+  color: var(--text-tertiary);
+}
 
 .field-group {
   display: flex;
@@ -775,13 +775,11 @@ select.select {
    ------------------------------------------------------------
    Tesla 的按钮语法：4px 圆角、32/38px 高度档位、14px/500、
    透明底 → hover 换底色。没有胶囊，没有按压缩放。
-   --ios-blue 系列是历史别名，统一指向 Electric Blue。
+   （--ios-blue 三兄弟别名已删：全站 CSS/JS 零引用，统一用 --accent
+    系令牌；.pill-lg / .pill-glass 两个死类一并删除。）
    ============================================================ */
 
 :root {
-  --ios-blue: var(--accent);
-  --ios-blue-soft: var(--accent-soft);
-  --ios-blue-soft-hover: color-mix(in srgb, var(--accent) 14%, transparent);
   --pill-fill: transparent;
   --pill-fill-hover: var(--fill-quaternary);
   --pill-ease: background-color var(--dur-base) var(--ease),
@@ -863,27 +861,10 @@ select.select {
   filter: brightness(0.96);
 }
 
-.pill-lg {
-  min-height: 38px;
-  padding: 8px 20px;
-  font-size: var(--fs-body);
-}
 .pill-sm {
   min-height: 28px;
   padding: 5px 12px;
   font-size: var(--fs-caption);
-}
-
-/** 视频内浮层用的深色按钮（保留给全屏等场景） */
-.pill-glass {
-  background: rgba(255, 255, 255, 0.22);
-  color: #fff; /* lit-ok: 视频画面上的玻璃按钮，永远白字 */
-  box-shadow: none;
-  -webkit-backdrop-filter: blur(8px);
-  backdrop-filter: blur(8px);
-}
-.pill-glass:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.34);
 }
 
 /* ---- 控制条（视频下方） ---- */

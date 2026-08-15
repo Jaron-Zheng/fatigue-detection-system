@@ -305,6 +305,23 @@ function deepMerge(target, patch) {
     if (isPlainObject(current)) {
       if (!isPlainObject(v)) continue;
       deepMerge(target[k], v);
+    } else if (Array.isArray(current)) {
+      /* E9 数组形状校验（安全审计实测结论：localStorage 注入的
+       * fusion.levels 数组可被整组替换——数组不是纯对象，原先走
+       * typeof 'object'==='object' 的兜底分支直接赋值，任意形状的
+       * 元素会流入等级判定与 UI 文案）。此处要求补丁也是数组且
+       * 每个元素都是含 key、label 为字符串的对象，任一元素缺 key
+       * 或 label 非字符串即整组拒绝、保留默认数组。默认 levels
+       * （{key,label,min,max}）显然满足形状，合法配置不受影响。 */
+      if (
+        Array.isArray(v) &&
+        v.every(
+          (item) =>
+            isPlainObject(item) && item.key != null && typeof item.label === 'string'
+        )
+      ) {
+        target[k] = v;
+      }
     } else if (typeof current === typeof v && (typeof v !== 'number' || Number.isFinite(v))) {
       target[k] = v;
     }

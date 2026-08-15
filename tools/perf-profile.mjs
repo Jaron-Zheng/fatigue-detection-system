@@ -36,7 +36,9 @@ if (MODE === 'infer' && !fs.existsSync(FIXTURE)) {
 }
 
 const session = await launchHeadless({
-  debugPort: Number(get('--port', 9347)),
+  // 【F5·审计加固】默认调试端口 9347→9349：与 demo-url-test 旧默认 9347 撞车，
+  // 两者并行时必冲突（连到对方的页面），错开默认端口。
+  debugPort: Number(get('--port', 9349)),
   extraArgs: MODE === 'infer'
     ? ['--use-fake-device-for-media-stream', `--use-file-for-fake-video-capture=${FIXTURE}`]
     : [],

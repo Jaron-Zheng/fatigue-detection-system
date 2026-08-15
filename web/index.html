@@ -438,7 +438,7 @@
               </div>
               <h3 id="overlayTitle">正在认识你的眼睛</h3>
               <p id="overlayText">请正视摄像头，自然睁眼、放松表情。</p>
-              <div id="overlayActions" style="margin-top:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap"></div>
+              <div id="overlayActions" class="overlay-actions"></div>
             </div>
           </div>
         </div>
@@ -670,11 +670,10 @@
     <!-- 空态引导卡：直接进入报告页且本次打开从未生成过报告时显示
          （report.js 的 hasReport 标志控制），同时隐藏下方 .report-grid
          并禁用"下载报告"。 -->
-    <div class="card rp-empty no-print" id="rpEmpty" hidden
-         style="margin-top:var(--sp-5);padding:56px 24px;text-align:center">
-      <h2 class="t-title" style="font-size:24px;margin:0 0 8px">还没有检测记录</h2>
-      <p class="t-secondary" style="margin:0 0 24px">完成一次检测后，这里会生成完整的疲劳分析报告。</p>
-      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+    <div class="card rp-empty no-print report-empty" id="rpEmpty" hidden>
+      <h2 class="t-title report-empty-title">还没有检测记录</h2>
+      <p class="t-secondary report-empty-sub">完成一次检测后，这里会生成完整的疲劳分析报告。</p>
+      <div class="report-empty-actions">
         <button class="btn btn-primary btn-lg" id="rpEmptyStart" type="button">
           <svg width="18" height="18" aria-hidden="true"><use href="#i-play"></use></svg>
           开始一次检测
@@ -740,7 +739,7 @@
       </div>
 
       <!-- ===== 实验分析：参数敏感性 + 消融 + 离线复现（专业模式） ===== -->
-      <div class="card pro-only" style="grid-column:1/-1">
+      <div class="card pro-only span-full">
         <div class="card-head">
           <div class="card-title">
             <svg width="16" height="16" aria-hidden="true"><use href="#i-flask"></use></svg>
@@ -763,7 +762,7 @@
         <div id="sensConclusion" style="margin-top:14px"></div>
       </div>
 
-      <div class="card pro-only" style="grid-column:1/-1">
+      <div class="card pro-only span-full">
         <div class="card-head">
           <div class="card-title">
             <svg width="16" height="16" aria-hidden="true"><use href="#i-file-text"></use></svg>
@@ -784,7 +783,7 @@
       </div>
 
       <!-- ===== 视频离线评测：真人准确率验证（专业模式） ===== -->
-      <div class="card pro-only" style="grid-column:1/-1">
+      <div class="card pro-only span-full">
         <div class="card-head">
           <div class="card-title">
             <svg width="16" height="16" aria-hidden="true"><use href="#i-video"></use></svg>
@@ -892,7 +891,7 @@
         </div>
       </div>
 
-      <div class="card pro-only" style="grid-column:1/-1">
+      <div class="card pro-only span-full">
         <div class="card-head"><div class="card-title">检测参数与环境</div></div>
         <table class="tbl" id="rpParams"></table>
       </div>
@@ -1003,7 +1002,7 @@
     </div>
   </div>
   <div class="sheet-foot">
-    <span class="t-caption" style="align-self:center;color:var(--text-tertiary)">上面的开关即时生效；「保存」记住算法参数</span>
+    <span class="t-caption sheet-foot-note">上面的开关即时生效；「保存」记住算法参数</span>
     <button class="btn btn-ghost" id="btnResetCfg" type="button">恢复默认</button>
     <button class="btn btn-primary" id="btnSaveCfg" type="button">保存参数</button>
   </div>

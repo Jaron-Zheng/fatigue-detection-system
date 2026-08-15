@@ -17,6 +17,10 @@ export class FramePresenter {
     this.fps = 0;
     this.lastChartAt = 0;
     this.lowFpsWarnedAt = 0;
+    /* E5：explain() 计算降频——lastReason 缓存最近一次的结论文案，
+     * lastExplainAt 是计算时间戳（performance.now 毫秒） */
+    this.lastExplainAt = 0;
+    this.lastReason = null;
     this.stageEl = document.getElementById('stage');
   }
 
@@ -104,7 +108,17 @@ export class FramePresenter {
     this._applyStageLevel(fus);
     app.dash.setFaceState(ind.facePresent, ind.facePresent ? 0 : 2000);
     app.dash.setQualityState(ind);
-    app.dash.updateScore(fus, ind, FusionEngine.explain(fus, ind));
+    /* E5 explain() 计算降频：explain() 要遍历各指标拼结论文案，原先
+     * 每帧（20~30Hz）都算一遍，而写入端 setText 的值比对去重只省了
+     * DOM 写、省不了计算。并入 ~15Hz 分频档（与 updateHud 的 66ms
+     * 门槛同档）：首次（lastReason 为空）立即计算，保证 scoreReason
+     * 第一句不等待；其余帧复用缓存文案。文案本身随等级渐变，15Hz
+     * 的刷新对人眼完全无感。 */
+    if (this.lastReason === null || now - this.lastExplainAt >= 66) {
+      this.lastExplainAt = now;
+      this.lastReason = FusionEngine.explain(fus, ind);
+    }
+    app.dash.updateScore(fus, ind, this.lastReason);
     app.dash.updateMetrics(ind, fus, now);
 
     if (now - this.lastChartAt > 180) {

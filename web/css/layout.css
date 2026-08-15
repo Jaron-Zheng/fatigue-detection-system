@@ -931,6 +931,16 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   margin: 0 auto;
 }
 
+/* E7：舞台遮罩内操作按钮行（#overlayActions 原内联样式收进类）。
+ * 出错/暂停等场景由 JS 注入 1~2 个按钮，居中排布、窄屏换行。 */
+.overlay-actions {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
 /* 标定环形进度：Electric Blue 细环 */
 .calib-ring {
   width: 132px;
@@ -1209,6 +1219,32 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   color: var(--text);
 }
 
+/* ---- E7：报告空态引导卡（#rpEmpty）----
+ * 原先的 4 处内联样式（卡片留白、标题字号与下距、说明下距、按钮行
+ * 排布）收进类里，index.html 侧由 HTML 维护者替换为这些类名。
+ * 卡片底色与圆角仍由 .card 提供，此处只补空态专属的留白与排布。 */
+.report-empty {
+  margin-top: var(--sp-5);
+  padding: 56px 24px;
+  text-align: center;
+}
+/* 空态标题：t-title 同款 24px/500，补标题到说明的下距 */
+.report-empty-title {
+  font-size: var(--fs-title);
+  margin: 0 0 8px;
+}
+/* 空态说明文字：颜色由 .t-secondary 提供，此处只管下距 */
+.report-empty-sub {
+  margin: 0 0 24px;
+}
+/* 空态按钮行：主/次按钮居中排布，窄屏自动换行 */
+.report-empty-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
 /* ---- 报告主网格 ---- */
 .report-grid {
   display: grid;
@@ -1216,8 +1252,14 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   gap: var(--sp-5);
   align-items: stretch;
 }
+/* E7：跨整行卡片改用语义类 .span-full 承接（原先嗅探内联
+ * [style*="grid-column"] 的写法脆弱——内联样式一改版式就静默失效）。
+ * index.html 里 6 处 style="grid-column:1/-1" 由 HTML 侧统一替换为该类。 */
+.span-full {
+  grid-column: 1 / -1;
+}
 /* 全宽卡片恢复自动高度 */
-.report-grid > .card[style*="grid-column"] {
+.report-grid > .card.span-full {
   align-self: start;
 }
 /* 顶部三卡：内部 flex 列布局，让内容可以纵向填满 */
@@ -1243,10 +1285,6 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   gap: var(--sp-3);
 }
 
-/* ---- 报告概要卡 stat-item：大数字 Tesla 风格 ----
- * A1：概要数字原单独覆盖 30px，与基础 .stat-item .n 的 32px 分档；
- * 收敛后统一走 32px 概要档，此覆盖不再需要（保留注释存档）。 */
-
 /* ---- 行为表格卡内部可滚动 ---- */
 .report-event-table-wrap {
   flex: 1;
@@ -1264,38 +1302,6 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
 .report-event-table-wrap .tbl td:last-child,
 .report-event-table-wrap .tbl th:last-child {
   white-space: nowrap;
-}
-
-/* ---- 各状态时长占比卡 ---- */
-.dist-stat-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: var(--sp-2);
-  margin-top: var(--sp-4);
-  flex: 1;
-  align-content: start;
-}
-.dist-stat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: var(--sp-3) var(--sp-2);
-  border-radius: var(--r-sm);
-  background: var(--bg-inset);
-  gap: 3px;
-}
-.dist-stat-item .n {
-  font-family: var(--font-display);
-  font-size: var(--fs-body);
-  font-weight: var(--fw-medium);
-  line-height: 1.2;
-  font-variant-numeric: tabular-nums;
-}
-.dist-stat-item .l {
-  font-size: var(--fs-micro);
-  color: var(--text-tertiary);
-  font-weight: var(--fw-medium);
-  text-align: center;
 }
 
 /* ---- 窄屏响应 ---- */
@@ -1318,9 +1324,6 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   }
   .report-grid > .card:nth-child(3) {
     grid-column: auto;
-  }
-  .dist-stat-row {
-    grid-template-columns: repeat(2, 1fr);
   }
 }
 .stat-item {
