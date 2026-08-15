@@ -9,6 +9,15 @@
 import { $, setText } from '../util/dom.js';
 import { CONFIG } from '../config.js';
 
+/** 校准动作指令文案：时长取自 CONFIG.calibration.durationSec，
+ *  用户在设置面板改「标定时长」后文案随之更新，不写死数字。 */
+function calibInstructionText() {
+  return `请正视摄像头，保持自然睁眼（约 ${CONFIG.calibration.durationSec} 秒）。系统正在记录你平时睁眼的样子，作为判断闭眼的个人标准。`;
+}
+
+/** 校准完成反馈的停留时长（毫秒） */
+const CALIB_DONE_MS = 800;
+
 export class SessionStage {
   constructor() {
     this.overlay = $('#stageOverlay');
@@ -18,9 +27,13 @@ export class SessionStage {
     this.title = $('#overlayTitle');
     this.text = $('#overlayText');
     this.actions = $('#overlayActions');
+    this._calibFlashOn = false;
+    this._calibFlashTimer = null;
   }
 
   _frame(title, text, { ring = false } = {}) {
+    // 任何新阶段接管遮罩时，撤销"校准完成"反馈的挂起状态与定时器
+    this._cancelCalibFlash();
     this.overlay.hidden = false;
     this.ring.hidden = !ring;
     setText(this.title, title);
@@ -56,11 +69,7 @@ export class SessionStage {
   }
 
   showCalibrating(onSkip) {
-    this._frame(
-      '正在认识你的眼睛',
-      '请正视摄像头，自然睁眼、放松表情。系统在记录你平时睁眼的样子，作为判断闭眼的个人标准。',
-      { ring: true }
-    );
+    this._frame('正在认识你的眼睛', calibInstructionText(), { ring: true });
 
     /* 「直接开始」入口：
      * 首屏不再摆这个按钮（普通用户没有理由主动跳过校准），
@@ -87,9 +96,35 @@ export class SessionStage {
     setText(
       this.text,
       faceOk
-        ? '请正视摄像头，自然睁眼、放松表情。系统在记录你平时睁眼的样子，作为判断闭眼的个人标准。'
+        ? calibInstructionText()
         : '还没看到你的脸，倒计时已暂停。请让面部完整进入画面，光线不要太暗。'
     );
+  }
+
+  /**
+   * 校准完成反馈：在遮罩上短暂显示「校准完成，开始监测」，800ms 后自动收起。
+   * app 侧校准完成后会立刻调用 hide() 进入监测——反馈期内 hide 被挂起，
+   * 收起由这里的定时器负责；期间若有新阶段（如暂停）接管遮罩则立即让位。
+   */
+  showCalibrated() {
+    this._frame('校准完成', '开始监测');
+    this._calibFlashOn = true;
+    clearTimeout(this._calibFlashTimer);
+    this._calibFlashTimer = setTimeout(() => {
+      this._calibFlashOn = false;
+      this._calibFlashTimer = null;
+      this.overlay.hidden = true;
+      this.ring.hidden = true;
+    }, CALIB_DONE_MS);
+  }
+
+  /** 撤销校准完成反馈的挂起状态（新阶段接管时调用） */
+  _cancelCalibFlash() {
+    this._calibFlashOn = false;
+    if (this._calibFlashTimer) {
+      clearTimeout(this._calibFlashTimer);
+      this._calibFlashTimer = null;
+    }
   }
 
   showPaused() {
@@ -106,6 +141,9 @@ export class SessionStage {
   }
 
   hide() {
+    // "校准完成"反馈期内不接受外部 hide（app 完成校准后立即 hide 舞台进入监测），
+    // 遮罩由 showCalibrated 的定时器在 800ms 后真正收起
+    if (this._calibFlashOn) return;
     this.overlay.hidden = true;
     this.ring.hidden = true;
   }

@@ -226,7 +226,7 @@
         </button>
         <a class="btn btn-hero-ghost btn-lg" href="#tsFeatures">
           查看工作原理
-          <svg width="16" height="16" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
+          <svg width="18" height="18" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
         </a>
       </div>
 
@@ -257,7 +257,7 @@
             <g class="hud-gauge" transform="translate(636,176)">
               <path class="hud-gauge-track" d="M-64 34 A72 72 0 1 1 64 34"></path>
               <path class="hud-gauge-bar" d="M-64 34 A72 72 0 1 1 64 34" stroke-dasharray="276" stroke-dashoffset="254"></path>
-              <text class="hud-gauge-num" y="8">08</text>
+              <text class="hud-gauge-num" y="8">8</text>
               <text class="hud-gauge-label" y="34">疲劳指数</text>
             </g>
             <!-- 仪表右侧等级芯片 -->
@@ -320,19 +320,19 @@
       <div class="tile-stats" data-reveal-group>
         <div class="tile-stat" data-reveal>
           <span class="tile-stat-num"><b data-countup>478</b></span>
-          <span class="tile-stat-label">个面部关键点<br>逐帧定位</span>
+          <span class="tile-stat-label"><span class="tile-stat-unit">个面部关键点</span><span class="tile-stat-mod">逐帧定位</span></span>
         </div>
         <div class="tile-stat" data-reveal>
           <span class="tile-stat-num"><b data-countup>7</b></span>
-          <span class="tile-stat-label">类疲劳特征<br>融合判断</span>
+          <span class="tile-stat-label"><span class="tile-stat-unit">类疲劳特征</span><span class="tile-stat-mod">融合判断</span></span>
         </div>
         <div class="tile-stat" data-reveal>
           <span class="tile-stat-num"><b data-countup>4</b></span>
-          <span class="tile-stat-label">级预警<br>分档提醒</span>
+          <span class="tile-stat-label"><span class="tile-stat-unit">级预警</span><span class="tile-stat-mod">分档提醒</span></span>
         </div>
         <div class="tile-stat" data-reveal>
           <span class="tile-stat-num"><b data-countup>0</b></span>
-          <span class="tile-stat-label">字节上传<br>画面不出本机</span>
+          <span class="tile-stat-label"><span class="tile-stat-unit">字节上传</span><span class="tile-stat-mod">画面不出本机</span></span>
         </div>
       </div>
     </div>
@@ -342,7 +342,7 @@
   <div class="ts-section ts-section-ash ts-final">
     <div class="ts-section-inner ts-center">
       <h2 class="ts-section-title" data-reveal>现在就开始一次检测</h2>
-      <p class="ts-section-sub" data-reveal>只需要一个摄像头和几十秒的校准，不需要安装任何东西。</p>
+      <p class="ts-section-sub" data-reveal>只需要一个摄像头和 8 秒的个人校准，不需要安装任何东西。</p>
       <div class="ts-final-cta" data-reveal>
         <a class="btn btn-primary btn-lg" href="#" data-goto="viewWork">
           <svg width="18" height="18" aria-hidden="true"><use href="#i-video"></use></svg>
@@ -402,7 +402,7 @@
 
           <div class="hud" id="hud">
             <div class="hud-row"><span>眼睛闭合</span><b class="tnum" id="hudClosure">--</b></div>
-            <div class="hud-row pro-only"><span>眼睛开合度</span><b class="tnum" id="hudEar">--</b></div>
+            <div class="hud-row pro-only"><span>眼睛开合度（EAR 原始值）</span><b class="tnum" id="hudEar">--</b></div>
             <div class="hud-row pro-only"><span>嘴巴张开度</span><b class="tnum" id="hudMar">--</b></div>
             <div class="hud-row pro-only"><span>抬头低头</span><b class="tnum" id="hudPitch">--</b></div>
             <div class="hud-row pro-only"><span>左右转头</span><b class="tnum" id="hudYaw">--</b></div>
@@ -551,7 +551,7 @@
               <div class="metric-spark"><i id="kPerclos" style="width:0%"></i></div>
             </div>
 
-            <div class="metric" id="mClosure">
+            <div class="metric pro-only" id="mClosure">
               <div class="metric-label">当前闭眼时长</div>
               <div class="metric-value"><span class="tnum" id="vClosure">0.00</span><span class="metric-unit">秒</span></div>
               <div class="metric-sub" id="sClosure">睁眼</div>
@@ -586,7 +586,7 @@
               <div class="metric-spark"><i id="kHeadDev" style="width:0%"></i></div>
             </div>
 
-            <div class="metric pro-only" id="mBlink">
+            <div class="metric" id="mBlink">
               <div class="metric-label">眨眼频率<span class="hint" title="正常成人自发眨眼约 12–22 次/分；疲劳早期因代偿性唤醒而升高，进入深度嗜睡后转为降低且单次时长明显变长">?</span></div>
               <div class="metric-value"><span class="tnum" id="vBlink">0.0</span><span class="metric-unit">次/分</span></div>
               <div class="metric-sub" id="sBlink">正常区间 12–22</div>
@@ -667,13 +667,29 @@
       </div>
     </div>
 
+    <!-- 空态引导卡：直接进入报告页且本次打开从未生成过报告时显示
+         （report.js 的 hasReport 标志控制），同时隐藏下方 .report-grid
+         并禁用"下载报告"。 -->
+    <div class="card rp-empty no-print" id="rpEmpty" hidden
+         style="margin-top:var(--sp-5);padding:56px 24px;text-align:center">
+      <h2 class="t-title" style="font-size:24px;margin:0 0 8px">还没有检测记录</h2>
+      <p class="t-secondary" style="margin:0 0 24px">完成一次检测后，这里会生成完整的疲劳分析报告。</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-primary btn-lg" id="rpEmptyStart" type="button">
+          <svg width="18" height="18" aria-hidden="true"><use href="#i-play"></use></svg>
+          开始一次检测
+        </button>
+        <button class="btn btn-secondary btn-lg" id="rpEmptyDemo" type="button">看演示模式</button>
+      </div>
+    </div>
+
     <div class="report-grid">
       <div class="card">
         <div class="card-head"><div class="card-title">检测概要</div><span class="badge" id="rpLevelBadge">--</span></div>
         <div class="report-stat-grid">
           <div class="stat-item"><div class="n tnum" id="rpDuration">--</div><div class="l">检测时长</div></div>
           <div class="stat-item"><div class="n tnum" id="rpAvgScore">--</div><div class="l">平均疲劳指数</div></div>
-          <div class="stat-item"><div class="n tnum" id="rpPeakScore">--</div><div class="l">最高疲劳指数</div></div>
+          <div class="stat-item"><div class="n tnum" id="rpPeakScore">--</div><div class="l">峰值疲劳指数</div></div>
           <div class="stat-item"><div class="n tnum" id="rpAvgPerclos">--</div><div class="l">平均闭眼占比</div></div>
         </div>
         <!-- 有效覆盖率提示：人脸丢失的那段时间不参与统计，必须说清楚，
@@ -690,24 +706,7 @@
           <span><i style="background:var(--lv-moderate)"></i>中度 <b id="rpdModerate">0%</b></span>
           <span><i style="background:var(--lv-severe)"></i>重度 <b id="rpdSevere">0%</b></span>
         </div>
-        <div class="dist-stat-row">
-          <div class="dist-stat-item" style="color:var(--lv-awake)">
-            <span class="n tnum" id="rpdAwakeVal">--</span>
-            <span class="l">清醒</span>
-          </div>
-          <div class="dist-stat-item" style="color:var(--lv-mild)">
-            <span class="n tnum" id="rpdMildVal">--</span>
-            <span class="l">轻度</span>
-          </div>
-          <div class="dist-stat-item" style="color:var(--lv-moderate)">
-            <span class="n tnum" id="rpdModerateVal">--</span>
-            <span class="l">中度</span>
-          </div>
-          <div class="dist-stat-item" style="color:var(--lv-severe)">
-            <span class="n tnum" id="rpdSevereVal">--</span>
-            <span class="l">重度</span>
-          </div>
-        </div>
+        <!-- 原第三份"纯时长数字块"（dist-stat-row）已删除：与图例里的时长重复 -->
       </div>
 
       <div class="card">
@@ -718,10 +717,20 @@
             <tbody id="rpEventTable"></tbody>
           </table>
         </div>
+        <!-- "发出疲劳提醒"是系统动作而非检测到的行为，从表中移出，改为此处小字说明 -->
+        <p class="t-caption" id="rpAlarmNote" style="margin-top:10px" hidden></p>
       </div>
 
       <div class="card" style="grid-column:1/-1">
-        <div class="card-head"><div class="card-title">全程疲劳指数曲线</div></div>
+        <div class="card-head">
+          <div class="card-title">全程疲劳指数曲线</div>
+          <!-- 三条阈值参考线（虚线）的图例，与图内标线颜色一一对应 -->
+          <div class="legend">
+            <span><i style="background:var(--lv-mild)"></i>轻度 30</span>
+            <span><i style="background:var(--lv-moderate)"></i>中度 52</span>
+            <span><i style="background:var(--lv-severe)"></i>重度 74</span>
+          </div>
+        </div>
         <div class="chart-box" style="height:220px"><canvas id="rpChart" role="img" aria-label="本次会话全程疲劳指数曲线，含轻中重三级阈值参考线"></canvas></div>
       </div>
 
@@ -945,7 +954,7 @@
         <label class="switch"><input type="checkbox" id="swSpeech" checked aria-label="语音提示"><span class="switch-track"></span><span class="switch-thumb"></span></label>
       </div>
       <div class="field-row">
-        <div><div class="field-label">听一下提醒声</div><div class="field-desc">按中度疲劳的强度播放一次</div></div>
+        <div><div class="field-label">听一下提醒声</div><div class="field-desc">可选级别，对应强度的提醒声各播一次</div></div>
         <button class="btn btn-secondary btn-sm" id="btnTestAlarm" type="button">试听</button>
       </div>
     </div>
@@ -953,7 +962,7 @@
     <div class="field-group">
       <div class="group-title">画面</div>
       <div class="field-row">
-        <div><div class="field-label">摄像头</div><div class="field-desc">换了之后需要重新测一次基准</div></div>
+        <div><div class="field-label">摄像头</div><div class="field-desc">换了之后需要重新做一次个人校准</div></div>
         <select class="select" id="selCamera" aria-label="摄像头选择"></select>
       </div>
       <div class="field-row">
@@ -979,11 +988,24 @@
         <div><div class="field-label">演示模式</div><div class="field-desc">不用摄像头，用一段模拟的疲劳过程走通完整流程</div></div>
         <label class="switch"><input type="checkbox" id="swSimulate" aria-label="演示模式"><span class="switch-track"></span><span class="switch-thumb"></span></label>
       </div>
+      <div class="field-row">
+        <div><div class="field-label">演示从哪个阶段开始</div><div class="field-desc">完整剧本约 2.5 分钟；答辩时间紧可从中度开始</div></div>
+        <select class="select" id="selDemoStart" aria-label="演示起始阶段">
+          <option value="awake" selected>清醒（完整剧本）</option>
+          <option value="mild">轻度疲劳</option>
+          <option value="moderate">中度疲劳（最快出重度报警）</option>
+        </select>
+      </div>
+      <div class="field-row">
+        <div class="field-label" style="max-width:100%">更快的进入方式</div>
+        <div class="field-desc" style="max-width:100%">浏览器地址栏加 <code>?demo=moderate</code> 打开即演示（可选 awake / mild / moderate）</div>
+      </div>
     </div>
   </div>
   <div class="sheet-foot">
+    <span class="t-caption" style="align-self:center;color:var(--text-tertiary)">上面的开关即时生效；「保存」记住算法参数</span>
     <button class="btn btn-ghost" id="btnResetCfg" type="button">恢复默认</button>
-    <button class="btn btn-primary" id="btnSaveCfg" type="button">保存</button>
+    <button class="btn btn-primary" id="btnSaveCfg" type="button">保存参数</button>
   </div>
 </aside>
 

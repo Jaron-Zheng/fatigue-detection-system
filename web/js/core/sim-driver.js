@@ -86,6 +86,20 @@ const PHASES = [
 
 const CYCLE_MS = PHASES[PHASES.length - 1].until;
 
+/**
+ * 演示起点（答辩演示用）：把剧本时间直接快进到某阶段的开头。
+ *
+ * 只偏移起始时刻 t0，各阶段的时长、频率、阈值参数与判定窗口
+ * 分毫未动——这是唯一安全的"加速演示"方式（直接倍速会稀释
+ * PERCLOS 统计窗口，等级爬不上去，演示必翻车）。
+ * 各值 = 对应 PHASES[i].until 的前一段边界。
+ */
+const START_OFFSETS = {
+  awake: 0,
+  mild: 25000,
+  moderate: 62000,
+};
+
 /** 基线：模拟一位睁眼 EAR 约 0.30 的驾驶员 */
 const EAR_OPEN = 0.30;
 const EAR_CLOSED = 0.055;
@@ -99,6 +113,7 @@ export class SimulatedDriver {
 
   reset() {
     this.t0 = null;
+    this.startOffsetMs = 0;
     this.nextBlinkAt = 0;
     this.blinkUntil = 0;
     this.blinkDur = 0;
@@ -114,6 +129,14 @@ export class SimulatedDriver {
     this._rng = mulberry32(20250730); // 固定种子：结果可复现，便于对比实验
   }
 
+  /**
+   * 选择演示起点阶段（必须在会话开始前调用，reset 后生效于下一帧）。
+   * @param {'awake'|'mild'|'moderate'} stage
+   */
+  setStartStage(stage) {
+    this.startOffsetMs = START_OFFSETS[stage] ?? 0;
+  }
+
   currentPhase(elapsed) {
     const t = elapsed % CYCLE_MS;
     for (const p of PHASES) if (t < p.until) return { p, t };
@@ -126,7 +149,8 @@ export class SimulatedDriver {
    */
   frame(ts) {
     if (this.t0 === null) {
-      this.t0 = ts;
+      // 演示起点：把剧本时间快进到所选阶段的开头（见 START_OFFSETS）
+      this.t0 = ts - (this.startOffsetMs || 0);
       this.nextBlinkAt = ts + 800;
     }
     const elapsed = ts - this.t0;

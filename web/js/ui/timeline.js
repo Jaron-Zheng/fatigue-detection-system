@@ -7,6 +7,7 @@
 
 import { el, clear, setText } from '../util/dom.js';
 import { eventLabel } from '../core/recorder.js';
+import { CONFIG } from '../config.js';
 
 const ICON = {
   blink: '·',
@@ -26,6 +27,40 @@ const ICON = {
 };
 
 const MAX_ROWS = 120;
+
+/**
+ * 事件 detail 的展示层统一术语（type → 格式化函数）。
+ * message 由 core/indicators.js 生成，本层不拥有、不去改它；
+ * 这里只在渲染时按事件类型做替换，保证与指标卡、报告页用语一致。
+ */
+const DETAIL_BY_TYPE = {
+  // indicators 原文「长时闭眼 0.53s」→ 统一为「长闭眼 ≥0.5s：0.53 秒」，
+  // 阈值读 CONFIG（与事件判定同源），不写死数字
+  microsleep: (ev) =>
+    `长闭眼 ≥${(CONFIG.event.microsleepMs / 1000).toFixed(1)}s：${((ev.durationMs || 0) / 1000).toFixed(2)} 秒`,
+};
+
+/**
+ * 展示层事件分级（type → data-level）。
+ * 事件源自带的 level 多数笼统为 warn，这里按类型重新分配严重度；
+ * 未列出的类型沿用事件自带 level。报警事件单独处理（见 _level）。
+ */
+const LEVEL_BY_TYPE = {
+  microsleep: 'danger', // 长闭眼/微睡眠：疲劳强信号
+  critical_closure: 'danger', // 危险闭眼：最高级
+  yawn: 'warn',
+  nod: 'warn',
+  distraction: 'warn',
+  quality_low: 'warn',
+  face_lost: 'info',
+  face_found: 'info',
+  quality_ok: 'info',
+  calibrated: 'info',
+  session_start: 'info',
+  session_end: 'info',
+  blink: 'info',
+  yawn_end: 'info',
+};
 
 export class Timeline {
   constructor(hostId, countId) {
@@ -106,7 +141,7 @@ export class Timeline {
     const mm = String(Math.floor(rel / 60000)).padStart(2, '0');
     const ss = String(Math.floor((rel % 60000) / 1000)).padStart(2, '0');
     const detail = this._detail(ev);
-    return el('div.tl-item', { dataset: { level: ev.level || 'info' } }, [
+    return el('div.tl-item', { dataset: { level: this._level(ev) } }, [
       el('div.tl-time', { text: `${mm}:${ss}` }),
       el('div.tl-icon', { text: ICON[ev.type] || '•', 'aria-hidden': 'true' }),
       el('div.tl-text', {}, [
@@ -116,7 +151,16 @@ export class Timeline {
     ]);
   }
 
+  /** 展示层分级：报警事件用其疲劳等级，其余按类型映射 */
+  _level(ev) {
+    if (ev.type === 'alarm') return ev.alarmLevel || ev.level || 'warn';
+    return LEVEL_BY_TYPE[ev.type] || ev.level || 'info';
+  }
+
   _detail(ev) {
+    // 先查展示层术语映射，命中的类型不走 indicators 生成的 message
+    const fmt = DETAIL_BY_TYPE[ev.type];
+    if (fmt) return fmt(ev);
     if (ev.message) return ev.message;
     if (Number.isFinite(ev.durationMs)) return `持续 ${(ev.durationMs / 1000).toFixed(2)}s`;
     return '';

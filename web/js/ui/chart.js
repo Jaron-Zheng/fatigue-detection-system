@@ -29,6 +29,8 @@ export class LineChart {
    *   bands: [{ from, to, color }] 背景色带（用于疲劳等级区间）
    *   refLines: [{ y, color, label, dash }] 阈值参考线
    *   windowMs: 时间窗宽度
+   *   interactive: 悬停十字准线 + 数值气泡（报告等静态图用；
+   *                实时图每秒重绘 20+ 次，不开启以保持轻量）
    */
   constructor(canvas, opts = {}) {
     this.canvas = canvas;
@@ -42,11 +44,17 @@ export class LineChart {
       refLines: [],
       yTicks: 4,
       showXAxis: true,
+      interactive: false,
       ...opts,
     };
     this.w = 0;
     this.h = 0;
     this.ctx = canvas.getContext('2d');
+    // 悬停交互状态：_hoverX 为最近一次鼠标的画布内横坐标（null 表示未悬停）
+    this._hoverX = null;
+    this._lastData = null;
+    this._lastNow = null;
+    if (this.opts.interactive) this._bindHover();
   }
 
   resize() {
@@ -263,6 +271,94 @@ export class LineChart {
       ctx.globalAlpha = 1;
     }
     ctx.restore();
+
+    // ---- 悬停十字准线 + 数值气泡（interactive 模式）----
+    // 缓存最近一次的数据与右边界，mousemove 时复用同一条 render 路径重绘
+    this._lastData = data;
+    this._lastNow = nowTs;
+    if (this.opts.interactive && this._hoverX !== null) {
+      this._drawHover(ctx, { pad, plotW, plotH, t0, t1, X, Y });
+    }
+  }
+
+  /**
+   * 悬停交互（仅 interactive: true 的静态图，见构造函数注释）。
+   * 每次 mousemove 全量重绘一次：报告数据是静态数组、单次绘制成本低，
+   * 复用 render() 比另做增量图层简单，且天然继承主题/尺寸变化后的重绘。
+   */
+  _bindHover() {
+    this.canvas.addEventListener('mousemove', (e) => {
+      // offsetX 即相对 canvas 左上角的 CSS 像素坐标，与 this.w 同一坐标系
+      this._hoverX = Math.max(0, Math.min(this.w, e.offsetX));
+      this._repaint();
+    });
+    this.canvas.addEventListener('mouseleave', () => {
+      this._hoverX = null;
+      this._repaint();
+    });
+  }
+
+  _repaint() {
+    if (this._lastData) this.render(this._lastData, this._lastNow);
+  }
+
+  /** 在最近数据点处画竖直准线、点标记与"时间 · 数值"气泡 */
+  _drawHover(ctx, { pad, plotW, plotH, t0, t1, X, Y }) {
+    // 找横坐标最接近悬停位置的采样点：数据按时间升序且为静态数组，
+    // 线性扫描即可（几千点量级）；以第一个有数据的序列为准（报告图单序列）
+    const o = this.opts;
+    let best = null;
+    for (const s of o.series) {
+      const arr = this._lastData[s.key] || [];
+      for (const p of arr) {
+        if (!Number.isFinite(p.v) || p.t < t0 || p.t > t1) continue;
+        const d = Math.abs(X(p.t) - this._hoverX);
+        if (!best || d < best.d) best = { d, t: p.t, v: p.v, color: s.color };
+      }
+      if (best) break;
+    }
+    if (!best) return;
+    const x = X(best.t);
+    const y = Y(best.v);
+
+    // 竖直准线
+    ctx.save();
+    ctx.strokeStyle = cssVar('--chart-axis', '#aeaeb2');
+    ctx.globalAlpha = 0.55;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(Math.round(x) + 0.5, pad.top);
+    ctx.lineTo(Math.round(x) + 0.5, pad.top + plotH);
+    ctx.stroke();
+    ctx.restore();
+
+    // 悬停点标记
+    ctx.fillStyle = best.color;
+    ctx.beginPath();
+    ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 气泡文字：时间 mm:ss · 数值
+    const sec = Math.max(0, Math.round(best.t / 1000));
+    const label = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')} · ${best.v.toFixed(1)}`;
+    ctx.font = CHART_FONT;
+    const tw = ctx.measureText(label).width;
+    const bw = tw + 12;
+    const bh = 18;
+    const bx = Math.min(Math.max(pad.left, x - bw / 2), pad.left + plotW - bw);
+    let by = y - bh - 8;
+    if (by < pad.top) by = Math.min(y + 8, pad.top + plotH - bh); // 顶部越界改放点下方
+    ctx.fillStyle = cssVar('--bg-elevated', '#fff');
+    ctx.strokeStyle = cssVar('--chart-grid', 'rgba(0,0,0,0.12)');
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.rect(bx, by, bw, bh);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = cssVar('--text', '#1d1d1f');
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, bx + bw / 2, by + bh / 2 + 0.5);
   }
 
   _fmtTick(v, range) {
@@ -285,7 +381,9 @@ export function renderDistribution(container, ratios, labels, colors) {
     seg.className = 'dist-seg';
     seg.style.flexBasis = pct + '%';
     seg.style.background = colors[k];
-    seg.textContent = pct >= 8 ? `${pct.toFixed(0)}%` : '';
+    // 精度与图例（title、dist-legend）一致取 1 位小数，避免同一数字两处口径不同；
+    // 过窄分段（<8%）放不下文字，靠 title 悬浮提示补全
+    seg.textContent = pct >= 8 ? `${pct.toFixed(1)}%` : '';
     seg.title = `${labels[k]} ${pct.toFixed(1)}%`;
     /* 文字色不再在这里硬编码：CSS 的 .dist-seg 用 --on-lv 分主题给出
      * （浅色四档加深后配白字，深色高明度色配近黑字） */

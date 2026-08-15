@@ -121,8 +121,10 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-links a[aria-curren
   background: var(--btn-bg-hover);
 }
 .gn-icon {
-  width: 32px;
-  height: 32px;
+  /* A9：点击热区从 32px 扩到 36px（触屏/指针最低易点尺寸），
+   * 内部 svg 仍为 17px，视觉图标尺寸不变 */
+  width: 36px;
+  height: 36px;
   display: grid;
   place-items: center;
   border-radius: var(--r-sm);
@@ -333,7 +335,9 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
 }
 .hud-gauge-num {
   font-family: var(--font-display);
-  font-size: 44px;
+  /* A1：主数字档收敛——44px 并入 40px 档（与 .gauge-num 车速表同档），
+   * 全站"大数字"只保留 40(主)/32(概要) 两档 */
+  font-size: 40px;
   font-weight: var(--fw-medium);
   fill: var(--hero-text);
   text-anchor: middle;
@@ -346,19 +350,24 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
 }
 .vision-product figcaption {
   margin-top: var(--sp-3);
-  /* 用 --hero-muted（白底 5.9:1）而不是 --hero-faint（3.3，小字不达标） */
+  /* 用 --hero-muted（浅色白底 6.3:1 / 深色固定灰，两主题均达标） */
   color: var(--hero-muted);
-  font-size: var(--fs-caption);
+  /* A8：图注从 12px 升到 13px——图注是插图语义的一部分，
+   * 12px 在 820px 宽插图下存在感不足；13px 介于 caption 与 body 之间的说明档 */
+  font-size: 13px;
   text-align: center;
 }
 
 /* ---- 白底通用段落 ---- */
+/* A4：段落垂直节奏统一 48px（原 80px 与 tight 档 64px 混排造成断拍），
+ * 水平 padding 维持各断点原值（桌面 24px / 窄屏 20px）不动 */
 .ts-section {
-  padding: var(--sp-20) var(--sp-6);
+  padding: var(--sp-12) var(--sp-6);
   background: var(--tile-canvas);
 }
+/* tight 档同步对齐 48px——统计条区段不再出现 40/48 的上下断拍 */
 .ts-section-tight {
-  padding-top: var(--sp-16);
+  padding-top: var(--sp-12);
 }
 .ts-section-ash {
   background: var(--tile-parchment);
@@ -472,6 +481,21 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   color: var(--text-tertiary);
   text-align: center;
 }
+/* A3：统计 tile 说明文字拆成两行（unit 主体 / mod 补充）。
+ * unit 承载主要语义，提为次级文字档；mod 是补充修饰，降为弱档 + 12px，
+ * 两行紧凑（1.3 行高）保持 tile 原有居中对齐。 */
+.tile-stat-unit {
+  display: block;
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+.tile-stat-mod {
+  display: block;
+  color: var(--text-tertiary);
+  font-size: var(--fs-caption);
+  line-height: 1.3;
+  margin-top: 1px;
+}
 
 @media (max-width: 640px) {
   .tile-stats {
@@ -538,8 +562,10 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   .ts-section {
     padding: var(--sp-12) var(--sp-5);
   }
+  /* A4：tight 档顶部原 40px 与段落底部 48px 断拍，统一 48px；
+   * 水平 20px 维持不变 */
   .ts-section-tight {
-    padding-top: var(--sp-10);
+    padding-top: var(--sp-12);
   }
   .ts-hero-cta {
     margin: var(--sp-6) 0 var(--sp-8);
@@ -769,6 +795,18 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   overflow: hidden;
   background: #0a0a0b; /* lit-ok: 视频舞台两主题都保持近黑（视频容器） */
   aspect-ratio: 4 / 3;
+  /* 等级描边（frame-presenter 按疲劳等级切换类）：
+   * 中度起视频边框持续描边，开车余光也能察觉（第四轮真人走查）。
+   * 用 outline 而不是 box-shadow——DESIGN.md 的 Tesla 纪律是全站零投影
+   * （design-audit R2 会拦截任何 box-shadow），outline 内嵌同样成环 */
+}
+.stage.level-warn {
+  outline: 3px solid var(--lv-moderate);
+  outline-offset: -3px;
+}
+.stage.level-danger {
+  outline: 4px solid var(--lv-severe);
+  outline-offset: -4px;
 }
 .stage video,
 .stage canvas {
@@ -800,11 +838,17 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   gap: 5px;
   padding: 10px 14px;
   border-radius: var(--r-sm);
-  background: rgba(23, 26, 32, 0.62); /* lit-ok: 视频画面上的固定暗色面板 */
+  /* A7：叠字底改为纯黑半透明 + 背景模糊——画面遇亮背景（逆光/白天）时
+   * 白字仍可读（最坏纯白背景下混色后约 #737373，白字对比 4.7:1）；
+   * rgba(0,0,0,α) 属主题无关中性色，浅深主题同样适用 */
+  background: rgba(0, 0, 0, 0.55);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   color: #fff; /* lit-ok: 视频画面上暗底的白字，主题无关 */
   font-size: var(--fs-caption);
   font-variant-numeric: tabular-nums;
-  line-height: 1.45;
+  /* A10：1.45 归入 1.5 主旋律（12px 小字行间呼吸更匀） */
+  line-height: 1.5;
   pointer-events: none;
   transition: opacity var(--dur-base) var(--ease);
 }
@@ -838,7 +882,10 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   gap: 6px;
   padding: 5px 12px;
   border-radius: var(--r-sm);
-  background: rgba(23, 26, 32, 0.62); /* lit-ok: 视频画面上的固定暗色标签底 */
+  /* A7：与 .hud 同款墨底 + 模糊，亮画面下白字不失效 */
+  background: rgba(0, 0, 0, 0.55);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   color: #fff; /* lit-ok: 视频画面上暗底的白字（状态标签） */
   font-size: var(--fs-caption);
   font-weight: var(--fw-medium);
@@ -846,6 +893,15 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
 }
 .stage-pill .dot {
   background: var(--lv-awake);
+}
+
+/* A5：控件条按钮字号统一——components.css 里主 .pill 14px 与 .pill-sm 12px 混排，
+ * 此处按第四轮审计统一为 13px、行高 1.2（原 line-height:1 过紧，
+ * 中文两字按钮的上下留白几乎为零）。
+ * 本文件在 components.css 之后加载，同组合选择器直接生效。 */
+.controls .pill {
+  font-size: 13px;
+  line-height: 1.2;
 }
 
 /* 舞台遮罩（未开始 / 标定中 / 出错） */
@@ -905,7 +961,8 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   display: grid;
   place-items: center;
   font-family: var(--font-display);
-  font-size: 34px;
+  /* A1：概要数字档收敛——34px 并入 32px（与报告概要 .stat-item .n 同档） */
+  font-size: 32px;
   font-weight: var(--fw-medium);
   font-variant-numeric: tabular-nums;
 }
@@ -973,6 +1030,13 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   border-radius: 1px;
   margin-right: 6px;
   vertical-align: middle;
+}
+
+/* ---- 事件时间线图标字号补丁 ----
+ * A1：components.css 里 .tl-icon 字面量 11px，与全站 12px 下限破档；
+ * 本文件在 components.css 之后加载，同特异性覆盖为 12px 档。 */
+.tl-icon {
+  font-size: var(--fs-caption);
 }
 
 /* ============ 报警视觉层 ============ */
@@ -1051,8 +1115,13 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
 .alarm-banner[data-level='moderate'] {
   box-shadow: inset 4px 0 0 0 var(--caution), inset 4px 0 0 1px rgba(255, 255, 255, 0.12);
 }
+/* A6：severe 整幅反色为红底白字/近黑字——最高级报警要"一眼跳出来"。
+ * 底用 --danger、字用 --on-lv（浅色 #c11f1a+白 6.0:1 / 深色 #f87171+近黑 6.1:1，
+ * 两主题恒 ≥4.5 达标）；原左侧红条在红底上不可见，改为中性深色条。 */
 .alarm-banner[data-level='severe'] {
-  box-shadow: inset 4px 0 0 0 var(--danger), inset 4px 0 0 1px rgba(255, 255, 255, 0.12);
+  background: var(--danger);
+  color: var(--on-lv);
+  box-shadow: inset 4px 0 0 0 rgba(0, 0, 0, 0.3);
 }
 .alarm-banner .ab-icon {
   width: 20px;
@@ -1174,10 +1243,9 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   gap: var(--sp-3);
 }
 
-/* ---- 报告概要卡 stat-item：大数字 Tesla 风格 ---- */
-.report-stat-grid .stat-item .n {
-  font-size: 30px;
-}
+/* ---- 报告概要卡 stat-item：大数字 Tesla 风格 ----
+ * A1：概要数字原单独覆盖 30px，与基础 .stat-item .n 的 32px 分档；
+ * 收敛后统一走 32px 概要档，此覆盖不再需要（保留注释存档）。 */
 
 /* ---- 行为表格卡内部可滚动 ---- */
 .report-event-table-wrap {
@@ -1273,7 +1341,8 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   font-size: var(--fs-caption);
   color: var(--text-secondary);
   margin-top: 3px;
-  line-height: 1.4;
+  /* A10：1.4 归入 1.5 主旋律 */
+  line-height: 1.5;
 }
 
 /* 分布色带 */

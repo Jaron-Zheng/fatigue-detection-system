@@ -25,17 +25,19 @@ export class ViewRouter {
     });
 
     /**
-     * 全局导航的三个入口。
+     * 所有带 data-goto 的链接（顶栏导航 + 首页各处 CTA）。
      *
-     * 用事件委托而不是逐个绑定：链接是纯展示元素，
+     * 事件委托到 document：重设计后的 CTA 分布在首页各段落里，
+     * 逐个按容器圈定会漏绑（第四轮真人走查发现首页收尾段
+     * 「进入实时检测」点击后只跳 # 不进工作台）。
      * 真正的规则集中在 gotoView 里一处，改起来不会漏。
      */
-    for (const link of document.querySelectorAll('.gn-links a[data-goto]')) {
-      link.addEventListener('click', (e) => {
-        e.preventDefault();
-        this.gotoView(link.dataset.goto);
-      });
-    }
+    document.addEventListener('click', (e) => {
+      const link = e.target.closest('a[data-goto]');
+      if (!link) return;
+      e.preventDefault();
+      this.gotoView(link.dataset.goto);
+    });
 
     // 退出全屏时（包括 Esc 键）重新测量 Canvas
     document.addEventListener('fullscreenchange', () => {
@@ -68,6 +70,14 @@ export class ViewRouter {
     for (const v of document.querySelectorAll('.view')) {
       v.classList.toggle('active', v.id === id);
     }
+    // 导航高亮随一切视图切换更新（单一事实来源）：
+    // start()/stopSession 走的是 switchView 而非 gotoView，
+    // 只在 gotoView 里更新会漏掉「开始检测」「结束生成报告」两条路径
+    for (const link of document.querySelectorAll('.gn-links a[data-goto]')) {
+      const active = link.dataset.goto === id;
+      if (active) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
+    }
     // 视图切换后布局才确定，Canvas 需要在下一帧重新测量尺寸
     if (id === 'viewWork') {
       requestAnimationFrame(() => {
@@ -92,12 +102,6 @@ export class ViewRouter {
 
     this.switchView(id);
     if (id === 'viewWork' && app.state === SessionState.IDLE) app.showIdleStage();
-
-    for (const link of document.querySelectorAll('.gn-links a[data-goto]')) {
-      const active = link.dataset.goto === id;
-      if (active) link.setAttribute('aria-current', 'page');
-      else link.removeAttribute('aria-current');
-    }
 
     requestAnimationFrame(() => {
       refreshMotion(target);

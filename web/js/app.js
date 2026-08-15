@@ -350,8 +350,8 @@ class App {
     stopSession(this);
   }
 
-  _setSimulate(on) {
-    setSimulate(this, on);
+  _setSimulate(on, startStage = null) {
+    setSimulate(this, on, startStage);
   }
 
   /* ==================== 主循环帧回调 ==================== */
@@ -432,6 +432,8 @@ class App {
       toastOk('校准完成', `已记住你睁眼的样子，判定标准按你本人调好了 · 质量${r.qualityLabel}`);
     }
     if (!this.sm.send(SessionEvent.CALIBRATION_DONE, { calibration: r })) return;
+    // 校准完成瞬间在遮罩上短暂反馈 800ms（session-stage.showCalibrated 自己收尾）
+    this.stage.showCalibrated();
     this._beginRunning();
     this.timeline.add([
       {
@@ -448,6 +450,27 @@ class App {
 
 const app = new App();
 installTestHooks(app, SessionState);
+
+/* ==================== ?demo= 一键演示（答辩直通车） ====================
+ * 打开即自动进入演示模式并跳到工作台，省去「齿轮 → 滚到底 → 开开关 → 关抽屉」四步。
+ *   ?demo=1         从头（清醒）开始完整剧本
+ *   ?demo=mild      从轻度疲劳阶段开始
+ *   ?demo=moderate  从中度疲劳阶段开始（约 30 秒出中度提醒，约 40 秒后升重度）
+ * 提示：浏览器自动播放策略下报警声音需要一次任意点击/按键才会响，
+ * 演示前先点一下页面即可。 */
+(() => {
+  const demo = new URLSearchParams(location.search).get('demo');
+  if (!demo) return;
+  const stage = ['awake', 'mild', 'moderate'].includes(demo) ? demo : 'awake';
+  // 走与「设置里开演示开关 + 点开始检测」完全相同的语义：
+  // IDLE 态不能用 SIM_ENTER（状态机只允许会话中途切入），
+  // 配置 simulate 后经 start() 的 START→BOOTING→BEGIN_RUNNING 正规链路进入
+  app.settings.swSimulate.checked = true;
+  app.simulate = true;
+  app.sim.reset();
+  app.sim.setStartStage(stage);
+  app.start(true);
+})();
 
 /* ==================== PWA（可选，默认关闭） ====================
  * 日常开发不注册 Service Worker（源码 no-store，改完刷新即生效）；

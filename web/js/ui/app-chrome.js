@@ -125,9 +125,15 @@ export class AppChrome {
         return '未知';
       }
     })();
+    // GPU 串友好化：去掉 "(0x000021C4)" 这类十六进制设备 ID，
+    // 超过 48 字符截断加省略号；origin 只留 host，不带协议
+    const gpu = String(gl)
+      .replace(/\s*\(0x[0-9A-Fa-f]+\)/g, '')
+      .trim();
+    const gpuText = gpu.length > 48 ? gpu.slice(0, 48) + '…' : gpu;
     setText(
       $('#footEnv'),
-      `运行环境：${navigator.hardwareConcurrency || '?'} 逻辑核心 · ${gl} · ${location.origin}`
+      `运行环境：${navigator.hardwareConcurrency || '?'} 逻辑核心 · ${gpuText} · ${location.host}`
     );
   }
 }

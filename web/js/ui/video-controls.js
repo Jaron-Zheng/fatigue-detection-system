@@ -16,6 +16,23 @@ function setToggle(btn, on) {
 }
 
 /**
+ * 同步静音按钮的开/关状态标识。
+ * btnMute 控制的是报警「声音」静音（app.alarm.muted，视觉报警不受影响），
+ * 不是报警总开关（总开关是设置面板的 swAlarm → CONFIG.alarm.enabled），
+ * 这里仅按现有语义补状态显示，不改变语义本身。
+ */
+function syncMuteButton(app) {
+  const muted = app.alarm.muted;
+  const btn = $('#btnMute');
+  $('#muteIcon').setAttribute('href', muted ? '#i-mute' : '#i-sound');
+  toggleClass(btn, 'is-off', muted);
+  btn.setAttribute('aria-pressed', String(muted));
+  const label = muted ? '报警声音：已关闭，点击开启' : '报警声音：开启，点击关闭';
+  btn.setAttribute('title', label);
+  btn.setAttribute('aria-label', label);
+}
+
+/**
  * @param {object} app 应用组合根（需要 overlay / video / alarm / _redrawAfterResize）
  */
 export function bindVideoControls(app) {
@@ -49,10 +66,11 @@ export function bindVideoControls(app) {
   $('#btnMute').addEventListener('click', () => {
     const muted = !app.alarm.muted;
     app.alarm.setMuted(muted);
-    $('#muteIcon').setAttribute('href', muted ? '#i-mute' : '#i-sound');
-    toggleClass($('#btnMute'), 'is-on', muted);
+    syncMuteButton(app);
     toast(muted ? '已静音' : '已恢复声音', muted ? '视觉报警仍然有效' : '', 'info', 2000);
   });
+  // 初始化状态标识：图标/aria-pressed/title 与 alarm.muted 当前值对齐
+  syncMuteButton(app);
 }
 
 /** 全屏：优先放大视频舞台，退出时恢复画布尺寸 */

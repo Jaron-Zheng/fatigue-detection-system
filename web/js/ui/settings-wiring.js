@@ -27,15 +27,19 @@ export function createSettingsHandlers(app) {
       toggleClass($('#btnMirror'), 'is-on', CONFIG.render.mirror);
       toggleClass($('#btnMesh'), 'is-on', CONFIG.render.showMesh);
     },
-    onTestAlarm: async () => {
+    onTestAlarm: async (level = 'moderate') => {
       await app.alarm.unlock();
-      app.alarm.test('moderate');
-      app.alarmUi.flash('moderate');
+      app.alarm.test(level);
+      app.alarmUi.flash(level);
     },
     onCameraChange: (id) => app._switchCamera(id),
     onDelegateChange: () => {
       toastWarn('推理委托已切换', '需要重新开始检测才会生效');
     },
-    onSimulateChange: (on) => app._setSimulate(on),
+    onSimulateChange: (on) => {
+      // 演示起点选择器（HTML 里 #selDemoStart）只在开启时读取
+      const stage = on ? ($('#selDemoStart')?.value || 'awake') : null;
+      app._setSimulate(on, stage);
+    },
   };
 }

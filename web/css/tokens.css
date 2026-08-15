@@ -43,7 +43,9 @@
   --fs-body: 14px;
   --fs-callout: 14px;
   --fs-caption: 12px;
-  --fs-micro: 11px;
+  /* A1：micro 原 11px，中文笔画密集在小字号发虚不可读，并入 12px 档。
+   * 全站字号阶梯收口为 44或40(主数字)/32(概要数字)/26/20/16/14/12，不再有 11px。 */
+  --fs-micro: 12px;
 
   /* 字重阶梯：Tesla 只用 400 / 500。
    * semibold / bold 两个名字保留（旧代码在引用），值都映射到 500——
@@ -78,12 +80,15 @@
   --hero-bg: #ffffff;
   --hero-text: #171a20;
   --hero-muted: #5c5e62;
-  --hero-faint: #8e8e8e;
+  /* A2：hero-faint 原 Silver Fog #8e8e8e（无蓝调中性灰，观感发脏），
+   * 校正为同明度带蓝调灰，与 --text-quaternary 同层级取值。 */
+  --hero-faint: #767a82;
   --hero-accent: #2f55bd;
   --hero-panel: #f4f4f4;
   --hero-chip-bg: #ffffff;
   --hero-line: #d0d1d2;
-  --hero-line-strong: #8e8e8e;
+  /* A2：同上，插图内的强描线一并脱离无蓝调灰 */
+  --hero-line-strong: #767a82;
 
   /* 首页能力卡底色：浅色为 Light Ash，深色为微亮一档的面板色 */
   --feat-bg: #f4f4f4;
@@ -99,15 +104,20 @@
   --tile-black: #000000;
 
   --on-dark: #ffffff;
-  --on-dark-muted: rgba(255, 255, 255, 0.72);
+  /* A2：暗底段落上的次级文字原为半透明白，与固定灰两套机制混用；
+   * 固定化为具体色值（观感与 rgba(255,255,255,.72) 等价），
+   * 半透明白只保留给"视频画面/插图上的叠字"。 */
+  --on-dark-muted: #b7bac0;
   --link-on-dark: #739df2;
 
   --text: #171a20;
-  /* Graphite / Pewter / Silver Fog——Tesla 的三级灰字。
-   * Silver Fog 在白底只有 3.0，仅用于禁用态与占位符。 */
+  /* Graphite / Pewter——Tesla 的灰字体系。
+   * A2：第四档原 Silver Fog #8e8e8e 是全站唯一无蓝调中性灰（发脏），
+   * 校正为同明度带蓝调灰 #767a82（白底 4.3:1，小字也达标），
+   * 与深色档 #7e828a（Carbon Dark 底 4.4:1）感知明度镜像对等。 */
   --text-secondary: #393c41;
   --text-tertiary: #5c5e62;
-  --text-quaternary: #8e8e8e;
+  --text-quaternary: #767a82;
   --text-on-accent: #ffffff;
 
   /* 全站唯一交互色：Electric Blue（#3E6AE1 对白字 4.7，达标） */
@@ -158,12 +168,13 @@
   --lv-severe: #c11f1a;
   --on-lv: #ffffff;
 
-  /* 图表线色：主曲线改用品牌蓝，辅线用灰系 */
+  /* 图表线色：主曲线改用品牌蓝，辅线用灰系
+   * A2：轴色原 #8e8e8e（无蓝调灰），与文字第四档同源校正 */
   --chart-ear: #3e6ae1;
   --chart-mar: #5c5e62;
   --chart-score: #3e6ae1;
   --chart-grid: rgba(23, 26, 32, 0.07);
-  --chart-axis: #8e8e8e;
+  --chart-axis: #767a82;
 
   /* 关键点叠加层（画在视频上，深浅两套通用） */
   --mesh: rgba(115, 157, 242, 0.45);
@@ -269,8 +280,11 @@
 
     --hero-bg: #171a20;
     --hero-text: #f4f4f4;
-    --hero-muted: rgba(255, 255, 255, 0.72);
-    --hero-faint: rgba(255, 255, 255, 0.5);
+    /* A2：hero 副标题原为半透明白，与浅色的固定灰不成镜像；
+     * 固定化为第三档灰（对应浅色 #5c5e62 的层级），
+     * hero 注脚同理固定为第四档灰，两主题层级镜像对等。 */
+    --hero-muted: #a0a3a9;
+    --hero-faint: #7e828a;
     --hero-accent: #739df2;
     --hero-panel: rgba(255, 255, 255, 0.04);
     --hero-chip-bg: rgba(255, 255, 255, 0.06);
@@ -283,7 +297,9 @@
     --text: #f4f4f4;
     --text-secondary: #c9cbd0;
     --text-tertiary: #a0a3a9;
-    --text-quaternary: #6b6e75;
+    /* A2：第四档微亮一档到 #7e828a，与浅色 #767a82 感知明度镜像对等
+     * （白底 4.3:1 ↔ Carbon Dark 底 4.4:1），层级间隔两主题一致。 */
+    --text-quaternary: #7e828a;
 
     --accent: #5a8bf2;
     --accent-hover: #6e9bf5;
@@ -332,7 +348,8 @@
     --chart-mar: #a0a3a9;
     --chart-score: #5a8bf2;
     --chart-grid: rgba(255, 255, 255, 0.08);
-    --chart-axis: #6b6e75;
+    /* A2：轴色随第四档灰同步微亮，保持同层级 */
+    --chart-axis: #7e828a;
 
     --sh-xl: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
     --sh-focus: 0 0 0 3px rgba(90, 139, 242, 0.45);
@@ -363,8 +380,9 @@
 
   --hero-bg: #171a20;
   --hero-text: #f4f4f4;
-  --hero-muted: rgba(255, 255, 255, 0.72);
-  --hero-faint: rgba(255, 255, 255, 0.5);
+  /* A2：同 prefers-color-scheme 深色块——hero 次级文字固定化，镜像浅色层级 */
+  --hero-muted: #a0a3a9;
+  --hero-faint: #7e828a;
   --hero-accent: #739df2;
   --hero-panel: rgba(255, 255, 255, 0.04);
   --hero-chip-bg: rgba(255, 255, 255, 0.06);
@@ -377,7 +395,8 @@
   --text: #f4f4f4;
   --text-secondary: #c9cbd0;
   --text-tertiary: #a0a3a9;
-  --text-quaternary: #6b6e75;
+  /* A2：同上，第四档镜像校正 */
+  --text-quaternary: #7e828a;
 
   --accent: #5a8bf2;
   --accent-hover: #6e9bf5;
@@ -424,7 +443,8 @@
   --chart-mar: #a0a3a9;
   --chart-score: #5a8bf2;
   --chart-grid: rgba(255, 255, 255, 0.08);
-  --chart-axis: #6b6e75;
+  /* A2：轴色随第四档灰同步微亮，保持同层级 */
+  --chart-axis: #7e828a;
 
   --sh-xl: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
   --sh-focus: 0 0 0 3px rgba(90, 139, 242, 0.45);

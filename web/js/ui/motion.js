@@ -89,10 +89,16 @@ function countUp(el, duration = 900) {
   if (!m) return;
 
   const target = parseFloat(m[1]);
-  if (!Number.isFinite(target) || target === 0) return;
+  if (!Number.isFinite(target) || target <= 0) return;
+  // 防御：动画中间态被再次触发时会把中间值当目标解析，
+  // 一旦出现负数（理论上不该发生）宁可不动也不要播出去
+  const goal = Math.max(0, target);
 
   // 保持与原文本相同的小数位数，否则 "0.0" 会变成 "0"
   const decimals = (m[1].split('.')[1] || '').length;
+
+  // 重入保护：上一次动画未播完时先取消，避免两个循环互相覆盖文本
+  if (el._countUpRaf) cancelAnimationFrame(el._countUpRaf);
 
   const start = performance.now();
   // 与 CSS 的 --ease-reveal 同形：末段极缓，数字"停"得自然
@@ -100,12 +106,15 @@ function countUp(el, duration = 900) {
 
   function frame(now) {
     const t = Math.min(1, (now - start) / duration);
-    const v = target * ease(t);
+    const v = goal * ease(t);
     el.textContent = v.toFixed(decimals);
-    if (t < 1) requestAnimationFrame(frame);
-    else el.textContent = target.toFixed(decimals);
+    if (t < 1) el._countUpRaf = requestAnimationFrame(frame);
+    else {
+      el.textContent = goal.toFixed(decimals);
+      el._countUpRaf = null;
+    }
   }
-  requestAnimationFrame(frame);
+  el._countUpRaf = requestAnimationFrame(frame);
 }
 
 /**

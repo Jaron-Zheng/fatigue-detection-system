@@ -31,6 +31,22 @@ const WINDOW_SPECS = [
   ['calibration.durationSec', '标定时长', 3, 20, 1, 's'],
 ];
 
+/** 演示模式标记（模块级状态）。
+ *  面板通过 this.hooks 拿不到 app，无法直接读 app.simulate；
+ *  而 #swSimulate 的勾选状态在所有路径下（面板切换、启动失败转演示、
+ *  ?demo= 直通车）都与 app.simulate 保持一致，故以它为事实来源。 */
+let simulateOn = false;
+
+/** 试听级别：[级别键, 按钮文案]，与 CONFIG.alarm.byLevel 对应（awake 无报警音，不含） */
+const ALARM_TEST_LEVELS = [
+  ['mild', '轻度'],
+  ['moderate', '中度'],
+  ['severe', '重度'],
+];
+
+/** 行内级别选择的自动收起时长（毫秒） */
+const ALARM_TEST_TTL_MS = 5000;
+
 /** 同步滑块的填充比例（供 CSS 渐变使用），让当前值在量程中的位置可见 */
 function syncFill(input) {
   const min = Number(input.min);
@@ -192,9 +208,11 @@ export class SettingsPanel {
       CONFIG.alarm.speechEnabled = swSpeech.checked;
     });
 
-    $('#btnTestAlarm').addEventListener('click', () => {
-      if (h.onTestAlarm) h.onTestAlarm();
-    });
+    /* 试听：点「试听」在按钮旁展开 轻度/中度/重度 三个行内小按钮，
+     * 点级别即播对应强度的提醒声；5 秒无操作自动收起，再次点「试听」也可收起。 */
+    this.btnTestAlarm = $('#btnTestAlarm');
+    this.btnTestAlarm.setAttribute('aria-expanded', 'false');
+    this.btnTestAlarm.addEventListener('click', () => this._toggleAlarmTestMenu());
 
     /* 画面开关 */
     const swMesh = $('#swMesh');
@@ -234,6 +252,7 @@ export class SettingsPanel {
     /* 模拟疲劳注入（答辩演示用） */
     const swSim = $('#swSimulate');
     swSim.addEventListener('change', () => {
+      simulateOn = swSim.checked;
       if (h.onSimulateChange) h.onSimulateChange(swSim.checked);
     });
     this.swSimulate = swSim;
@@ -260,6 +279,7 @@ export class SettingsPanel {
     $('#swMesh').checked = CONFIG.render.showMesh;
     $('#swMirror').checked = CONFIG.render.mirror;
     if (this.swSimulate) this.swSimulate.checked = false;
+    simulateOn = false;
     $('#segDelegate')
       .querySelectorAll('button')
       .forEach((b) => b.setAttribute('aria-selected', String(b.dataset.v === CONFIG.capture.delegate)));
@@ -267,9 +287,18 @@ export class SettingsPanel {
 
   /** 填充摄像头列表 */
   setCameras(devices, currentId) {
+    // 程序化勾选（启动失败转演示、?demo= 直通车）不触发 change 事件，这里再对齐一次
+    if (this.swSimulate) simulateOn = this.swSimulate.checked;
     clear(this.selCamera);
     if (!devices.length) {
-      this.selCamera.appendChild(el('option', { value: '', text: '默认摄像头' }));
+      // 空态按模式区分：演示模式本就不采集摄像头，不该让用户误以为出了故障；
+      // 真实模式则给出排查指引。文案与真实设备名（厂商型号串）明显可区分。
+      this.selCamera.appendChild(
+        el('option', {
+          value: '',
+          text: simulateOn ? '演示模式下不使用摄像头' : '未检测到摄像头，请检查连接与权限',
+        })
+      );
       return;
     }
     devices.forEach((d, i) => {
@@ -278,6 +307,55 @@ export class SettingsPanel {
       );
     });
     if (currentId) this.selCamera.value = currentId;
+  }
+
+  /** 展开/收起试听级别选择（已展开时再点「试听」视为收起） */
+  _toggleAlarmTestMenu() {
+    if (this._alarmTestBox) {
+      this._collapseAlarmTest();
+      return;
+    }
+    const btn = this.btnTestAlarm;
+    // 包一层行内组合，保证级别按钮紧跟「试听」而不被 .field-row 的
+    // space-between 布局拉开间距（移动节点不丢失已绑定的事件监听）
+    if (!btn.parentElement.classList.contains('js-alarm-test-group')) {
+      const group = el('span.js-alarm-test-group', {
+        style: { display: 'inline-flex', alignItems: 'center', gap: '6px' },
+      });
+      btn.after(group);
+      group.appendChild(btn);
+      this._alarmTestGroup = group;
+    }
+    const box = el(
+      'span',
+      { style: { display: 'inline-flex', gap: '4px' } },
+      ALARM_TEST_LEVELS.map(([level, label]) =>
+        el('button.btn.btn-secondary.btn-sm', {
+          type: 'button',
+          text: label,
+          'aria-label': `试听${label}疲劳提醒声`,
+          onclick: () => {
+            this._collapseAlarmTest();
+            if (this.hooks.onTestAlarm) this.hooks.onTestAlarm(level);
+          },
+        })
+      )
+    );
+    this._alarmTestGroup.appendChild(box);
+    this._alarmTestBox = box;
+    btn.setAttribute('aria-expanded', 'true');
+    this._alarmTestTimer = setTimeout(() => this._collapseAlarmTest(), ALARM_TEST_TTL_MS);
+  }
+
+  /** 收起试听级别选择并清理自动收起定时器 */
+  _collapseAlarmTest() {
+    clearTimeout(this._alarmTestTimer);
+    this._alarmTestTimer = null;
+    if (this._alarmTestBox) {
+      this._alarmTestBox.remove();
+      this._alarmTestBox = null;
+    }
+    if (this.btnTestAlarm) this.btnTestAlarm.setAttribute('aria-expanded', 'false');
   }
 
   show() {

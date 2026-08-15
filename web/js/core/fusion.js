@@ -338,7 +338,9 @@ export class FusionEngine {
     if (!detail.perclosReady) {
       const sec = (ind.perclosObservedMs || 0) / 1000;
       const need = CONFIG.window.perclosMinObservationSec;
-      return `正在积累闭眼数据（${sec.toFixed(1)} / ${need} 秒），这一项暂时先不算分。其余指标已在监测。`;
+      // 措辞注意：这是"闭眼占比统计的预热期"，与开场的 8 秒个人校准是两回事，
+      // 不能都叫"积累数据"，否则用户会以为校准时长有两个口径
+      return `闭眼占比统计预热中（${sec.toFixed(0)} / ${need} 秒），预热完成前这一项不计分，其余指标已在监测。`;
     }
     if (!detail.topFactors.length) return '各项指标均在正常范围内，驾驶状态良好。';
     const parts = detail.topFactors.map((f) => {

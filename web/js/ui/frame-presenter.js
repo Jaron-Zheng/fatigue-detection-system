@@ -17,6 +17,7 @@ export class FramePresenter {
     this.fps = 0;
     this.lastChartAt = 0;
     this.lowFpsWarnedAt = 0;
+    this.stageEl = document.getElementById('stage');
   }
 
   /** 记录帧时间戳并更新滑动 FPS 统计 */
@@ -65,6 +66,19 @@ export class FramePresenter {
     }
   }
 
+  /**
+   * 中度起给舞台（#stage）加等级强化类，CSS 侧提供视觉样式：
+   *   level-warn（≥ moderate）/ level-danger（severe）
+   * 等级回 awake / mild 或无法评估（unreliable）时移除。
+   * classList.toggle 第二参数让每帧重复设置无害。
+   */
+  _applyStageLevel(fus) {
+    if (!this.stageEl) return;
+    const lv = fus.unreliable ? null : fus.level;
+    this.stageEl.classList.toggle('level-warn', lv === 'moderate' || lv === 'severe');
+    this.stageEl.classList.toggle('level-danger', lv === 'severe');
+  }
+
   /** 全屏等尺寸变化后按最新一帧数据重画叠加层 */
   redrawAfterResize() {
     const app = this.app;
@@ -84,7 +98,10 @@ export class FramePresenter {
       mouthOpen: ind.mouthOpenMs > 0,
       level: fus.level,
     });
-    app.dash.updateHud(feat, ind, this.fps, now);
+    // 演示模式的帧是合成数据、没有真实采集与推理，FPS 数字没有意义，
+    // 传 NaN 让 HUD 显示「-- FPS」占位（真实模式不受影响）
+    app.dash.updateHud(feat, ind, app.simulate ? NaN : this.fps, now);
+    this._applyStageLevel(fus);
     app.dash.setFaceState(ind.facePresent, ind.facePresent ? 0 : 2000);
     app.dash.setQualityState(ind);
     app.dash.updateScore(fus, ind, FusionEngine.explain(fus, ind));

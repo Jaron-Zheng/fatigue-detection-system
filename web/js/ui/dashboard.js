@@ -21,6 +21,23 @@ const LEVEL_COLOR = {
   severe: 'var(--lv-severe)',
 };
 
+/**
+ * 展示层方向阈值：仅用于指标卡 sub 文案与迷你条颜色，不参与算法判定。
+ * 与各卡 sub 文案中的区间同源（改文案里的区间数字时必须同步改这里）：
+ *   「正常区间 12–22」 → BLINK_RATE_LOW / BLINK_RATE_HIGH
+ *   「清醒约 100–200」 → BLINK_DUR_MAX_MS
+ */
+const BLINK_RATE_LOW = 12;
+const BLINK_RATE_HIGH = 22;
+const BLINK_DUR_MAX_MS = 200;
+
+/** 迷你条填充色跟随卡片状态色条（与左侧色条双重编码，色盲友好） */
+const SPARK_COLOR = {
+  normal: 'var(--accent)',
+  caution: 'var(--caution)',
+  danger: 'var(--danger)',
+};
+
 export class Dashboard {
   constructor() {
     this.q = {};
@@ -166,7 +183,8 @@ export class Dashboard {
     const noData = !fusion.scoreCount;
     setText(q.metaDuration, fmtDuration(ind.sessionMs));
     setText(q.metaPeak, noData ? '--' : Math.round(fusion.peakScore));
-    setText(q.metaAvg, noData ? '--' : Math.round(fusion.avgScore));
+    // 均值保留一位小数，与报告页口径一致
+    setText(q.metaAvg, noData ? '--' : fusion.avgScore.toFixed(1));
   }
 
   /** 指标卡（约 6Hz 刷新足够，人眼看不出差别，却能省下大量 DOM 写入） */
@@ -178,74 +196,105 @@ export class Dashboard {
 
     // PERCLOS
     setText(q.vPerclos, (ind.perclos * 100).toFixed(1));
-    setText(q.sPerclos, `最近 ${CONFIG.window.perclosSec} 秒`);
-    this._spark(q.kPerclos, mu.perclos);
-    this._state(q.mPerclos, ind.perclos, 0.15, 0.30);
+    const stPerclos = this._state(q.mPerclos, ind.perclos, 0.15, 0.30);
+    setText(q.sPerclos, this._withHigh(stPerclos, `最近 ${CONFIG.window.perclosSec} 秒`));
+    this._spark(q.kPerclos, mu.perclos, stPerclos);
 
     // 当前闭眼
     const closed = ind.eyeState === 'closed';
     setText(q.vClosure, (ind.currentClosureMs / 1000).toFixed(2));
     setText(q.sClosure, closed ? '闭眼中' : `最长 ${(ind.maxClosureMs / 1000).toFixed(2)}s`);
-    this._spark(q.kClosure, mu.closureDur);
-    this._state(q.mClosure, ind.currentClosureMs, 500, CONFIG.event.criticalClosureMs);
+    this._spark(q.kClosure, mu.closureDur, this._state(q.mClosure, ind.currentClosureMs, 500, CONFIG.event.criticalClosureMs));
 
-    // 眨眼频率
+    // 眨眼频率（反向指标：过低与过高都危险，方向词区分两种偏离）
     setText(q.vBlink, ind.blinkRate.toFixed(1));
-    setText(q.sBlink, ind.observedMs < 15000 ? '统计中…' : '正常区间 12–22');
-    this._spark(q.kBlink, mu.blinkRate);
-    this._stateByMu(q.mBlink, mu.blinkRate);
+    let blinkSub;
+    if (ind.observedMs < 15000) blinkSub = '统计中…';
+    else if (ind.blinkRate < BLINK_RATE_LOW) blinkSub = '低于正常区间 ↑ 危险';
+    else if (ind.blinkRate > BLINK_RATE_HIGH) blinkSub = '高于正常区间（疲劳早期代偿）';
+    else blinkSub = `正常区间 ${BLINK_RATE_LOW}–${BLINK_RATE_HIGH}`;
+    setText(q.sBlink, blinkSub);
+    this._spark(q.kBlink, mu.blinkRate, this._stateByMu(q.mBlink, mu.blinkRate));
 
-    // 平均眨眼时长
+    // 平均眨眼时长（反向指标：疲劳时单次变长）
     setText(q.vBlinkDur, Number.isFinite(ind.avgBlinkMs) ? ind.avgBlinkMs.toFixed(0) : '--');
-    setText(q.sBlinkDur, '清醒约 100–200');
-    this._spark(q.kBlinkDur, mu.blinkDur);
-    this._stateByMu(q.mBlinkDur, mu.blinkDur);
+    setText(
+      q.sBlinkDur,
+      Number.isFinite(ind.avgBlinkMs) && ind.avgBlinkMs > BLINK_DUR_MAX_MS
+        ? '偏长 ↑ 危险'
+        : `清醒约 100–${BLINK_DUR_MAX_MS}`
+    );
+    this._spark(q.kBlinkDur, mu.blinkDur, this._stateByMu(q.mBlinkDur, mu.blinkDur));
 
     // 哈欠
     setText(q.vYawn, ind.totals.yawn);
-    setText(q.sYawn, `${ind.yawnRate.toFixed(1)} 次/分`);
-    this._spark(q.kYawn, mu.yawn);
-    this._stateByMu(q.mYawn, mu.yawn);
+    const stYawn = this._stateByMu(q.mYawn, mu.yawn);
+    setText(q.sYawn, this._withHigh(stYawn, `${ind.yawnRate.toFixed(1)} 次/分`));
+    this._spark(q.kYawn, mu.yawn, stYawn);
 
     // 点头
     setText(q.vNod, ind.totals.nod);
-    setText(q.sNod, `${ind.nodRate.toFixed(1)} 次/分`);
-    this._spark(q.kNod, mu.nod);
-    this._stateByMu(q.mNod, mu.nod);
+    const stNod = this._stateByMu(q.mNod, mu.nod);
+    setText(q.sNod, this._withHigh(stNod, `${ind.nodRate.toFixed(1)} 次/分`));
+    this._spark(q.kNod, mu.nod, stNod);
 
     // 视线偏离
     setText(q.vHeadDev, (ind.headDevRatio * 100).toFixed(1));
-    setText(q.sHeadDev, ind.headDeviateMs > 0 ? `已偏离 ${(ind.headDeviateMs / 1000).toFixed(1)}s` : '头部朝向前方');
-    this._spark(q.kHeadDev, mu.headDev);
-    this._stateByMu(q.mHeadDev, mu.headDev);
+    const stHeadDev = this._stateByMu(q.mHeadDev, mu.headDev);
+    setText(
+      q.sHeadDev,
+      this._withHigh(stHeadDev, ind.headDeviateMs > 0 ? `已偏离 ${(ind.headDeviateMs / 1000).toFixed(1)}s` : '头部朝向前方')
+    );
+    this._spark(q.kHeadDev, mu.headDev, stHeadDev);
 
     // 长时闭眼
     const micro = ind.totals.microsleep + ind.totals.criticalClosure;
     setText(q.vMicro, micro);
-    setText(q.sMicro, ind.totals.criticalClosure > 0 ? `其中 ${ind.totals.criticalClosure} 次很危险` : '超过 0.5 秒算一次');
-    this._spark(q.kMicro, clamp(micro / 5, 0, 1));
-    this._state(q.mMicro, micro, 1, 3);
+    const stMicro = this._state(q.mMicro, micro, 1, 3);
+    setText(
+      q.sMicro,
+      this._withHigh(
+        stMicro,
+        ind.totals.criticalClosure > 0 ? `其中 ${ind.totals.criticalClosure} 次很危险` : '超过 0.5 秒算一次'
+      )
+    );
+    this._spark(q.kMicro, clamp(micro / 5, 0, 1), stMicro);
 
     this._updateContrib(fusion);
   }
 
-  _spark(node, mu) {
+  /**
+   * 迷你条：宽度表示当前值相对预警阈值的位置，
+   * 填充色与左侧状态色条同色（色盲友好的双重编码）。
+   * @param {HTMLElement} node spark 的 <i> 元素
+   * @param {number} mu 隶属度 0~1
+   * @param {string} state 卡片状态（normal/caution/danger），由 _state/_stateByMu 给出
+   */
+  _spark(node, mu, state = 'normal') {
     if (!node) return;
     const pct = clamp((mu || 0) * 100, 0, 100);
     setStyle(node, 'width', pct.toFixed(1) + '%');
-    setStyle(node, 'background', pct > 66 ? 'var(--danger)' : pct > 33 ? 'var(--caution)' : 'var(--accent)');
+    setStyle(node, 'background', SPARK_COLOR[state] || SPARK_COLOR.normal);
+    setAttr(node, 'title', `当前值相对预警阈值的位置：${pct.toFixed(0)}%`);
+  }
+
+  /** 正向指标超阈时在 sub 文案追加方向词，与色条同源 */
+  _withHigh(state, base) {
+    return state === 'normal' ? base : `${base} · ↑ 偏高`;
   }
 
   _state(node, v, warnAt, dangerAt) {
-    if (!node) return;
+    if (!node) return 'normal';
     const s = v >= dangerAt ? 'danger' : v >= warnAt ? 'caution' : 'normal';
     setAttr(node, 'data-state', s);
+    return s;
   }
 
   _stateByMu(node, mu) {
-    if (!node) return;
+    if (!node) return 'normal';
     const s = mu > 0.66 ? 'danger' : mu > 0.33 ? 'caution' : 'normal';
     setAttr(node, 'data-state', s);
+    return s;
   }
 
   /** 融合贡献度明细：首次建行，之后只更新宽度与数字 */

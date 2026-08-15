@@ -60,17 +60,34 @@ export async function switchCamera(app, id) {
 }
 
 /** 演示模式中途切入/退出（会话状态迁移经状态机裁决） */
-export function setSimulate(app, on) {
+export function setSimulate(app, on, startStage = null) {
   app.simulate = on;
   app.sim.reset();
   if (on) {
     if (app.camera) app.camera.stop();
-    toast('演示模式已开启', '将按预设剧本模拟一段由清醒到重度疲劳的过程，不使用摄像头', 'info', 4200);
+    // 演示起点（awake/mild/moderate）：在 reset 之后、首帧之前设定
+    if (startStage) app.sim.setStartStage(startStage);
+    // 开启即进入检测，抽屉必须让位——否则用户错过剧本开头
+    if (app.settings && app.settings.open) app.settings.hide();
+    const stageNote =
+      startStage === 'moderate'
+        ? '，从中度疲劳阶段开始（约 30 秒后出现中度提醒，再约 40 秒升级为重度）'
+        : startStage === 'mild'
+        ? '，从轻度疲劳阶段开始'
+        : '';
+    toast(
+      '演示模式已开启',
+      '按预设剧本模拟一段由清醒到重度疲劳的过程，不使用摄像头' + stageNote,
+      'info',
+      4200
+    );
     if (app.sm.send(SessionEvent.SIM_ENTER, { simulated: true })) {
       app.startAbort = true;
       app.loop.stop();
       app.calib = SimulatedDriver.calibration();
       app._beginRunning();
+      // 演示直接在工作台看，避免"开启了却看不到画面"（gotoView 同步导航高亮）
+      app.router.gotoView('viewWork');
     }
   } else {
     toast('演示模式已关闭', '请重新开始检测以启用真实摄像头', 'info', 3000);
