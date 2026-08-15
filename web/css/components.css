@@ -1,32 +1,35 @@
-/** components.css — 通用组件（Apple 设计语言） */
+/** components.css — 通用组件（Tesla 设计语言）
+ *
+ * 硬规则（来自 tesla/DESIGN.md）：
+ *   · 按钮一律 4px 圆角、40px 高度档位，没有胶囊
+ *   · 字重只有 400/500
+ *   · 过渡统一 0.33s cubic-bezier(0.5,0,0,0.75)，只过渡颜色类属性
+ *   · 没有 box-shadow、没有 hover 缩放/位移
+ *   · 分层靠底色差（fill 系列）与间距，不靠描边
+ */
 
 /* ============ 按钮 ============ */
 /**
- * 通用按钮。
- * 字重与内边距按 apps.apple.com 实测值调整：
- * font-weight 由 500 提到 600（文字按钮字重不足会显得没有力量感），
- * padding 由 11px 22px 收紧到 9px 18px，更接近 Apple 的紧凑观感。
+ * Tesla 主 CTA 规格：Electric Blue 底白字、4px 圆角、
+ * min-height 40px、14px/500、宽度由内容决定（hero 场景另有 200px 定宽）。
+ * 边框态用 inset 0 0 0 1px 描线（Tesla 用透明边框给 focus 动画留位，效果相同）。
  */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--sp-2);
-  padding: 9px 18px;
-  border-radius: var(--r-pill);
-  font-size: var(--fs-callout);
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  min-height: 40px;
+  padding: 8px 20px;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0;
   white-space: nowrap;
-  transition: background-color var(--dur-fast) var(--ease-apple),
-    color var(--dur-fast) var(--ease-apple), transform var(--dur-fast) var(--ease-apple),
-    opacity var(--dur-fast) var(--ease-apple), box-shadow var(--dur-fast) var(--ease-apple);
+  transition: background-color var(--dur-base) var(--ease),
+    color var(--dur-base) var(--ease), box-shadow var(--dur-base) var(--ease);
   user-select: none;
   -webkit-user-select: none;
-}
-.btn:active:not(:disabled) {
-  /* Apple 全站统一的按下反馈幅度 */
-  transform: scale(var(--press-scale));
 }
 .btn:disabled {
   opacity: 0.38;
@@ -34,20 +37,22 @@
 }
 
 .btn-primary {
-  /* 白字对比度由 --btn-bg 分主题保证（深色下 #0a84ff 对白字只有 3.6，换成更深的蓝） */
   background: var(--btn-bg);
   color: var(--text-on-accent);
 }
+/* Tesla hover 是"微微变深的蓝"，不是提亮 */
 .btn-primary:hover:not(:disabled) {
   background: var(--btn-bg-hover);
 }
 
+/* Tesla 次 CTA：白底 Graphite 字（深色下为微亮面板底） */
 .btn-secondary {
-  background: var(--fill-quaternary);
+  background: var(--bg-elevated);
   color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--separator);
 }
 .btn-secondary:hover:not(:disabled) {
-  background: var(--fill-tertiary);
+  background: var(--bg-inset);
 }
 
 .btn-ghost {
@@ -64,7 +69,8 @@
   color: #fff; /* lit-ok: 语义色实心底上的白字，主题无关 */
 }
 .btn-danger:hover:not(:disabled) {
-  filter: brightness(1.08);
+  background: var(--danger);
+  filter: brightness(0.92);
 }
 
 .btn-outline {
@@ -77,61 +83,57 @@
 }
 
 .btn-lg {
-  padding: 13px 30px;
-  font-size: var(--fs-body);
-  font-weight: 600;
+  min-height: 44px;
+  padding: 10px 28px;
+  font-size: var(--fs-subhead);
 }
 .btn-sm {
-  padding: 6px 14px;
+  min-height: 32px;
+  padding: 5px 14px;
   font-size: var(--fs-caption);
-  font-weight: 700;
 }
+
+/* 图标按钮：Tesla 导航右侧的工具按钮——透明底、4px 圆角、颜色过渡 */
 .btn-icon {
   width: 36px;
   height: 36px;
   padding: 0;
-  border-radius: 50%;
-  background: var(--fill-quaternary);
+  border-radius: var(--r-sm);
+  background: transparent;
   color: var(--text);
+  transition: background-color var(--dur-base) var(--ease),
+    color var(--dur-base) var(--ease);
 }
 .btn-icon:hover:not(:disabled) {
-  background: var(--fill-tertiary);
+  background: var(--fill-quaternary);
 }
 .btn-icon svg {
   width: 18px;
   height: 18px;
 }
 .btn-icon.is-on {
-  background: var(--accent);
+  background: var(--btn-bg);
   color: #fff; /* lit-ok: 强调色实心底上的白字，主题无关 */
 }
 
 /* ============ 卡片 ============ */
 /**
- * 卡片。
- *
- * DESIGN.md 的硬规则：卡片不投影。Apple 用底色差 + 极细描边分层，
- * 而不是靠阴影把卡片"抬起来"——投影一多，页面就会显出廉价的模板感。
- * 这里 inset 那一条 0.5px 轮廓就是全部的边缘感来源。
+ * Tesla 卡片：白面板、12px 圆角、零描边零投影。
+ * 层次完全来自"浅灰画布 + 纯白面板"的底色差。
  */
 .card {
   background: var(--bg-elevated);
-  border-radius: var(--r-xl);
-  box-shadow: inset 0 0 0 0.5px var(--separator-soft);
+  border-radius: var(--r-lg);
   padding: var(--sp-6);
-  transition: background-color var(--dur-base) var(--ease-apple);
+  transition: background-color var(--dur-base) var(--ease);
 }
-/* 可交互卡片：只改变底色与轻推位置，不增加投影。 */
+/* 可交互卡片：只过渡底色 */
 .card-hover {
   cursor: pointer;
-  transition: background-color var(--dur-hover) var(--ease-apple),
-    transform var(--dur-hover) var(--ease-apple);
+  transition: background-color var(--dur-hover) var(--ease);
 }
 .card-hover:hover {
   background: var(--bg-inset);
-}
-.card-hover:active {
-  transform: scale(0.99);
 }
 .card-compact {
   padding: var(--sp-5);
@@ -150,23 +152,28 @@
 }
 .card-title {
   font-size: var(--fs-subhead);
-  font-weight: 600;
-  letter-spacing: var(--ls-tight);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0;
   display: flex;
   align-items: center;
   gap: var(--sp-2);
 }
+.card-title svg {
+  color: var(--text-tertiary);
+  flex: none;
+}
 
-/* ============ 徽章 / 药丸标签 ============ */
+/* ============ 徽章标签 ============ */
+/* Tesla 没有圆角胶囊文化：徽章同样是 4px 小矩形 */
 .badge {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   padding: 3px 10px;
-  border-radius: var(--r-pill);
+  border-radius: var(--r-sm);
   font-size: var(--fs-micro);
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-weight: var(--fw-medium);
+  letter-spacing: 0;
   background: var(--fill-quaternary);
   color: var(--text-secondary);
   white-space: nowrap;
@@ -200,26 +207,26 @@
   flex: none;
 }
 .dot-pulse {
-  animation: dotPulse 1.6s var(--ease-apple) infinite;
+  animation: dotPulse 1.6s var(--ease) infinite;
 }
 @keyframes dotPulse {
   0%,
   100% {
     opacity: 1;
-    transform: scale(1);
   }
   50% {
     opacity: 0.35;
-    transform: scale(0.72);
   }
 }
 
-/* ============ 开关（iOS Switch） ============ */
+/* ============ 开关 ============ */
+/* 4px 轨道圆角（Tesla 语言里没有全圆胶囊，但开关的物理隐喻仍是圆钮，
+   这里只把轨道端部改为 4px，滑钮保持圆形） */
 .switch {
   position: relative;
   display: inline-block;
-  width: 51px;
-  height: 31px;
+  width: 48px;
+  height: 28px;
   flex: none;
 }
 .switch input {
@@ -234,32 +241,29 @@
   position: absolute;
   inset: 0;
   background: var(--fill-tertiary);
-  border-radius: var(--r-pill);
-  transition: background-color var(--dur-base) var(--ease-apple);
+  border-radius: var(--r-sm);
+  transition: background-color var(--dur-base) var(--ease);
   pointer-events: none;
 }
 .switch-thumb {
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 27px;
-  height: 27px;
-  background: #fff; /* lit-ok: 开关滑块永远白色（Apple 开关外观），主题无关 */
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  background: #fff; /* lit-ok: 开关滑块永远白色（车机开关外观），主题无关 */
   border-radius: 50%;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 0 1px 1px rgba(0, 0, 0, 0.16);
-  transition: transform var(--dur-base) var(--ease-apple);
+  transition: transform var(--dur-base) var(--ease);
   pointer-events: none;
 }
 .switch input:checked ~ .switch-track {
-  background: var(--ok);
+  background: var(--btn-bg);
 }
 .switch input:checked ~ .switch-thumb {
   transform: translateX(20px);
 }
-/* 焦点环用 outline：开关轨道被 .switch 的定位上下文包着，
-   box-shadow 环容易被祖先的 overflow 裁掉半圈 */
 .switch input:focus-visible ~ .switch-track {
-  outline: 3px solid var(--accent);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -275,7 +279,7 @@
   margin-top: var(--sp-4);
 }
 .slider-row .slider-label {
-  font-size: var(--fs-callout);
+  font-size: var(--fs-body);
   color: var(--text);
 }
 .slider-row .slider-value {
@@ -286,17 +290,16 @@
   text-align: right;
 }
 /**
- * 滑块轨道用渐变把「已填充」部分染成主色（--pct 由 JS 同步）。
- * 原生 range 在深色模式下轨道与背景几乎同色，只剩一个白色圆点悬空，
- * 用户无法判断当前值处于量程的哪个位置。加上填充色后位置一目了然。
+ * 滑块轨道用线性填充把「已填充」部分染成 Electric Blue（--pct 由 JS 同步）。
+ * 原生 range 在深色模式下轨道与背景几乎同色，加上填充色后位置一目了然。
  */
 .slider {
   grid-column: 1 / -1;
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 5px;
-  border-radius: var(--r-pill);
+  height: 4px;
+  border-radius: var(--r-xs);
   background: linear-gradient(
     to right,
     var(--accent) 0%,
@@ -309,28 +312,25 @@
 }
 .slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  background: #fff; /* lit-ok: 滑块把手永远白色（Apple 滑块外观），主题无关 */
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.24), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+  background: var(--accent);
+  border: 2px solid #fff; /* lit-ok: 滑块把手描边永远白色（保证把手可见），主题无关 */
   cursor: grab;
-  transition: transform var(--dur-fast) var(--ease-apple);
 }
 .slider::-webkit-slider-thumb:active {
-  transform: scale(1.15);
   cursor: grabbing;
 }
 .slider::-moz-range-thumb {
-  width: 20px;
-  height: 20px;
-  border: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #fff; /* lit-ok: 同上（Firefox 版滑块把手） */
   border-radius: 50%;
-  background: #fff; /* lit-ok: 同上（Firefox 版滑块把手） */
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.24);
+  background: var(--accent);
 }
 
-/* ============ 分段控件（Segmented Control） ============ */
+/* ============ 分段控件 ============ */
 .segmented {
   display: inline-flex;
   padding: 2px;
@@ -344,53 +344,63 @@
   font-size: var(--fs-caption);
   font-weight: var(--fw-regular);
   color: var(--text-secondary);
-  /* 只过渡真正会变的属性：transition:all 会顺带动画 border-radius 之类
-     的东西，在快速点击时看得出细微的形变抖动 */
-  transition: background-color var(--dur-base) var(--ease-apple),
-    color var(--dur-base) var(--ease-apple);
+  transition: background-color var(--dur-base) var(--ease),
+    color var(--dur-base) var(--ease);
 }
 .segmented button[aria-selected='true'] {
   background: var(--bg-elevated);
   color: var(--text);
-  font-weight: var(--fw-semibold);
+  font-weight: var(--fw-medium);
 }
 
 /* ============ 进度条 ============ */
 .progress {
-  height: 6px;
-  border-radius: var(--r-pill);
+  height: 4px;
+  border-radius: var(--r-xs);
   background: var(--fill-tertiary);
   overflow: hidden;
 }
 .progress-bar {
   height: 100%;
-  border-radius: var(--r-pill);
+  border-radius: var(--r-xs);
   background: var(--accent);
-  transition: width 0.2s linear, background-color var(--dur-base) var(--ease-apple);
+  transition: width 0.2s linear, background-color var(--dur-base) var(--ease);
 }
 
 /* ============ 指标卡（仪表盘核心） ============ */
+/**
+ * Tesla 车机指标行：无边框、无投影，整块面板内以发丝线分行。
+ * 左侧 3px 状态色条是功能信息（该指标是否进入预警区间），不属于装饰。
+ */
 .metric {
-  background: var(--bg-elevated);
-  border-radius: var(--r-lg);
-  padding: var(--sp-4) var(--sp-5);
-  box-shadow: inset 0 0 0 0.5px var(--separator-soft);
+  background: transparent;
+  border-radius: 0;
+  padding: var(--sp-3) var(--sp-2) calc(var(--sp-3) + 2px);
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
   position: relative;
   overflow: hidden;
+  border-bottom: 1px solid var(--separator);
+}
+/* 面板末行不画底线。注意：末两枚指标是 pro-only，普通模式下它们隐藏后，
+ * 可见的末行变成第 5/6 枚——两条规则各对应一种模式，避免悬空发丝线 */
+body:not(.pro-mode) .metric-grid .metric:nth-child(n + 5) {
+  border-bottom: none;
+}
+body.pro-mode .metric-grid .metric:nth-last-child(-n + 2) {
+  border-bottom: none;
 }
 .metric::after {
   content: '';
   position: absolute;
   left: 0;
-  top: 0;
-  bottom: 0;
+  top: var(--sp-2);
+  bottom: var(--sp-2);
   width: 3px;
   background: transparent;
-  transition: background-color var(--dur-base) var(--ease-apple);
+  transition: background-color var(--dur-base) var(--ease);
 }
 .metric[data-state='warn']::after {
   background: var(--warn);
@@ -401,11 +411,11 @@
 .metric[data-state='danger']::after {
   background: var(--danger);
 }
+/* Tesla 不用大写：指标名 12px/500/Pewter */
 .metric-label {
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0;
   color: var(--text-tertiary);
   display: flex;
   align-items: center;
@@ -413,10 +423,10 @@
 }
 .metric-value {
   font-family: var(--font-display);
-  font-size: 27px;
-  font-weight: 600;
-  letter-spacing: var(--ls-tight);
-  line-height: 1.1;
+  font-size: 24px;
+  font-weight: var(--fw-medium);
+  letter-spacing: 0;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
   display: flex;
   align-items: baseline;
@@ -434,8 +444,8 @@
   min-height: 18px;
 }
 .metric-spark {
-  height: 3px;
-  border-radius: var(--r-pill);
+  height: 2px;
+  border-radius: var(--r-xs);
   background: var(--fill-tertiary);
   overflow: hidden;
   margin-top: 2px;
@@ -443,9 +453,9 @@
 .metric-spark > i {
   display: block;
   height: 100%;
-  border-radius: var(--r-pill);
+  border-radius: var(--r-xs);
   background: var(--accent);
-  transition: width 0.25s var(--ease-apple), background-color var(--dur-base) var(--ease-apple);
+  transition: width 0.25s var(--ease), background-color var(--dur-base) var(--ease);
 }
 
 /* ============ 贡献度条（融合明细） ============ */
@@ -464,26 +474,19 @@
   text-overflow: ellipsis;
 }
 .contrib-track {
-  height: 7px;
-  border-radius: var(--r-pill);
+  height: 6px;
+  border-radius: var(--r-xs);
   background: var(--fill-quaternary);
   overflow: hidden;
   position: relative;
 }
-/**
- * 贡献度填充。
- *
- * 原来这里是一道蓝→橙渐变，有两个问题：一是 DESIGN.md 禁止装饰性渐变，
- * 二是更实际的——条越长颜色越偏橙，会让人以为"长 = 危险"，
- * 但这条表达的是该指标在融合里占了多少权重，与危险程度无关。
- * 改成单一主色，长度就是唯一的信息维度。
- */
+/* 单一 Electric Blue 填充：长度是唯一的信息维度，不用渐变 */
 .contrib-fill {
   position: absolute;
   inset: 0 auto 0 0;
-  border-radius: var(--r-pill);
+  border-radius: var(--r-xs);
   background: var(--accent);
-  transition: width var(--dur-slow) var(--ease-apple);
+  transition: width var(--dur-base) var(--ease);
 }
 .contrib-val {
   font-size: var(--fs-caption);
@@ -505,8 +508,8 @@
   gap: var(--sp-3);
   align-items: start;
   padding: 8px 0;
-  border-bottom: 1px solid var(--separator-soft);
-  animation: tlIn var(--dur-base) var(--ease-out);
+  border-bottom: 1px solid var(--separator);
+  animation: tlIn var(--dur-base) var(--ease);
 }
 .tl-item:last-child {
   border-bottom: none;
@@ -514,11 +517,9 @@
 @keyframes tlIn {
   from {
     opacity: 0;
-    transform: translateY(-6px);
   }
   to {
     opacity: 1;
-    transform: none;
   }
 }
 .tl-time {
@@ -530,11 +531,11 @@
 .tl-icon {
   width: 22px;
   height: 22px;
-  border-radius: 50%;
+  border-radius: var(--r-xs);
   display: grid;
   place-items: center;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: var(--fw-medium);
   background: var(--fill-quaternary);
   color: var(--text-secondary);
   flex: none;
@@ -552,11 +553,11 @@
   color: var(--info);
 }
 .tl-text {
-  font-size: var(--fs-callout);
+  font-size: var(--fs-body);
   min-width: 0;
 }
 .tl-text b {
-  font-weight: 600;
+  font-weight: var(--fw-medium);
 }
 .tl-detail {
   font-size: var(--fs-caption);
@@ -564,10 +565,11 @@
 }
 
 /* ============ Toast 通知 ============ */
+/* Tesla 的浮层语言：不透明面板 + 极细描线，没有毛玻璃也没有投影 */
 .toast-host {
   position: fixed;
   top: calc(var(--nav-total) + var(--sp-4));
-  transition: top var(--dur-base) var(--ease-apple);
+  transition: top var(--dur-base) var(--ease);
   left: 50%;
   transform: translateX(-50%);
   z-index: 400;
@@ -582,33 +584,27 @@
   align-items: center;
   gap: var(--sp-3);
   padding: 12px 18px;
-  border-radius: var(--r-md);
+  border-radius: var(--r-sm);
   background: var(--surface-glass-strong);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  backdrop-filter: saturate(180%) blur(20px);
-  box-shadow: var(--sh-lg);
-  border: 0.5px solid var(--separator-soft);
-  font-size: var(--fs-callout);
+  box-shadow: inset 0 0 0 1px var(--separator-soft);
+  font-size: var(--fs-body);
   pointer-events: auto;
-  animation: toastIn var(--dur-base) var(--ease-spring);
+  animation: toastIn var(--dur-base) var(--ease);
 }
 .toast.leaving {
-  animation: toastOut var(--dur-fast) var(--ease-apple) forwards;
+  animation: toastOut var(--dur-fast) var(--ease) forwards;
 }
 @keyframes toastIn {
   from {
     opacity: 0;
-    transform: translateY(-14px) scale(0.96);
   }
   to {
     opacity: 1;
-    transform: none;
   }
 }
 @keyframes toastOut {
   to {
     opacity: 0;
-    transform: translateY(-10px) scale(0.97);
   }
 }
 .toast-icon {
@@ -617,10 +613,10 @@
   flex: none;
   display: grid;
   place-items: center;
-  border-radius: 50%;
+  border-radius: var(--r-xs);
   font-size: 12px;
-  font-weight: 700;
-  color: #fff; /* lit-ok: 语义色实心圆底上的白字（吐司图标） */
+  font-weight: var(--fw-medium);
+  color: #fff; /* lit-ok: 语义色实心方底上的白字（吐司图标） */
   background: var(--info);
 }
 .toast[data-kind='ok'] .toast-icon {
@@ -637,7 +633,7 @@
   min-width: 0;
 }
 .toast-title {
-  font-weight: 600;
+  font-weight: var(--fw-medium);
 }
 .toast-msg {
   font-size: var(--fs-caption);
@@ -649,12 +645,10 @@
   position: fixed;
   inset: 0;
   z-index: 500;
-  background: rgba(0, 0, 0, 0.34);
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
+  background: rgba(23, 26, 32, 0.5); /* lit-ok: 抽屉遮罩固定 Carbon Dark 半透明，两主题一致 */
   opacity: 0;
   pointer-events: none;
-  transition: opacity var(--dur-base) var(--ease-apple);
+  transition: opacity var(--dur-base) var(--ease);
 }
 .sheet-backdrop.open {
   opacity: 1;
@@ -670,7 +664,7 @@
   background: var(--bg-elevated);
   box-shadow: var(--sh-xl);
   transform: translateX(100%);
-  transition: transform var(--dur-slow) var(--ease-out);
+  transition: transform var(--dur-slow) var(--ease);
   display: flex;
   flex-direction: column;
 }
@@ -682,7 +676,7 @@
   align-items: center;
   justify-content: space-between;
   padding: var(--sp-5) var(--sp-6);
-  border-bottom: 1px solid var(--separator-soft);
+  border-bottom: 1px solid var(--separator);
   flex: none;
 }
 .sheet-body {
@@ -696,7 +690,7 @@
 .sheet-foot {
   flex: none;
   padding: var(--sp-4) var(--sp-6);
-  border-top: 1px solid var(--separator-soft);
+  border-top: 1px solid var(--separator);
   display: flex;
   gap: var(--sp-3);
   justify-content: flex-end;
@@ -708,11 +702,10 @@
   gap: var(--sp-4);
 }
 .field-group > .group-title {
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0;
+  color: var(--text);
 }
 .field-row {
   display: flex;
@@ -721,7 +714,7 @@
   gap: var(--sp-4);
 }
 .field-row .field-label {
-  font-size: var(--fs-callout);
+  font-size: var(--fs-body);
 }
 .field-row .field-desc {
   font-size: var(--fs-caption);
@@ -759,7 +752,7 @@ select.select {
   padding: var(--sp-8) var(--sp-4);
   text-align: center;
   color: var(--text-tertiary);
-  font-size: var(--fs-callout);
+  font-size: var(--fs-body);
 }
 
 /* ============ 提示气泡 ============ */
@@ -772,40 +765,27 @@ select.select {
   background: var(--fill-tertiary);
   color: var(--text-tertiary);
   font-size: 10px;
-  font-weight: 700;
+  font-weight: var(--fw-medium);
   cursor: help;
   flex: none;
 }
 
 /* ============================================================
-   App Store 风格药丸按钮
+   工具按钮（.pill —— 历史类名，视觉已改为 Tesla 4px 矩形按钮）
    ------------------------------------------------------------
-   取值来自对 apps.apple.com 的实测采样（computed style）：
-     border-radius : 1000px（完全药丸）
-     font-weight   : 700     ← 关键，文字按钮字重不够就没有力量感
-     font-size     : 13px（次级）/ 15px（主级）
-     padding       : 7px 16px（紧凑，非网页常见的宽松内边距）
-     高度          : 28 / 32 / 34px
-     主操作按钮    : 极淡主色底 rgba(0,122,255,0.06) + 主色文字
-                     （iOS 17+ 风格，而非实心蓝底白字）
-     过渡          : 只针对 background-color，0.14s ease-out
-   ------------------------------------------------------------
-   关于强调色：这里原本自带一套 iOS systemBlue #007aff，
-   与全站主色 #0071e3 形成了两个几乎分辨不出、但并排时会让人
-   觉得"没对齐"的蓝。DESIGN.md 要求全站只有一个强调色，
-   因此 --ios-blue 系列现在只是 --accent 的别名保留下来，
-   不再是独立色值——引用它的几十处代码无需改动，颜色自动统一。
+   Tesla 的按钮语法：4px 圆角、32/38px 高度档位、14px/500、
+   透明底 → hover 换底色。没有胶囊，没有按压缩放。
+   --ios-blue 系列是历史别名，统一指向 Electric Blue。
    ============================================================ */
 
 :root {
   --ios-blue: var(--accent);
   --ios-blue-soft: var(--accent-soft);
-  --ios-blue-soft-hover: color-mix(in srgb, var(--accent) 18%, transparent);
-  --pill-fill: var(--fill-quaternary);
-  --pill-fill-hover: var(--fill-tertiary);
-  /* Apple 实测：0.24s + cubic-bezier(0.4,0,0.6,1) */
-  --pill-ease: background-color var(--dur-base) var(--ease-apple),
-    color var(--dur-base) var(--ease-apple);
+  --ios-blue-soft-hover: color-mix(in srgb, var(--accent) 14%, transparent);
+  --pill-fill: transparent;
+  --pill-fill-hover: var(--fill-quaternary);
+  --pill-ease: background-color var(--dur-base) var(--ease),
+    color var(--dur-base) var(--ease);
 }
 
 .pill {
@@ -813,68 +793,70 @@ select.select {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 32px;
-  padding: 7px 16px;
-  border-radius: var(--r-pill);
-  font-size: 13px;
-  font-weight: var(--fw-bold);
+  min-height: 34px;
+  padding: 6px 16px;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
   line-height: 1;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   white-space: nowrap;
   background: var(--pill-fill);
   color: var(--text);
-  transition: var(--pill-ease), transform var(--dur-base) var(--ease-apple);
+  box-shadow: inset 0 0 0 1px var(--separator);
+  transition: var(--pill-ease);
   user-select: none;
   -webkit-user-select: none;
 }
 .pill:hover:not(:disabled) {
   background: var(--pill-fill-hover);
 }
-.pill:active:not(:disabled) {
-  transform: scale(var(--press-scale));
-}
 .pill:disabled {
   opacity: 0.38;
   cursor: not-allowed;
 }
 .pill svg {
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
   flex: none;
 }
 
-/** 开关型按钮的激活态：淡主色底 + 主色文字（App Store get-button gray 风格）。
- * 文字用 --accent-text：浅底上 #0071e3 碰见 accent-soft 底会跌破 4.5:1 */
+/** 开关型按钮的激活态：Electric Blue 底白字（Tesla 主操作的唯一表达）。
+ * 底色用 --btn-bg：深色下 --accent 提亮后白字只剩 3.3，会跌破 AA */
 .pill.is-on {
-  background: var(--ios-blue-soft);
-  color: var(--accent-text);
+  background: var(--btn-bg);
+  color: #fff; /* lit-ok: 主按钮实心底上的白字，主题无关 */
+  box-shadow: none;
 }
 .pill.is-on:hover {
-  background: var(--ios-blue-soft-hover);
+  background: var(--btn-bg-hover);
 }
 
 /** 主操作 */
 .pill-primary {
-  background: var(--ios-blue-soft);
-  color: var(--accent-text);
+  background: var(--btn-bg);
+  color: #fff; /* lit-ok: 主操作实心底上的白字，主题无关 */
+  box-shadow: none;
 }
 .pill-primary:hover:not(:disabled) {
-  background: var(--ios-blue-soft-hover);
+  background: var(--btn-bg-hover);
 }
 
-/** 强调实心（用于“结束检测”这类终结性操作）：白字对比度同样走 --btn-bg */
+/** 强调实心（"暂停/继续"这类过程控制） */
 .pill-solid {
   background: var(--btn-bg);
   color: #fff; /* lit-ok: 主按钮实心底上的白字，主题无关 */
+  box-shadow: none;
 }
 .pill-solid:hover:not(:disabled) {
-  filter: brightness(1.06);
+  background: var(--btn-bg-hover);
 }
 
 /** 危险操作：淡红底红字，不用实心红以免过度抢注意力 */
 .pill-danger {
   background: var(--danger-soft);
   color: var(--danger);
+  box-shadow: none;
 }
 .pill-danger:hover:not(:disabled) {
   background: var(--danger-soft);
@@ -882,22 +864,23 @@ select.select {
 }
 
 .pill-lg {
-  height: 38px;
-  padding: 10px 22px;
-  font-size: 15px;
+  min-height: 38px;
+  padding: 8px 20px;
+  font-size: var(--fs-body);
 }
 .pill-sm {
-  height: 28px;
-  padding: 6px 13px;
-  font-size: 12px;
+  min-height: 28px;
+  padding: 5px 12px;
+  font-size: var(--fs-caption);
 }
 
-/** 视频内浮层用的深色药丸（保留给全屏等场景） */
+/** 视频内浮层用的深色按钮（保留给全屏等场景） */
 .pill-glass {
   background: rgba(255, 255, 255, 0.22);
-  color: #fff; /* lit-ok: 视频画面上的玻璃药丸，永远白字 */
-  -webkit-backdrop-filter: saturate(1.8) blur(10px);
-  backdrop-filter: saturate(1.8) blur(10px);
+  color: #fff; /* lit-ok: 视频画面上的玻璃按钮，永远白字 */
+  box-shadow: none;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
 .pill-glass:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.34);
@@ -909,10 +892,9 @@ select.select {
   align-items: center;
   gap: var(--sp-2);
   flex-wrap: wrap;
-  padding: var(--sp-4) var(--sp-5);
+  padding: var(--sp-3) var(--sp-4);
   background: var(--bg-elevated);
   border-radius: var(--r-lg);
-  box-shadow: inset 0 0 0 0.5px var(--separator-soft);
 }
 .controls-group {
   display: flex;
@@ -921,10 +903,9 @@ select.select {
   flex-wrap: wrap;
 }
 .controls-label {
-  font-size: var(--fs-micro);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0;
   color: var(--text-tertiary);
   margin-right: 2px;
 }
@@ -959,8 +940,6 @@ body.has-alarm .toast-host {
    ------------------------------------------------------------
    默认（普通用户）只呈现能直接看懂的内容；带 .pro-only 的元素
    是技术指标与实验工具，仅在 body.pro-mode 下出现。
-   这样做而不是直接删除，是因为这些功能是毕业设计的实验数据来源，
-   答辩与写论文时需要，但日常使用会造成认知负担。
    ============================================================ */
 .pro-only {
   display: none !important;
@@ -975,7 +954,8 @@ body.pro-mode .pro-only {
 body.pro-mode div.pro-only,
 body.pro-mode p.pro-only,
 body.pro-mode .pro-only.card,
-body.pro-mode .pro-only.stat-item {
+body.pro-mode .pro-only.stat-item,
+body.pro-mode .pro-only.metrics-panel {
   display: block !important;
 }
 body.pro-mode .pro-only.metric,
@@ -1001,9 +981,7 @@ body.pro-mode tr.pro-only {
   display: table-row !important;
 }
 
-/* 打印时不能让上面的规则复活控制条与仅屏幕元素。
-   layout.css 里的 @media print 用的是 .controls / .no-print（低特异性），
-   会被 body.pro-mode .pro-only.controls 盖掉，所以这里补一条等特异性的兜底。 */
+/* 打印时不能让上面的规则复活控制条与仅屏幕元素。 */
 @media print {
   body.pro-mode .pro-only.controls,
   body.pro-mode .pro-only.no-print,
@@ -1012,8 +990,8 @@ body.pro-mode tr.pro-only {
   }
 }
 
-/* 专业模式开关的激活态：文字同样走 --accent-text，避免浅底上跌破 4.5 */
+/* 专业模式开关的激活态 */
 #btnProMode.is-on {
-  background: var(--ios-blue-soft);
-  color: var(--accent-text);
+  background: var(--btn-bg);
+  color: #fff; /* lit-ok: 主按钮实心底上的白字，主题无关 */
 }

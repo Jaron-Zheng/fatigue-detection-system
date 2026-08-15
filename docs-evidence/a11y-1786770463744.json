@@ -1,0 +1,101 @@
+{
+  "date": "2026-08-15T05:07:18.823Z",
+  "url": "http://127.0.0.1:5180/",
+  "scenarios": [
+    {
+      "name": "首页 · 浅色",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "help": "ARIA role should be appropriate for the element",
+          "nodes": 1,
+          "target": [
+            "figure"
+          ]
+        },
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 1,
+          "target": [
+            "figcaption"
+          ],
+          "details": [
+            {
+              "t": "figcaption",
+              "m": "Element has insufficient color contrast of 3.27 (foreground color: #8e8e8e, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "首页 · 深色",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "help": "ARIA role should be appropriate for the element",
+          "nodes": 1,
+          "target": [
+            "figure"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "工作台 · 普通 · 浅色",
+      "violations": []
+    },
+    {
+      "name": "工作台 · 普通 · 深色",
+      "violations": []
+    },
+    {
+      "name": "工作台 · 专业 · 浅色",
+      "violations": []
+    },
+    {
+      "name": "工作台 · 专业 · 深色",
+      "violations": []
+    },
+    {
+      "name": "报告页 · 浅色",
+      "violations": []
+    },
+    {
+      "name": "报告页 · 深色",
+      "violations": []
+    },
+    {
+      "name": "设置抽屉 · 浅色",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "help": "ARIA role should be appropriate for the element",
+          "nodes": 1,
+          "target": [
+            "#sheet"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "设置抽屉 · 深色",
+      "violations": [
+        {
+          "id": "aria-allowed-role",
+          "impact": "minor",
+          "help": "ARIA role should be appropriate for the element",
+          "nodes": 1,
+          "target": [
+            "#sheet"
+          ]
+        }
+      ]
+    }
+  ]
+}

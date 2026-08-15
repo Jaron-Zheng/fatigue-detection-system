@@ -120,16 +120,17 @@ export function runCountUp(root = document) {
 /* ==================== 顶栏滚动态 ==================== */
 
 /**
- * 页面滚过一定距离后给顶栏加 .is-scrolled，
- * 让毛玻璃与分隔线浮现。停在顶端时顶栏与页面同色，看不出边界。
+ * 页面滚过一定距离后给导航加 .is-scrolled，
+ * 从首页 hero 上的透明悬浮切回实底。
+ * 停在顶端时导航与 hero 画幅融为一体，看不出边界（Tesla 顶栏模式）。
  */
 function setupNavScroll() {
-  const subnav = document.querySelector('.subnav');
-  if (!subnav) return;
+  const nav = document.querySelector('.global-nav');
+  if (!nav) return;
 
   let ticking = false;
   const update = () => {
-    subnav.classList.toggle('is-scrolled', window.scrollY > 8);
+    nav.classList.toggle('is-scrolled', window.scrollY > 8);
     ticking = false;
   };
 

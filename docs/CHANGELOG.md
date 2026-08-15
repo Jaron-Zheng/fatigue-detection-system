@@ -4,6 +4,87 @@
 每一项均可在 `system-delivery/comparison/文件变更清单.md` 中找到对应文件，
 在 `docs/代码审计报告.md` 中找到问题编号。
 
+## [3.1.0] — 真人反馈修复：导航高亮、首页主题化、插画重做
+
+### 缺陷修复
+
+- **导航当前页高亮不可见（layout.css）**：导航三入口的激活态原来只改
+  透明度 0.78→1，用户看不出点击后已跳转；改为 Electric Blue 文字高亮
+ （hero 融合态下自动换亮蓝），一眼可辨。
+- **视图切换滚动改瞬时（view-router.js）**：`scrollTo smooth` 与视图重排
+  叠加会产生一段"看着没反应"的过渡，改为立即归顶，切换手感干脆。
+
+### 首页跟随主题（默认亮色，暗色模式才变暗）
+
+- **tokens.css**：新增 `--hero-*` 与 `--feat-*` 两套主题令牌
+ （浅色：白底 hero + Light Ash 卡；深色：Carbon Dark hero + 微亮面板）。
+- **layout.css / index.html**：hero 从固定 Carbon Dark 改为跟随主题；
+  导航融合态同步跟随 hero 底色；能力卡/收尾段两套底色。
+
+### 首页插画重做
+
+- 原来的人脸线稿（大圆脸+关键点）整张移除，重做为 Tesla 车机 HUD 风格的
+  「驾驶舱预览」：透视路面 + Electric Blue 车道线 + 220° 疲劳仪表弧 +
+  状态芯片与微型指标；全部颜色走 `--hero-*` 令牌，浅/深主题自动适配。
+
+### 其他
+
+- **app.js**：启动控制台日志颜色从 Apple 蓝 #0071e3 换为 Electric Blue。
+- **tools/design-audit.mjs**：R8 允许 hero 融合态下的白色导航底。
+- 图注颜色升到 --hero-muted（白底 5.9:1，修复 axe serious）。
+- 全套验证重跑：check / ui-smoke 14 / a11y 14（serious 清零）/
+  design-audit 14 / lint / typecheck 全部通过；浏览器 MCP 真实点击
+  走通导航、演示检测、报告、设置抽屉、专业模式、主题切换全流程。
+
+## [3.0.0] — UI 全量重构：Apple 设计语言 → Tesla 设计语言
+
+以 `awesome-design-md-main/design-md/tesla/DESIGN.md` 为基准，图标、颜色、
+布局、交互全部推翻重做（非换肤）：图标库替换为 Lucide、三个视图骨架重排、
+导航/抽屉/报警/动效全部重写。CSS 变量名、元素 ID、测试锚点全部保留，
+检测算法层（web/js/core）零改动。
+
+### 设计令牌与样式（web/css/*，全量重写）
+
+- **tokens.css**：色板换为 Tesla（Electric Blue `#3E6AE1` 唯一交互色、
+  Carbon Dark `#171A20`、Graphite/Pewter/Silver Fog、Light Ash/Cloud Gray）；
+  字阶压缩到 14px 体系、字重只留 400/500、圆角只留 4/12px、阴影全归零、
+  动效统一 `0.33s cubic-bezier(0.5,0,0,0.75)` 且只过渡颜色。变量名全部不变。
+- **base.css / components.css / layout.css / motion.css**：胶囊按钮改 4px 矩形、
+  卡片靠底色差分层、零投影、删除按压 scale/悬停位移/视差/模糊进场，
+  进场动效改为纯淡入。
+
+### 图标系统（web/index.html）
+
+- 22 个自绘 SVG 全部替换为 Lucide 官方 path（MIT，24×24/2px 描边），
+  新增 8 个布局所需图标；symbol id 沿用旧命名，JS 动态换图零改动。
+
+### 布局骨架重排（web/index.html + layout.css）
+
+- 导航：Apple 双层（44px 黑条 + 52px 毛玻璃）→ Tesla 单层 56px；
+  首页 hero 上与 Carbon Dark 画幅融合，滚动后切实底（motion.js 同步适配）。
+- 首页：磁贴交替结构 → Tesla 全幅段落（Carbon Dark hero + 白底能力段 +
+  大数字段 + Light Ash 收尾 CTA），hero 内容居中、CTA 双按钮 200/176px 定宽。
+- 工作台：新增横贯全宽的「仪表条」（等级/原因 + 128px 细环大数字 +
+  时长峰值均值）；右侧指标改为单块白面板内 2 列发丝线分行。
+- 报告：头部改 Tesla 订单页模式（左标题摘要/右 CTA 组），概要数字放大。
+- 报警横幅：Carbon Dark 底 + 左侧等级色条 + 4px 圆角。
+
+### 工具与文档
+
+- **tools/design-audit.mjs**：审计规则从 Apple 十条改写为 Tesla 十条
+  （单一强调色/零投影/14px 正文/无 600-700 字重/无缩放按压/圆角阶梯/
+  零装饰渐变/导航底色/行高/无大写），实测 14/14 通过。
+- **docs/DESIGN.md**：重写为 Tesla 规范映射与项目裁定（含硬规则清单）。
+- 截图证据：`docs-evidence/tesla-redesign/`（浅/深/1366/390 全套 13 张）
+  与 `docs-evidence/design-audit/`。
+
+### 验证
+
+- `npm run check` 静态检查全过；回归测试 125/125；
+- `ui-smoke` 14/14（演示模式全链路无控制台错误）；
+- `a11y-test` 14/14（全部场景 critical/serious 清零，含深色实心按钮改用
+  `--btn-bg` 保证 AA）；`design-audit` 14/14；`lint`/`typecheck` 无错误。
+
 ## [2.1.0] — 按《项目优化提示词》十阶段执行：补测试 + 局部优化
 
 本轮严格按「先侦察、再基线、后改动、强验证」执行。先建立基线

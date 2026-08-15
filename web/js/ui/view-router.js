@@ -103,6 +103,8 @@ export class ViewRouter {
       refreshMotion(target);
       if (id === 'viewHome') runCountUp(target);
     });
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // 视图切换用瞬时滚动：平滑滚动会与视图重排叠加成一段"看着没反应"的
+    // 过渡（尤其从首页长页面切回时），干脆的立即归顶才符合 Tesla 的切换手感
+    window.scrollTo({ top: 0, behavior: 'auto' });
   }
 }

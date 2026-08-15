@@ -19,224 +19,251 @@
 
 <a class="skip-link" href="#main">跳到主内容</a>
 
-<!-- ============ SVG 图标库 ============ -->
+<!-- ============ SVG 图标库（Lucide，github.com/lucide-icons/lucide，MIT） ============
+     统一 24×24 视窗、2px 圆头描边、currentColor 取色。
+     symbol id 沿用旧的 #i-* 命名：JS 动态换图标（暂停/播放、静音、主题）
+     直接改 href，不需要跟着图标库改名。 -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
-    <symbol id="i-logo" viewBox="0 0 24 24">
-      <path fill="currentColor" d="M12 2.6c-5.19 0-9.4 3.62-9.4 8.09 0 2.3 1.12 4.37 2.92 5.85v3.02c0 .7.77 1.12 1.36.75l2.6-1.63c.81.16 1.65.25 2.52.25 5.19 0 9.4-3.62 9.4-8.24S17.19 2.6 12 2.6Z" opacity=".18"/>
-      <circle cx="8.4" cy="10.4" r="1.5" fill="currentColor"/>
-      <circle cx="15.6" cy="10.4" r="1.5" fill="currentColor"/>
-      <path d="M8.2 14.6c1.05.9 2.35 1.35 3.8 1.35s2.75-.45 3.8-1.35" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-      <path d="M12 2.6c-5.19 0-9.4 3.62-9.4 8.09 0 2.3 1.12 4.37 2.92 5.85v3.02c0 .7.77 1.12 1.36.75l2.6-1.63c.81.16 1.65.25 2.52.25 5.19 0 9.4-3.62 9.4-8.24S17.19 2.6 12 2.6Z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
+    <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+      <circle cx="12" cy="12" r="3"/>
     </symbol>
-    <symbol id="i-eye" viewBox="0 0 24 24">
-      <path d="M2 12s3.6-6.4 10-6.4S22 12 22 12s-3.6 6.4-10 6.4S2 12 2 12Z" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linejoin="round"/>
-      <circle cx="12" cy="12" r="2.7" stroke="currentColor" stroke-width="1.7" fill="none"/>
+    <symbol id="i-brain" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/>
+      <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/>
     </symbol>
-    <symbol id="i-brain" viewBox="0 0 24 24">
-      <path d="M9.5 4a3 3 0 0 0-3 3 2.6 2.6 0 0 0-2 2.5c0 .8.3 1.5.9 2A2.7 2.7 0 0 0 4.6 14c0 1.3.9 2.4 2.1 2.8A2.7 2.7 0 0 0 9.4 20c1 0 1.9-.5 2.4-1.3V4.9A2.9 2.9 0 0 0 9.5 4Z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
-      <path d="M14.5 4a3 3 0 0 1 3 3 2.6 2.6 0 0 1 2 2.5c0 .8-.3 1.5-.9 2A2.7 2.7 0 0 1 19.4 14c0 1.3-.9 2.4-2.1 2.8A2.7 2.7 0 0 1 14.6 20c-1 0-1.9-.5-2.4-1.3" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
+    <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1 1 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>
+      <path d="m9 12 2 2 4-4"/>
     </symbol>
-    <symbol id="i-shield" viewBox="0 0 24 24">
-      <path d="M12 2.8 4.6 5.6v5.9c0 4.3 3 8.2 7.4 9.7 4.4-1.5 7.4-5.4 7.4-9.7V5.6L12 2.8Z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/>
-      <path d="m8.8 12 2.3 2.3 4.1-4.4" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <symbol id="i-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
     </symbol>
-    <symbol id="i-bolt" viewBox="0 0 24 24">
-      <path d="M13.2 2.5 5.4 13.4h5l-1.6 8.1 8-11.2h-5l1.4-7.8Z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/>
+    <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 3v18h18"/>
+      <path d="m19 9-5 5-4-4-3 3"/>
     </symbol>
-    <symbol id="i-chart" viewBox="0 0 24 24">
-      <path d="M4 19V6M4 19h16" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round"/>
-      <path d="m7 15 3.4-4.2 3 2.5L18 7.5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+      <circle cx="12" cy="12" r="3"/>
     </symbol>
-    <symbol id="i-gear" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.7" fill="none"/>
-      <path d="M12 3.2v2M12 18.8v2M4.8 12h2M17.2 12h2M6.9 6.9l1.4 1.4M15.7 15.7l1.4 1.4M17.1 6.9l-1.4 1.4M8.3 15.7l-1.4 1.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+    <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
     </symbol>
-    <symbol id="i-sun" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.7" fill="none"/>
-      <path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.6 5.6l1.6 1.6M16.8 16.8l1.6 1.6M18.4 5.6l-1.6 1.6M7.2 16.8l-1.6 1.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+    <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
     </symbol>
-    <symbol id="i-moon" viewBox="0 0 24 24">
-      <path d="M20 14.4A8.5 8.5 0 0 1 9.6 4a8.6 8.6 0 1 0 10.4 10.4Z" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linejoin="round"/>
+    <symbol id="i-sound" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+      <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
     </symbol>
-    <symbol id="i-sound" viewBox="0 0 24 24">
-      <path d="M11 4.8 6.6 8.6H3.4v6.8h3.2L11 19.2V4.8Z" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linejoin="round"/>
-      <path d="M15.2 9.2a4 4 0 0 1 0 5.6M18 6.4a8 8 0 0 1 0 11.2" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+    <symbol id="i-mute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+      <line x1="22" x2="16" y1="9" y2="15"/>
+      <line x1="16" x2="22" y1="9" y2="15"/>
     </symbol>
-    <symbol id="i-mute" viewBox="0 0 24 24">
-      <path d="M11 4.8 6.6 8.6H3.4v6.8h3.2L11 19.2V4.8Z" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linejoin="round"/>
-      <path d="m15.4 9.6 4.4 4.8M19.8 9.6l-4.4 4.8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+    <symbol id="i-mesh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
+      <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+      <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
+      <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+      <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+      <path d="M9 9h.01"/>
+      <path d="M15 9h.01"/>
     </symbol>
-    <symbol id="i-mesh" viewBox="0 0 24 24">
-      <circle cx="6" cy="6" r="1.5" fill="currentColor"/><circle cx="12" cy="4.6" r="1.5" fill="currentColor"/>
-      <circle cx="18" cy="6" r="1.5" fill="currentColor"/><circle cx="4.8" cy="12" r="1.5" fill="currentColor"/>
-      <circle cx="12" cy="11.4" r="1.5" fill="currentColor"/><circle cx="19.2" cy="12" r="1.5" fill="currentColor"/>
-      <circle cx="7" cy="18" r="1.5" fill="currentColor"/><circle cx="12" cy="19.4" r="1.5" fill="currentColor"/>
-      <circle cx="17" cy="18" r="1.5" fill="currentColor"/>
-      <path d="M6 6 12 4.6 18 6l1.2 6-2.2 6L12 19.4 7 18l-2.2-6L6 6Z" stroke="currentColor" stroke-width="1.1" fill="none" opacity=".5"/>
+    <symbol id="i-mirror" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 8l4 4-4 4V8z"/>
+      <path d="M21 8l-4 4 4 4V8z"/>
+      <path d="M12 2v20" stroke-dasharray="3 3"/>
     </symbol>
-    <symbol id="i-mirror" viewBox="0 0 24 24">
-      <path d="M12 3v18" stroke="currentColor" stroke-width="1.6" stroke-dasharray="3 3"/>
-      <path d="M9.4 6.4 4.2 12l5.2 5.6V6.4ZM14.6 6.4 19.8 12l-5.2 5.6V6.4Z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/>
+    <symbol id="i-gauge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m12 14 4-4"/>
+      <path d="M3.34 19a10 10 0 1 1 17.32 0"/>
     </symbol>
-    <symbol id="i-gauge" viewBox="0 0 24 24">
-      <path d="M4 17a8.6 8.6 0 1 1 16 0" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round"/>
-      <path d="m12 17 4-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-      <circle cx="12" cy="17" r="1.6" fill="currentColor"/>
+    <symbol id="i-pause" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="6" y="4" width="4" height="16" rx="1"/>
+      <rect x="14" y="4" width="4" height="16" rx="1"/>
     </symbol>
-    <symbol id="i-pause" viewBox="0 0 24 24">
-      <rect x="7" y="5" width="3.4" height="14" rx="1.2" fill="currentColor"/>
-      <rect x="13.6" y="5" width="3.4" height="14" rx="1.2" fill="currentColor"/>
+    <symbol id="i-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="6 3 20 12 6 21 6 3"/>
     </symbol>
-    <symbol id="i-play" viewBox="0 0 24 24">
-      <path d="M8 5.4v13.2l11-6.6L8 5.4Z" fill="currentColor"/>
+    <symbol id="i-stop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect width="18" height="18" x="3" y="3" rx="2"/>
     </symbol>
-    <symbol id="i-stop" viewBox="0 0 24 24">
-      <rect x="6" y="6" width="12" height="12" rx="2.4" fill="currentColor"/>
+    <symbol id="i-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="22" x2="18" y1="12" y2="12"/>
+      <line x1="6" x2="2" y1="12" y2="12"/>
+      <line x1="12" x2="12" y1="6" y2="2"/>
+      <line x1="12" x2="12" y1="22" y2="18"/>
     </symbol>
-    <symbol id="i-target" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="8.2" stroke="currentColor" stroke-width="1.6" fill="none"/>
-      <circle cx="12" cy="12" r="3.6" stroke="currentColor" stroke-width="1.6" fill="none"/>
-      <circle cx="12" cy="12" r="1.2" fill="currentColor"/>
+    <symbol id="i-warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+      <path d="M12 9v4"/>
+      <path d="M12 17h.01"/>
     </symbol>
-    <symbol id="i-warn" viewBox="0 0 24 24">
-      <path d="M12 3.4 2.6 20h18.8L12 3.4Z" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linejoin="round"/>
-      <path d="M12 9.4v4.6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
-      <circle cx="12" cy="16.8" r="1.1" fill="currentColor"/>
+    <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="7 10 12 15 17 10"/>
+      <line x1="12" x2="12" y1="15" y2="3"/>
     </symbol>
-    <symbol id="i-download" viewBox="0 0 24 24">
-      <path d="M12 4v10.4M8.2 11l3.8 3.8L15.8 11" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M4.6 17.4v1.2a1.8 1.8 0 0 0 1.8 1.8h11.2a1.8 1.8 0 0 0 1.8-1.8v-1.2" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+    <symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 6 6 18"/>
+      <path d="m6 6 12 12"/>
     </symbol>
-    <symbol id="i-close" viewBox="0 0 24 24">
-      <path d="m6.4 6.4 11.2 11.2M17.6 6.4 6.4 17.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+    <symbol id="i-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 3H5a2 2 0 0 0-2 2v3"/>
+      <path d="M21 8V5a2 2 0 0 0-2-2h-3"/>
+      <path d="M3 16v3a2 2 0 0 0 2 2h3"/>
+      <path d="M16 21h3a2 2 0 0 0 2-2v-3"/>
     </symbol>
-    <symbol id="i-expand" viewBox="0 0 24 24">
-      <path d="M9.2 4.4H4.4v4.8M14.8 4.4h4.8v4.8M19.6 14.8v4.8h-4.8M4.4 14.8v4.8h4.8" stroke="currentColor" stroke-width="1.9" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
     </symbol>
-    <symbol id="i-lock" viewBox="0 0 24 24">
-      <rect x="5" y="10.4" width="14" height="9.6" rx="2.2" stroke="currentColor" stroke-width="1.7" fill="none"/>
-      <path d="M8.4 10.4V7.8a3.6 3.6 0 0 1 7.2 0v2.6" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round"/>
+    <symbol id="i-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 12h14"/>
+      <path d="m12 5 7 7-7 7"/>
+    </symbol>
+    <symbol id="i-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </symbol>
+    <symbol id="i-file-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/>
+      <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
+      <path d="M10 9H8"/>
+      <path d="M16 13H8"/>
+      <path d="M16 17H8"/>
+    </symbol>
+    <symbol id="i-video" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m22 8-6 4 6 4V8Z"/>
+      <rect x="2" y="6" width="14" height="12" rx="2"/>
+    </symbol>
+    <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <polyline points="9 22 9 12 15 12 15 22"/>
+    </symbol>
+    <symbol id="i-rotate-ccw" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+      <path d="M3 3v5h5"/>
+    </symbol>
+    <symbol id="i-flask" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/>
+      <path d="M8.5 2h7"/>
+      <path d="M7 16h10"/>
     </symbol>
   </defs>
 </svg>
 
-<!-- ============ 顶部导航（两层，Apple Store 结构） ============
-     第一层 .global-nav：44px 纯黑，全站不变，只放品牌与视图入口。
-     第二层 .subnav：52px 毛玻璃，吸附在下方，放当前产品名与操作。
-     这样"我在哪个站"和"我在这个站的哪一页"被分成了两行来回答，
-     比挤在一行里靠分隔线切开要清楚得多。 -->
-<header class="global-nav">
+<!-- ============ 顶部导航（Tesla 单层结构） ============
+     一条 56px 导航回答所有问题：左品牌、中视图入口、右工具与状态。
+     在首页 hero（Carbon Dark 画幅）之上时透明悬浮、白字；
+     滚动或进入其他视图后切换为实底（motion.js 控制 .is-scrolled）。 -->
+<header class="global-nav" id="globalNav">
   <nav class="global-nav-inner" aria-label="主导航">
     <a class="gn-brand" href="#" id="brandLink" aria-label="返回首页">
-      <svg class="gn-logo" aria-hidden="true"><use href="#i-logo"></use></svg>
+      <svg class="gn-logo" aria-hidden="true"><use href="#i-gauge"></use></svg>
+      <span class="gn-wordmark">疲劳检测系统</span>
     </a>
     <ul class="gn-links">
       <li><a href="#" data-goto="viewHome">概览</a></li>
       <li><a href="#" data-goto="viewWork">实时检测</a></li>
       <li><a href="#" data-goto="viewReport">检测报告</a></li>
     </ul>
-    <div class="gn-spacer"></div>
     <div class="gn-tail">
+      <div class="gn-status" id="navStatus" role="status" aria-live="polite">
+        <span class="dot" id="navDot" style="background:var(--text-quaternary)"></span>
+        <span id="navStatusText">未启动</span>
+      </div>
+      <!-- 专业模式：默认关闭，普通用户看到的是极简界面；
+           打开后展开全部技术指标与实验工具（写论文、答辩演示时用）。 -->
+      <button class="gn-toggle" id="btnProMode" type="button" aria-pressed="false"
+              title="显示全部技术指标与实验分析工具">专业模式</button>
       <button class="gn-icon" id="btnMute" type="button" title="报警声音开关" aria-label="报警声音开关">
         <svg aria-hidden="true"><use href="#i-sound" id="muteIcon"></use></svg>
       </button>
       <button class="gn-icon" id="btnTheme" type="button" title="切换深浅色" aria-label="切换深浅色">
         <svg aria-hidden="true"><use href="#i-moon" id="themeIcon"></use></svg>
       </button>
+      <button class="gn-icon" id="btnSettings" type="button" title="设置" aria-label="设置">
+        <svg aria-hidden="true"><use href="#i-gear"></use></svg>
+      </button>
     </div>
   </nav>
 </header>
 
-<div class="subnav" id="subnav">
-  <div class="subnav-inner">
-    <span class="subnav-title">驾驶员疲劳检测系统</span>
-    <span class="subnav-sub">基于面部多特征融合</span>
-    <div class="subnav-spacer"></div>
-    <div class="subnav-status" id="navStatus" role="status" aria-live="polite">
-      <span class="dot" style="background:var(--text-quaternary)" id="navDot"></span>
-      <span id="navStatusText">未启动</span>
-    </div>
-    <!-- 专业模式：默认关闭，普通用户看到的是极简界面；
-         打开后展开全部技术指标与实验工具（写论文、答辩演示时用）。 -->
-    <button class="pill pill-sm" id="btnProMode" type="button" aria-pressed="false"
-            title="显示全部技术指标与实验分析工具">专业模式</button>
-    <button class="btn-icon" id="btnSettings" type="button" title="设置" aria-label="设置">
-      <svg aria-hidden="true"><use href="#i-gear"></use></svg>
-    </button>
-  </div>
-</div>
-
 <main id="main">
 
 <!-- ============================================================ -->
-<!-- 视图一：首屏                                                  -->
+<!-- 视图一：首屏（Tesla 全幅段落结构）                            -->
 <!-- ============================================================ -->
-<!-- Apple 营销页的骨架：一屏一块全幅磁贴，一块只讲一件事，
-     浅底与近黑底交替产生节奏。分隔靠底色本身，不画线、不投影。
-     所以这里不套 .page（那会限制宽度），改由每块磁贴内部的
-     .tile-inner 收束栏宽。 -->
+<!-- Tesla 的骨架：一屏一讯息。hero 是一块 Carbon Dark 的"暗色画幅"
+     （对应 Tesla 的全屏摄影段），内容锚定在底部，主副 CTA 并排；
+     之后是白底段落与 Light Ash 收尾段，段落之间只靠留白分隔。 -->
 <section class="view active" id="viewHome">
 
-  <!-- ---------- 磁贴 1：首屏主张（浅底） ---------- -->
-  <div class="tile tile-hero" data-tile-exit>
-    <div class="tile-inner tile-center">
-      <div class="hero-eyebrow" data-reveal="fade">
+  <!-- ---------- 段落 1：hero（Carbon Dark 画幅，100vh） ---------- -->
+  <div class="ts-hero">
+    <div class="ts-hero-inner">
+      <p class="ts-promo" data-reveal="fade">
         <svg width="14" height="14" aria-hidden="true"><use href="#i-lock"></use></svg>
         全部计算在本机浏览器完成，视频不上传
-      </div>
-      <h1 class="tile-headline t-balance" data-reveal="focus">
-        让每一次疲劳征兆<br><span class="grad">都被提前看见</span>
-      </h1>
+      </p>
+      <h1 class="ts-hero-title t-balance" data-reveal>让每一次疲劳征兆<br>都被提前看见</h1>
       <!-- 注意：中文段落不要在源码里换行。HTML 会把换行折叠成一个空格，
            而中文标点本身已含间距，叠加后会出现明显的空洞。 -->
-      <p class="tile-lead" data-reveal>用摄像头看着你的眼睛、嘴巴和头部动作，实时判断你有多困，在真正危险之前就出声提醒。打开网页就能用，不装软件、不用联网，画面也不会离开这台电脑。</p>
-      <p class="t-caption pro-only" style="max-width:640px;margin:-4px auto 0" data-reveal>技术实现：融合 PERCLOS、眨眼动力学、哈欠、点头与头部姿态五类面部特征，经隶属函数归一化后模糊加权，实时输出 0–100 疲劳指数与四级预警。</p>
+      <p class="ts-hero-sub" data-reveal>用摄像头看着你的眼睛、嘴巴和头部动作，实时判断你有多困，在真正危险之前就出声提醒。打开网页就能用，不装软件、不用联网，画面也不会离开这台电脑。</p>
+      <p class="ts-hero-note pro-only" data-reveal>技术实现：融合 PERCLOS、眨眼动力学、哈欠、点头与头部姿态五类面部特征，经隶属函数归一化后模糊加权，实时输出 0–100 疲劳指数与四级预警。</p>
 
-      <div class="tile-cta" data-reveal>
+      <!-- Tesla CTA 对：主 Electric Blue 200×40 + 次透明白，均 4px 圆角 -->
+      <div class="ts-hero-cta" data-reveal>
         <button class="btn btn-primary btn-lg" id="btnStart" type="button">
           <svg width="18" height="18" aria-hidden="true"><use href="#i-play"></use></svg>
           开始检测
         </button>
+        <a class="btn btn-hero-ghost btn-lg" href="#tsFeatures">
+          查看工作原理
+          <svg width="16" height="16" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
+        </a>
       </div>
 
-      <!-- 原创视觉：把“本地实时分析”做成首屏唯一的产品主角，
-           不使用第三方品牌素材或图片资产。 -->
-      <figure class="vision-product" data-reveal="rise" role="img" aria-label="本地视觉引擎实时识别驾驶员面部状态的示意图">
-        <div class="vision-product-frame" data-parallax="slow">
-          <svg viewBox="0 0 820 348" aria-hidden="true">
-            <rect class="vision-shell" x="10" y="10" width="800" height="328" rx="38"></rect>
-            <rect class="vision-viewport" x="34" y="34" width="496" height="280" rx="25"></rect>
-            <path class="vision-face" d="M281 92c-49 0-88 39-88 92 0 55 39 104 88 104s88-49 88-104c0-53-39-92-88-92Z"></path>
-            <path class="vision-face-detail" d="M240 166h31m39 0h31m-75 55c11 9 24 13 40 13s30-4 41-13m-59-87v50l-13 21h25"></path>
-            <circle class="vision-node" cx="240" cy="166" r="4"></circle>
-            <circle class="vision-node" cx="271" cy="166" r="4"></circle>
-            <circle class="vision-node" cx="310" cy="166" r="4"></circle>
-            <circle class="vision-node" cx="341" cy="166" r="4"></circle>
-            <circle class="vision-node" cx="297" cy="184" r="4"></circle>
-            <circle class="vision-node" cx="281" cy="234" r="4"></circle>
-            <path class="vision-scan" d="M106 184h350"></path>
-            <rect class="vision-status" x="66" y="62" width="124" height="34" rx="17"></rect>
-            <circle class="vision-status-dot" cx="84" cy="79" r="5"></circle>
-            <text class="vision-status-text" x="98" y="84">本地分析中</text>
-            <g class="vision-metric">
-              <rect x="570" y="34" width="216" height="84" rx="20"></rect>
-              <text x="594" y="65">注意力状态</text>
-              <text class="vision-metric-value" x="594" y="96">清醒</text>
-              <circle class="vision-metric-dot" cx="752" cy="82" r="8"></circle>
+      <!-- 原创视觉：Tesla 车机 HUD 风格的“驾驶舱预览”——透视路面 + 疲劳仪表，
+           不使用人脸素材，不使用第三方品牌资产；配色全部走 --hero-* 令牌，
+           浅色主题为白底细灰线，暗色主题为 Carbon Dark 底亮线。 -->
+      <figure class="vision-product" data-reveal="fade" role="img" aria-label="疲劳检测仪表预览：透视路面示意与实时疲劳指数仪表">
+        <div class="vision-product-frame">
+          <svg viewBox="0 0 820 340" aria-hidden="true">
+            <!-- 面板 -->
+            <rect class="hud-panel" x="1.5" y="1.5" width="817" height="337" rx="12"></rect>
+            <!-- 地平线 -->
+            <line class="hud-horizon" x1="56" y1="158" x2="764" y2="158"></line>
+            <!-- 透视路面：两侧汇聚线 -->
+            <path class="hud-road" d="M168 318 396 162"></path>
+            <path class="hud-road" d="M288 318 406 162"></path>
+            <path class="hud-road" d="M652 318 424 162"></path>
+            <path class="hud-road" d="M532 318 414 162"></path>
+            <!-- 中央车道线（Electric Blue，断续） -->
+            <path class="hud-lane" d="M410 318 410 162"></path>
+            <!-- 扫描线 -->
+            <path class="hud-scan" d="M120 98h580"></path>
+            <!-- 状态芯片 -->
+            <rect class="hud-chip" x="56" y="48" width="150" height="36" rx="4"></rect>
+            <circle class="hud-dot-ok" cx="76" cy="66" r="5"></circle>
+            <text class="hud-chip-text" x="92" y="71">本地分析中</text>
+            <!-- 右侧疲劳仪表：220° 弧 + 大数字 -->
+            <g class="hud-gauge" transform="translate(636,176)">
+              <path class="hud-gauge-track" d="M-64 34 A72 72 0 1 1 64 34"></path>
+              <path class="hud-gauge-bar" d="M-64 34 A72 72 0 1 1 64 34" stroke-dasharray="276" stroke-dashoffset="254"></path>
+              <text class="hud-gauge-num" y="8">08</text>
+              <text class="hud-gauge-label" y="34">疲劳指数</text>
             </g>
-            <g class="vision-metric">
-              <rect x="570" y="132" width="216" height="84" rx="20"></rect>
-              <text x="594" y="163">疲劳指数</text>
-              <text class="vision-metric-value" x="594" y="194">08</text>
-              <path class="vision-spark" d="M688 187l14-13 15 8 18-26 20 13"></path>
-            </g>
-            <g class="vision-metric">
-              <rect x="570" y="230" width="216" height="84" rx="20"></rect>
-              <text x="594" y="261">影像处理</text>
-              <text class="vision-metric-sub" x="594" y="290">仅在这台设备上</text>
-              <path class="vision-lock" d="M744 268v-9a12 12 0 0 0-24 0v9m-4 0h32v24h-32z"></path>
-            </g>
+            <!-- 仪表右侧等级芯片 -->
+            <rect class="hud-chip" x="724" y="56" width="64" height="30" rx="4"></rect>
+            <circle class="hud-dot-ok" cx="740" cy="71" r="4"></circle>
+            <text class="hud-chip-text" x="752" y="75">清醒</text>
           </svg>
         </div>
         <figcaption>你的画面，始终只留在你的设备上。</figcaption>
@@ -252,31 +279,31 @@
     </div>
   </div>
 
-  <!-- ---------- 磁贴 2：四项能力（近黑底） ----------
-       Apple 的深色磁贴用来"讲技术"：底色一压暗，白字的信息密度
-       就能提上去而不显吵。 -->
-  <div class="tile tile-dark-1">
-    <div class="tile-inner">
-      <h2 class="tile-title" data-reveal>看得见的，不只是一张脸。</h2>
-      <p class="tile-sub" data-reveal>四层判断叠在一起，才敢在你自己都还没察觉的时候提醒你。</p>
+  <!-- ---------- 段落 2：四项能力（白底，2×2 大卡） ----------
+       Tesla 的白底段落：卡片 Light Ash 底、12px 圆角、无描边无阴影，
+       卡与卡之间靠 16px 间距和底色差分层。 -->
+  <div class="ts-section" id="tsFeatures">
+    <div class="ts-section-inner">
+      <h2 class="ts-section-title" data-reveal>看得见的，不只是一张脸。</h2>
+      <p class="ts-section-sub" data-reveal>四层判断叠在一起，才敢在你自己都还没察觉的时候提醒你。</p>
 
       <div class="hero-features" data-reveal-group>
-        <div class="feat" data-reveal data-hover-card>
+        <div class="feat" data-reveal>
           <div class="feat-icon"><svg aria-hidden="true"><use href="#i-eye"></use></svg></div>
           <h3>看清每一次眨眼</h3>
           <p>在脸上定位 478 个点，眼睛睁多大、嘴巴张多开、头往哪偏，逐帧都算得清。</p>
         </div>
-        <div class="feat" data-reveal data-hover-card>
+        <div class="feat" data-reveal>
           <div class="feat-icon"><svg aria-hidden="true"><use href="#i-brain"></use></svg></div>
           <h3>多个信号一起判断</h3>
           <p>只看一项容易误判。眨眼、哈欠、点头、走神等七项一起看，结论更稳。</p>
         </div>
-        <div class="feat" data-reveal data-hover-card>
+        <div class="feat" data-reveal>
           <div class="feat-icon"><svg aria-hidden="true"><use href="#i-target"></use></svg></div>
           <h3>先认识你，再判断你</h3>
           <p>开始前花几秒记住你睁眼时的样子。眼睛天生大小不同，标准也就该不同。</p>
         </div>
-        <div class="feat" data-reveal data-hover-card>
+        <div class="feat" data-reveal>
           <div class="feat-icon"><svg aria-hidden="true"><use href="#i-shield"></use></svg></div>
           <h3>画面不出这台电脑</h3>
           <p>计算全在浏览器里完成，视频不上传、不存盘，关掉网页就什么都不剩。</p>
@@ -285,12 +312,11 @@
     </div>
   </div>
 
-  <!-- ---------- 磁贴 3：关键数字（浅底羊皮纸） ----------
-       Apple 常用一块只放数字的磁贴收尾：数字很大，说明很小，
-       中间大片留白。数字用 data-countup 从 0 滚上来。 -->
-  <div class="tile tile-parchment">
-    <div class="tile-inner tile-center">
-      <h2 class="tile-title" data-reveal>算得多细，就能提醒得多早。</h2>
+  <!-- ---------- 段落 3：关键数字（白底，大留白） ----------
+       数字 40px/500，说明 14px Pewter，数字用 data-countup 从 0 滚上来。 -->
+  <div class="ts-section ts-section-tight">
+    <div class="ts-section-inner ts-center">
+      <h2 class="ts-section-title" data-reveal>算得多细，就能提醒得多早。</h2>
       <div class="tile-stats" data-reveal-group>
         <div class="tile-stat" data-reveal>
           <span class="tile-stat-num"><b data-countup>478</b></span>
@@ -312,13 +338,59 @@
     </div>
   </div>
 
+  <!-- ---------- 段落 4：收尾 CTA（Light Ash 底） ---------- -->
+  <div class="ts-section ts-section-ash ts-final">
+    <div class="ts-section-inner ts-center">
+      <h2 class="ts-section-title" data-reveal>现在就开始一次检测</h2>
+      <p class="ts-section-sub" data-reveal>只需要一个摄像头和几十秒的校准，不需要安装任何东西。</p>
+      <div class="ts-final-cta" data-reveal>
+        <a class="btn btn-primary btn-lg" href="#" data-goto="viewWork">
+          <svg width="18" height="18" aria-hidden="true"><use href="#i-video"></use></svg>
+          进入实时检测
+        </a>
+      </div>
+    </div>
+  </div>
+
 </section>
 
 <!-- ============================================================ -->
-<!-- 视图二：检测工作台                                            -->
+<!-- 视图二：检测工作台（Tesla 车机仪表组布局）                    -->
 <!-- ============================================================ -->
 <section class="view" id="viewWork">
   <div class="page">
+
+    <!-- ---------- 顶部仪表条：横贯全宽的"仪表台" ----------
+         左=当前等级与原因，中=疲劳指数大数字（车速表式），
+         右=时长/峰值/均值。原先埋在右栏的总览卡上移到这里，
+         让最重要的数字永远在第一屏正中。 -->
+    <div class="cluster score-card">
+      <div class="cluster-level">
+        <div class="level-chip" id="levelChip" data-level="awake">
+          <span class="dot"></span><span id="levelText">清醒</span>
+        </div>
+        <div class="score-reason" id="scoreReason">等待检测数据…</div>
+      </div>
+      <div class="cluster-gauge">
+        <div class="gauge">
+          <svg viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="track" cx="60" cy="60" r="50"></circle>
+            <circle class="bar" cx="60" cy="60" r="50" id="gaugeBar"
+                    stroke-dasharray="314.16" stroke-dashoffset="314.16"></circle>
+          </svg>
+          <div class="gauge-center">
+            <div class="gauge-num tnum" id="gaugeNum">0</div>
+            <div class="gauge-cap">疲劳指数</div>
+          </div>
+        </div>
+      </div>
+      <div class="score-meta">
+        <div><div class="k">检测时长</div><div class="v tnum" id="metaDuration">00:00</div></div>
+        <div><div class="k">峰值</div><div class="v tnum" id="metaPeak">0</div></div>
+        <div><div class="k">均值</div><div class="v tnum" id="metaAvg">0</div></div>
+      </div>
+    </div>
+
     <div class="workspace">
 
       <!-- ---------- 左侧：视频 + 图表 ---------- -->
@@ -371,10 +443,9 @@
           </div>
         </div>
 
-        <!-- ===== 控制条：从视频内部移出，改用文字按钮 =====
-             移出的理由：叠在画面上的图标按钮会遮挡面部区域，
-             而面部正是本系统最需要观察的地方；图标也需要猜测含义。
-             文字按钮不仅一目了然，还便于口头指代（"点重新标定"而不是"点那个靶心图标"）。 -->
+        <!-- ===== 控制条：文字按钮 + 4px 矩形 =====
+             从视频内部移出的理由：叠在画面上的图标按钮会遮挡面部区域，
+             而面部正是本系统最需要观察的地方；文字按钮便于口头指代。 -->
         <div class="controls" role="toolbar" aria-label="检测控制">
           <div class="controls-group">
             <span class="controls-label" aria-hidden="true">画面</span>
@@ -394,9 +465,9 @@
           <div class="controls-group">
             <span class="controls-label" aria-hidden="true">检测</span>
             <button class="pill" id="btnRecalib" type="button">
-              <svg aria-hidden="true"><use href="#i-target"></use></svg>重新校准
+              <svg aria-hidden="true"><use href="#i-rotate-ccw"></use></svg>重新校准
             </button>
-            <button class="pill pill-primary" id="btnPause" type="button">
+            <button class="pill pill-solid" id="btnPause" type="button">
               <svg aria-hidden="true"><use href="#i-pause" id="pauseIcon"></use></svg><span id="pauseLabel">暂停</span>
             </button>
             <button class="pill pill-danger" id="btnStop" type="button">
@@ -417,7 +488,7 @@
         <div class="card ord-chart1">
           <div class="card-head">
             <div class="card-title">
-              <svg width="18" height="18" aria-hidden="true"><use href="#i-chart"></use></svg>
+              <svg width="16" height="16" aria-hidden="true"><use href="#i-chart"></use></svg>
               疲劳指数趋势
             </div>
             <div class="legend">
@@ -432,7 +503,7 @@
         <div class="card ord-chart2 pro-only">
           <div class="card-head">
             <div class="card-title">
-              <svg width="18" height="18" aria-hidden="true"><use href="#i-eye"></use></svg>
+              <svg width="16" height="16" aria-hidden="true"><use href="#i-eye"></use></svg>
               眼睑与嘴部特征波形
             </div>
             <div class="legend">
@@ -448,7 +519,7 @@
         <div class="card ord-fusion pro-only">
           <div class="card-head">
             <div class="card-title">
-              <svg width="18" height="18" aria-hidden="true"><use href="#i-brain"></use></svg>
+              <svg width="16" height="16" aria-hidden="true"><use href="#i-brain"></use></svg>
               疲劳分数是怎么算出来的
             </div>
             <span class="badge" id="fusionSum">合计 0.0 分</span>
@@ -460,96 +531,81 @@
         </div>
       </div>
 
-      <!-- ---------- 右侧：总览 + 指标 + 事件 ---------- -->
+      <!-- ---------- 右侧：指标面板 + 事件 ---------- -->
       <div class="ws-side">
 
-        <div class="card score-card">
-          <div class="gauge">
-            <svg viewBox="0 0 120 120" aria-hidden="true">
-              <circle class="track" cx="60" cy="60" r="50"></circle>
-              <circle class="bar" cx="60" cy="60" r="50" id="gaugeBar"
-                      stroke-dasharray="314.16" stroke-dashoffset="314.16"></circle>
-            </svg>
-            <div class="gauge-center">
-              <div class="gauge-num tnum" id="gaugeNum">0</div>
-              <div class="gauge-cap">疲劳指数</div>
+        <!-- 8 项指标：整块白面板内的紧凑行，2 列网格，
+             行间 Cloud Gray 发丝线，左侧 3px 状态色条是功能信息 -->
+        <div class="card metrics-panel">
+          <div class="card-head">
+            <div class="card-title">
+              <svg width="16" height="16" aria-hidden="true"><use href="#i-activity"></use></svg>
+              实时指标
             </div>
           </div>
-          <div class="score-info">
-            <div class="level-chip" id="levelChip" data-level="awake">
-              <span class="dot"></span><span id="levelText">清醒</span>
+          <div class="metric-grid">
+            <div class="metric" id="mPerclos">
+              <div class="metric-label">闭眼时间占比<span class="hint" title="最近 30 秒里眼睛处于闭合状态的时间比例。这是判断疲劳最可靠的指标：越高说明越困。专业名称为 PERCLOS">?</span></div>
+              <div class="metric-value"><span class="tnum" id="vPerclos">0.0</span><span class="metric-unit">%</span></div>
+              <div class="metric-sub" id="sPerclos">最近 30 秒</div>
+              <div class="metric-spark"><i id="kPerclos" style="width:0%"></i></div>
             </div>
-            <div class="score-reason" id="scoreReason">等待检测数据…</div>
-            <div class="score-meta">
-              <div><div class="k">检测时长</div><div class="v tnum" id="metaDuration">00:00</div></div>
-              <div><div class="k">峰值</div><div class="v tnum" id="metaPeak">0</div></div>
-              <div><div class="k">均值</div><div class="v tnum" id="metaAvg">0</div></div>
+
+            <div class="metric" id="mClosure">
+              <div class="metric-label">当前闭眼时长</div>
+              <div class="metric-value"><span class="tnum" id="vClosure">0.00</span><span class="metric-unit">秒</span></div>
+              <div class="metric-sub" id="sClosure">睁眼</div>
+              <div class="metric-spark"><i id="kClosure" style="width:0%"></i></div>
             </div>
-          </div>
-        </div>
 
-        <div class="metric-grid">
-          <div class="metric" id="mPerclos">
-            <div class="metric-label">闭眼时间占比<span class="hint" title="最近 30 秒里眼睛处于闭合状态的时间比例。这是判断疲劳最可靠的指标：越高说明越困。专业名称为 PERCLOS">?</span></div>
-            <div class="metric-value"><span class="tnum" id="vPerclos">0.0</span><span class="metric-unit">%</span></div>
-            <div class="metric-sub" id="sPerclos">最近 30 秒</div>
-            <div class="metric-spark"><i id="kPerclos" style="width:0%"></i></div>
-          </div>
+            <div class="metric" id="mYawn">
+              <div class="metric-label">打哈欠</div>
+              <div class="metric-value"><span class="tnum" id="vYawn">0</span><span class="metric-unit">次</span></div>
+              <div class="metric-sub" id="sYawn">0.0 次/分</div>
+              <div class="metric-spark"><i id="kYawn" style="width:0%"></i></div>
+            </div>
 
-          <div class="metric" id="mClosure">
-            <div class="metric-label">当前闭眼时长</div>
-            <div class="metric-value"><span class="tnum" id="vClosure">0.00</span><span class="metric-unit">秒</span></div>
-            <div class="metric-sub" id="sClosure">睁眼</div>
-            <div class="metric-spark"><i id="kClosure" style="width:0%"></i></div>
-          </div>
+            <div class="metric" id="mMicro">
+              <div class="metric-label">长时间闭眼<span class="hint" title="单次闭眼超过 0.5 秒。正常眨眼只有 0.1~0.4 秒，超过说明可能已经短暂睡着">?</span></div>
+              <div class="metric-value"><span class="tnum" id="vMicro">0</span><span class="metric-unit">次</span></div>
+              <div class="metric-sub" id="sMicro">超过 0.5 秒算一次</div>
+              <div class="metric-spark"><i id="kMicro" style="width:0%"></i></div>
+            </div>
 
-          <div class="metric" id="mYawn">
-            <div class="metric-label">打哈欠</div>
-            <div class="metric-value"><span class="tnum" id="vYawn">0</span><span class="metric-unit">次</span></div>
-            <div class="metric-sub" id="sYawn">0.0 次/分</div>
-            <div class="metric-spark"><i id="kYawn" style="width:0%"></i></div>
-          </div>
+            <div class="metric" id="mNod">
+              <div class="metric-label">点头</div>
+              <div class="metric-value"><span class="tnum" id="vNod">0</span><span class="metric-unit">次</span></div>
+              <div class="metric-sub" id="sNod">0.0 次/分</div>
+              <div class="metric-spark"><i id="kNod" style="width:0%"></i></div>
+            </div>
 
-          <div class="metric" id="mMicro">
-            <div class="metric-label">长时间闭眼<span class="hint" title="单次闭眼超过 0.5 秒。正常眨眼只有 0.1~0.4 秒，超过说明可能已经短暂睡着">?</span></div>
-            <div class="metric-value"><span class="tnum" id="vMicro">0</span><span class="metric-unit">次</span></div>
-            <div class="metric-sub" id="sMicro">超过 0.5 秒算一次</div>
-            <div class="metric-spark"><i id="kMicro" style="width:0%"></i></div>
-          </div>
+            <div class="metric" id="mHeadDev">
+              <div class="metric-label">注意力分散<span class="hint" title="头部偏离正前方的时间占比。偏离过久说明注意力不在路面上">?</span></div>
+              <div class="metric-value"><span class="tnum" id="vHeadDev">0.0</span><span class="metric-unit">%</span></div>
+              <div class="metric-sub" id="sHeadDev">头部偏离前方</div>
+              <div class="metric-spark"><i id="kHeadDev" style="width:0%"></i></div>
+            </div>
 
-          <div class="metric" id="mNod">
-            <div class="metric-label">点头</div>
-            <div class="metric-value"><span class="tnum" id="vNod">0</span><span class="metric-unit">次</span></div>
-            <div class="metric-sub" id="sNod">0.0 次/分</div>
-            <div class="metric-spark"><i id="kNod" style="width:0%"></i></div>
-          </div>
+            <div class="metric pro-only" id="mBlink">
+              <div class="metric-label">眨眼频率<span class="hint" title="正常成人自发眨眼约 12–22 次/分；疲劳早期因代偿性唤醒而升高，进入深度嗜睡后转为降低且单次时长明显变长">?</span></div>
+              <div class="metric-value"><span class="tnum" id="vBlink">0.0</span><span class="metric-unit">次/分</span></div>
+              <div class="metric-sub" id="sBlink">正常区间 12–22</div>
+              <div class="metric-spark"><i id="kBlink" style="width:0%"></i></div>
+            </div>
 
-          <div class="metric" id="mHeadDev">
-            <div class="metric-label">注意力分散<span class="hint" title="头部偏离正前方的时间占比。偏离过久说明注意力不在路面上">?</span></div>
-            <div class="metric-value"><span class="tnum" id="vHeadDev">0.0</span><span class="metric-unit">%</span></div>
-            <div class="metric-sub" id="sHeadDev">头部偏离前方</div>
-            <div class="metric-spark"><i id="kHeadDev" style="width:0%"></i></div>
-          </div>
-
-          <div class="metric pro-only" id="mBlink">
-            <div class="metric-label">眨眼频率<span class="hint" title="正常成人自发眨眼约 12–22 次/分；疲劳早期因代偿性唤醒而升高，进入深度嗜睡后转为降低且单次时长明显变长">?</span></div>
-            <div class="metric-value"><span class="tnum" id="vBlink">0.0</span><span class="metric-unit">次/分</span></div>
-            <div class="metric-sub" id="sBlink">正常区间 12–22</div>
-            <div class="metric-spark"><i id="kBlink" style="width:0%"></i></div>
-          </div>
-
-          <div class="metric pro-only" id="mBlinkDur">
-            <div class="metric-label">平均眨眼时长</div>
-            <div class="metric-value"><span class="tnum" id="vBlinkDur">--</span><span class="metric-unit">ms</span></div>
-            <div class="metric-sub" id="sBlinkDur">清醒约 100–200</div>
-            <div class="metric-spark"><i id="kBlinkDur" style="width:0%"></i></div>
+            <div class="metric pro-only" id="mBlinkDur">
+              <div class="metric-label">平均眨眼时长</div>
+              <div class="metric-value"><span class="tnum" id="vBlinkDur">--</span><span class="metric-unit">ms</span></div>
+              <div class="metric-sub" id="sBlinkDur">清醒约 100–200</div>
+              <div class="metric-spark"><i id="kBlinkDur" style="width:0%"></i></div>
+            </div>
           </div>
         </div>
 
         <div class="card ord-timeline">
           <div class="card-head">
             <div class="card-title">
-              <svg width="18" height="18" aria-hidden="true"><use href="#i-warn"></use></svg>
+              <svg width="16" height="16" aria-hidden="true"><use href="#i-activity"></use></svg>
               检测记录
             </div>
             <div style="display:flex;gap:6px;align-items:center">
@@ -565,7 +621,7 @@
         <!-- 个人基准值（专业模式） -->
         <div class="card card-compact ord-calib pro-only">
           <div class="card-head" style="margin-bottom:10px">
-            <div class="card-title" style="font-size:var(--fs-callout)">你的个人基准值</div>
+            <div class="card-title" style="font-size:var(--fs-body)">你的个人基准值</div>
             <span class="badge" id="calibQuality">未测量</span>
           </div>
           <table class="tbl">
@@ -584,23 +640,24 @@
 </section>
 
 <!-- ============================================================ -->
-<!-- 视图三：会话报告                                              -->
+<!-- 视图三：会话报告（Tesla 订单页头部模式）                      -->
 <!-- ============================================================ -->
 <section class="view" id="viewReport">
   <div class="page">
     <div class="report-head">
-      <div class="hero-eyebrow" style="margin-bottom:16px">
-        <svg width="14" height="14" aria-hidden="true"><use href="#i-chart"></use></svg>
-        检测报告
+      <!-- 头部左文右钮：标题与摘要靠左，动作按钮组靠右（Tesla 订单页排布） -->
+      <div class="report-head-main">
+        <div class="hero-eyebrow">
+          <svg width="14" height="14" aria-hidden="true"><use href="#i-file-text"></use></svg>
+          检测报告
+        </div>
+        <h1 class="t-title report-title" id="rpTitle">本次检测汇总</h1>
+        <p class="t-secondary report-subtitle" id="rpSubtitle">--</p>
+        <div class="report-meta-pills" id="rpMetaPills"></div>
       </div>
-      <h1 class="t-title report-title" id="rpTitle">本次检测汇总</h1>
-      <p class="t-secondary report-subtitle" style="margin-top:10px" id="rpSubtitle">--</p>
-      <!-- 关键指标摘要 pill 条：把检测时长 / 均值 / 峰值 / 覆盖率精简为行内标签，
-           让标题区在视觉上更丰富，减少大片空白感 -->
-      <div class="report-meta-pills" id="rpMetaPills"></div>
       <!-- 普通用户只需要两个动作：把报告存下来、或者再测一次。
            两个数据导出按钮是论文做数据分析用的，收进专业模式。 -->
-      <div style="display:flex;gap:10px;justify-content:center;margin-top:24px;flex-wrap:wrap" class="no-print">
+      <div class="report-head-actions no-print">
         <button class="btn btn-primary" id="btnPrint" type="button">
           <svg width="16" height="16" aria-hidden="true"><use href="#i-download"></use></svg>下载报告
         </button>
@@ -633,7 +690,6 @@
           <span><i style="background:var(--lv-moderate)"></i>中度 <b id="rpdModerate">0%</b></span>
           <span><i style="background:var(--lv-severe)"></i>重度 <b id="rpdSevere">0%</b></span>
         </div>
-        <!-- 各状态时长数字块：让分布卡有实质内容，高度能与概要卡匹配 -->
         <div class="dist-stat-row">
           <div class="dist-stat-item" style="color:var(--lv-awake)">
             <span class="n tnum" id="rpdAwakeVal">--</span>
@@ -656,8 +712,6 @@
 
       <div class="card">
         <div class="card-head"><div class="card-title">检测到的行为</div></div>
-        <!-- report-event-table-wrap：表格行数不定，超出卡片高度时内部滚动，
-             不影响左侧两张卡片的等高布局 -->
         <div class="report-event-table-wrap">
           <table class="tbl">
             <thead><tr><th>行为</th><th style="text-align:right;white-space:nowrap">次数</th><th style="text-align:right;white-space:nowrap">每分钟</th></tr></thead>
@@ -680,7 +734,7 @@
       <div class="card pro-only" style="grid-column:1/-1">
         <div class="card-head">
           <div class="card-title">
-            <svg width="18" height="18" aria-hidden="true"><use href="#i-brain"></use></svg>
+            <svg width="16" height="16" aria-hidden="true"><use href="#i-flask"></use></svg>
             参数敏感性分析
           </div>
           <span class="badge badge-info">论文实验工具</span>
@@ -703,7 +757,7 @@
       <div class="card pro-only" style="grid-column:1/-1">
         <div class="card-head">
           <div class="card-title">
-            <svg width="18" height="18" aria-hidden="true"><use href="#i-chart"></use></svg>
+            <svg width="16" height="16" aria-hidden="true"><use href="#i-file-text"></use></svg>
             离线复现（导入会话 CSV）
           </div>
           <span class="badge" id="replayBadge">未导入</span>
@@ -724,7 +778,7 @@
       <div class="card pro-only" style="grid-column:1/-1">
         <div class="card-head">
           <div class="card-title">
-            <svg width="18" height="18" aria-hidden="true"><use href="#i-target"></use></svg>
+            <svg width="16" height="16" aria-hidden="true"><use href="#i-video"></use></svg>
             视频离线评测（准确率验证）
           </div>
           <span class="badge badge-info" id="evalBadge">未导入视频</span>
@@ -739,7 +793,7 @@
           <div class="controls-group">
             <span class="controls-label" aria-hidden="true">视频</span>
             <input type="file" id="fileVideo" accept="video/*" style="display:none">
-            <button class="pill pill-primary" id="btnPickVideo" type="button">
+            <button class="pill pill-solid" id="btnPickVideo" type="button">
               <svg aria-hidden="true"><use href="#i-download"></use></svg>选择视频文件
             </button>
             <span class="t-caption" id="videoInfo">尚未选择。建议 MP4（H.264），时长 2~5 分钟</span>
@@ -757,14 +811,14 @@
               <!-- 标注时间轴 -->
               <div class="card card-compact" style="margin-top:16px">
                 <div class="card-head" style="margin-bottom:10px">
-                  <div class="card-title" style="font-size:var(--fs-callout)">时间区间标注</div>
+                  <div class="card-title" style="font-size:var(--fs-body)">时间区间标注</div>
                   <span class="badge" id="annotCoverage">已标注 0.0s</span>
                 </div>
                 <p class="t-caption" style="margin-bottom:12px">
                   播放视频，在你认为状态发生变化的时刻点「设为起点 / 终点」，然后选标签加入。
                   标签由你本人主观自评给出，等价于 KSS 嗜睡量表的简化二分。
                 </p>
-                <div id="annotTimeline" style="position:relative;height:36px;border-radius:8px;background:var(--fill-quaternary);overflow:hidden;margin-bottom:12px"></div>
+                <div id="annotTimeline" style="position:relative;height:36px;border-radius:4px;background:var(--fill-quaternary);overflow:hidden;margin-bottom:12px"></div>
                 <div class="controls-group" style="margin-bottom:10px">
                   <button class="pill pill-sm" id="btnMarkStart" type="button">设为起点</button>
                   <span class="t-caption mono" id="markRange">-- ~ --</span>
@@ -784,7 +838,7 @@
             <div>
               <div class="card card-compact">
                 <div class="card-head" style="margin-bottom:10px">
-                  <div class="card-title" style="font-size:var(--fs-callout)">评测参数</div>
+                  <div class="card-title" style="font-size:var(--fs-body)">评测参数</div>
                 </div>
                 <div id="evalSliders"></div>
                 <div class="field-row" style="margin-top:14px">
@@ -810,7 +864,7 @@
 
               <div class="card card-compact" style="margin-top:16px">
                 <div class="card-head" style="margin-bottom:10px">
-                  <div class="card-title" style="font-size:var(--fs-callout)">标注存档</div>
+                  <div class="card-title" style="font-size:var(--fs-body)">标注存档</div>
                 </div>
                 <p class="t-caption" style="margin-bottom:12px">
                   标注结果可导出保存，下次换参数重跑不必重新标。

@@ -1,4 +1,4 @@
-/** base.css — 基础重置与排版 */
+/** base.css — 基础重置与排版（Tesla 设计语言） */
 
 *,
 *::before,
@@ -19,8 +19,8 @@ body {
   font-size: var(--fs-body);
   font-weight: var(--fw-regular);
   line-height: var(--lh-normal);
-  /* Apple 正文带极轻微的负字距，是"看不出来但少了就不像"的那种细节 */
-  letter-spacing: var(--ls-body);
+  /* Tesla 全站默认字距，不做负字距收紧 */
+  letter-spacing: 0;
   color: var(--text);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
@@ -43,13 +43,14 @@ dd {
   margin: 0;
 }
 
+/* Tesla 的标题与正文同一家族，只靠字号和 500 字重分层 */
 h1,
 h2,
 h3,
 h4 {
   font-family: var(--font-display);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--ls-tight);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0;
   line-height: var(--lh-snug);
 }
 
@@ -63,7 +64,7 @@ ol {
 a {
   color: var(--link);
   text-decoration: none;
-  transition: opacity var(--dur-fast) var(--ease-apple);
+  transition: color var(--dur-base) var(--ease);
 }
 a:hover {
   text-decoration: underline;
@@ -98,7 +99,7 @@ canvas {
  *
  * hidden 依赖 UA 样式表的 display:none 生效，而作者样式里任何 display 声明
  * 都会把它覆盖掉——例如 .stage-pill{display:inline-flex} 会让带 hidden 的
- * 药丸继续渲染成一个小色块（本项目实际踩过这个坑）。
+ * 元素继续渲染成一个小色块（本项目实际踩过这个坑）。
  * 这里用一条全局规则一次性兜住，避免以后每个组件都要单独处理。
  */
 [hidden] {
@@ -107,14 +108,11 @@ canvas {
 
 /**
  * 可见焦点环：键盘导航可达（无障碍要求）。
- *
- * 用 outline 而不是 box-shadow：box-shadow 会被祖先的 overflow:hidden 裁掉
- * （卡片、视频画面里的按钮都有这个问题），而 outline 画在裁切之外。
- * 现代浏览器的 outline 会自动跟随元素自身的 border-radius，
- * 所以也不必再强行给它套一个 border-radius——那会把方形和胶囊形元素的焦点环拉变形。
+ * Tesla 的焦点表达是 box-shadow 动画，但 outline 不受祖先
+ * overflow:hidden 裁切，这里沿用 outline 方案、颜色换成 Electric Blue。
  */
 :focus-visible {
-  outline: 3px solid var(--accent);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -131,7 +129,7 @@ canvas {
   border: 0;
 }
 
-/* 跳转到主内容（键盘用户）。浮层，保留真实阴影 */
+/* 跳转到主内容（键盘用户） */
 .skip-link {
   position: absolute;
   top: -60px;
@@ -139,9 +137,8 @@ canvas {
   z-index: 999;
   padding: var(--sp-3) var(--sp-5);
   background: var(--bg-elevated);
-  border-radius: var(--r-pill);
-  box-shadow: var(--sh-lg);
-  transition: top var(--dur-base) var(--ease-apple);
+  border-radius: var(--r-sm);
+  transition: top var(--dur-base) var(--ease);
 }
 .skip-link:focus {
   top: var(--sp-4);
@@ -151,28 +148,23 @@ canvas {
   background: var(--accent-soft);
 }
 
-/* 滚动条：贴近 macOS 观感 */
+/* 滚动条：细窄、灰色，贴近车机系统的克制观感 */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: var(--fill-tertiary);
-  border-radius: var(--r-pill);
-  border: 2px solid transparent;
-  background-clip: content-box;
+  border-radius: var(--r-xs);
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-quaternary);
-  background-clip: content-box;
 }
 
-/* 尊重系统的"减少动态效果"设置。
- * 注意：滚动驱动动画（animation-timeline）不吃 animation-duration，
- * 关不掉，所以 motion.css 里那部分整体包在 no-preference 查询里。 */
+/* 尊重系统的"减少动态效果"设置 */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -182,6 +174,12 @@ canvas {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Tesla 字重阶梯里没有 700：b/strong 的浏览器默认 bold 统一压到 500 */
+b,
+strong {
+  font-weight: var(--fw-medium);
 }
 
 /* 数字等宽：仪表盘数值跳动时不抖动 */
@@ -195,33 +193,33 @@ canvas {
 }
 
 /* ---------- 排版工具类 ----------
- * 字重只用 300/400/600/700。Apple 不用 500——
- * 常规与半粗之间那一跳本身就是它排版辨识度的来源。 */
+ * 字重只有 400 / 500（Tesla 规则，没有 600/700）。
+ * 标题靠字号跳变分层，颜色靠 Graphite/Pewter 分层。 */
 .t-hero {
   font-family: var(--font-display);
   font-size: var(--fs-hero);
-  font-weight: var(--fw-semibold);
+  font-weight: var(--fw-medium);
   line-height: var(--lh-tight);
-  letter-spacing: var(--ls-hero);
+  letter-spacing: 0;
 }
 .t-display {
   font-family: var(--font-display);
   font-size: var(--fs-display);
-  font-weight: var(--fw-semibold);
+  font-weight: var(--fw-medium);
   line-height: var(--lh-display);
-  letter-spacing: var(--ls-tight);
+  letter-spacing: 0;
 }
 .t-title {
   font-size: var(--fs-title);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--ls-tight);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0;
 }
 .t-headline {
   font-size: var(--fs-headline);
-  font-weight: var(--fw-semibold);
-  letter-spacing: var(--ls-tight);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0;
 }
-/* 导语段：19px 常规字重。Apple 的副标题靠字号和颜色分层，不靠加粗 */
+/* 导语段：16px 常规字重，关键安全提示也走这一档 */
 .t-subhead {
   font-size: var(--fs-subhead);
   font-weight: var(--fw-regular);
@@ -237,12 +235,12 @@ canvas {
   font-size: var(--fs-caption);
   color: var(--text-secondary);
 }
+/* Tesla 不用大写转换；micro 只是小号 + Pewter 色 */
 .t-micro {
   font-size: var(--fs-micro);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0;
   color: var(--text-tertiary);
-  font-weight: var(--fw-semibold);
+  font-weight: var(--fw-medium);
 }
 .t-secondary {
   color: var(--text-secondary);
@@ -251,6 +249,9 @@ canvas {
   color: var(--text-tertiary);
 }
 .t-center {
+  text-align: center;
+}
+.ts-center {
   text-align: center;
 }
 .t-balance {

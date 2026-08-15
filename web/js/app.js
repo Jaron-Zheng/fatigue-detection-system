@@ -480,6 +480,6 @@ installTestHooks(app, SessionState);
 
 console.log(
   '%c驾驶员疲劳检测系统 %c已就绪 · 全部推理在本地浏览器完成',
-  'font-weight:600;color:#0071e3',
-  'color:#6e6e73'
+  'font-weight:600;color:#3e6ae1',
+  'color:#5c5e62'
 );
