@@ -653,7 +653,10 @@ body.pro-mode .metric-grid .metric:nth-last-child(-n + 2) {
   top: 0;
   right: 0;
   bottom: 0;
-  width: min(420px, 100vw);
+  /* 不能用 100vw：vw 含滚动条而 fixed 的包含块（初始包含块）不含，
+   * 窄视口下抽屉会比可用区域宽出一根滚动条（实测 375px 视口左溢 8px）。
+   * 百分比相对包含块解析，与 right:0 的定位基准天然一致。 */
+  width: min(420px, 100%);
   z-index: 501;
   background: var(--bg-elevated);
   box-shadow: var(--sh-xl);
