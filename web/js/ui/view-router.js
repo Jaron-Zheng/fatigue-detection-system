@@ -9,6 +9,7 @@
 import { $ } from '../util/dom.js';
 import { SessionState } from '../core/session-state-machine.js';
 import { refreshMotion, runCountUp } from './motion.js';
+import { toast } from './toast.js';
 
 export class ViewRouter {
   /** @param {object} app 应用组合根 */
@@ -44,23 +45,30 @@ export class ViewRouter {
       setTimeout(() => app.presenter.redrawAfterResize(), 120);
     });
 
-    // 键盘快捷键：空格暂停
+    // 键盘快捷键：空格暂停（仅工作台生效——在首页/报告页按空格
+    // 会"隐形"操控一个看不见的后台会话，用户完全不知情）
     document.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
-      if (e.code === 'Space' && (app.state === SessionState.RUNNING || app.state === SessionState.PAUSED)) {
+      const onWorkbench = document.querySelector('#viewWork.active') !== null;
+      if (e.code === 'Space' && onWorkbench && (app.state === SessionState.RUNNING || app.state === SessionState.PAUSED)) {
         e.preventDefault();
         app.togglePause();
       }
     });
 
-    // 页面隐藏时暂停，避免后台跑推理白耗电
+    // 页面隐藏时暂停，避免后台跑推理白耗电；回前台自动续跑，
+    // 但必须 toast 告知——否则用户以为还暂停着，实际已在检测，
+    // 对安全类产品这种"状态不透明"比打断更危险
     document.addEventListener('visibilitychange', () => {
       if (document.hidden && app.state === SessionState.RUNNING) {
-        app._autoPaused = true;
+        // 先暂停再立标志：togglePause 内部会清除 _autoPaused，
+        // 顺序反了标志立即失效，回前台就不会自动恢复了
         app.togglePause();
+        app._autoPaused = true;
       } else if (!document.hidden && app._autoPaused && app.state === SessionState.PAUSED) {
         app._autoPaused = false;
         app.togglePause();
+        toast('已自动继续检测', '刚才页面在后台被暂停，现在已恢复；如需暂停请点暂停按钮', 'info', 3200);
       }
     });
   }
@@ -99,6 +107,15 @@ export class ViewRouter {
     const app = this.app;
     const target = document.getElementById(id);
     if (!target || !target.classList.contains('view')) return;
+
+    /* 会话进行中不放行报告页：那里只有上一会话的过期报告或空态，
+     * 用户可能导出半截数据或被旧结论误导。提示后带回工作台。
+     * 正常结束（stopSession）走 switchView 直达，不受此限。 */
+    const active = [SessionState.BOOTING, SessionState.CALIBRATING, SessionState.RUNNING, SessionState.PAUSED];
+    if (id === 'viewReport' && active.includes(app.state)) {
+      toast('检测进行中', '本次检测结束后会自动生成报告，已回到工作台', 'info', 3200);
+      id = 'viewWork';
+    }
 
     this.switchView(id);
     if (id === 'viewWork' && app.state === SessionState.IDLE) app.showIdleStage();

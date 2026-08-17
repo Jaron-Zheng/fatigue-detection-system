@@ -44,7 +44,7 @@ import { exportSessionJson, exportSessionCsv, exportReportHtml } from './ui/expo
 import { ViewRouter } from './ui/view-router.js';
 import { createSettingsHandlers } from './ui/settings-wiring.js';
 import { bootEngine, startCamera, switchCamera, setSimulate, cancelStart, resetSession, stopSession, failStart } from './ui/session-actions.js';
-import { toastOk, toastWarn } from './ui/toast.js';
+import { toast, toastOk, toastWarn } from './ui/toast.js';
 import { initMotion } from './ui/motion.js';
 import { installTestHooks } from './test-hooks.js';
 
@@ -170,7 +170,7 @@ class App {
       })
     );
     $('#btnExportCsv').addEventListener('click', () => exportSessionCsv(this.recorder));
-    $('#btnPrint').addEventListener('click', () => exportReportHtml());
+    $('#btnPrint').addEventListener('click', () => exportReportHtml(this.recorder));
     $('#btnBackWork').addEventListener('click', () => this.start(this.simulate));
 
     // 报警视觉回调由 UI 提供
@@ -215,7 +215,19 @@ class App {
   /* ==================== 生命周期（全部迁移经状态机裁决） ==================== */
 
   async start(skipCalib = false) {
-    if (this.sm.is(State.RUNNING, State.CALIBRATING, State.BOOTING)) return;
+    /* 已有活会话时绝不能静默吞掉这次点击——用户从首页/报告页点
+     * "开始检测"会毫无反应，像是按钮坏了（真实用户反馈的"卡死"）。
+     * 统一处理：带回工作台（会话画面所在处）+ toast 说明出路。 */
+    if (this.sm.is(State.RUNNING, State.CALIBRATING, State.BOOTING)) {
+      this.router.gotoView('viewWork');
+      toast('已有进行中的检测', '已回到工作台；如需重新开始，请先结束当前检测', 'info', 3600);
+      return;
+    }
+    if (this.sm.is(State.PAUSED)) {
+      this.router.gotoView('viewWork');
+      toast('检测处于暂停状态', '已回到工作台；点"继续"恢复检测，或先结束再重新开始', 'info', 3600);
+      return;
+    }
 
     // 报表页返回时的"再次检测"
     if (this.sm.is(State.REPORT)) resetSession(this);
@@ -328,6 +340,11 @@ class App {
   }
 
   togglePause() {
+    /* 手动/键盘暂停必须清除自动暂停标志：否则"曾自动暂停过 → 用户手动
+     * 恢复又手动暂停 → 切换标签页回来"会被 visibilitychange 误判为
+     * "恢复上次自动暂停"，把用户明确按下的暂停擅自恢复成检测中。
+     * 自动暂停路径在调用本方法之后再重新立标志（见 view-router.js）。 */
+    this._autoPaused = false;
     if (this.sm.send(SessionEvent.PAUSE)) {
       this.loop.stop();
       this.stage.showPaused();

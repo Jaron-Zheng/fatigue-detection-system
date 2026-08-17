@@ -230,8 +230,30 @@ export class CameraSource {
     };
 
     try {
-      this.stream = await navigator.mediaDevices.getUserMedia(constraints);
+      /**
+       * 权限弹窗超时兜底：
+       * 用户忽略权限对话框时 getUserMedia 会一直 pending，
+       * 界面将停留在 BOOTING 无任何反馈（实测"卡死"投诉的根源之一）。
+       * 15 秒未决即放弃并给出可操作的提示。
+       */
+      // 声明必须先于 Promise 构造：executor 同步执行，若 timerId 还在
+      // TDZ（let 提升但未初始化）赋值会直接抛 ReferenceError
+      let timerId = null;
+      const timeout = new Promise((_, reject) => {
+        timerId = setTimeout(() => reject(new Error('CAMERA_PERMISSION_TIMEOUT')), 15000);
+      });
+      timeout._clear = () => clearTimeout(timerId);
+      this.stream = await Promise.race([
+        navigator.mediaDevices.getUserMedia(constraints).then((s) => {
+          timeout._clear();
+          return s;
+        }),
+        timeout,
+      ]);
     } catch (err) {
+      if (err && err.message === 'CAMERA_PERMISSION_TIMEOUT') {
+        throw new Error('等待摄像头授权超时（15 秒无响应）。请在浏览器弹窗中点击「允许」，然后重新开始检测。');
+      }
       throw new Error(CameraSource.friendlyError(err), { cause: err });
     }
 

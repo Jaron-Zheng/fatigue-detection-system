@@ -424,6 +424,10 @@ export function downloadFile(filename, content, mime = 'application/octet-stream
 
 export function timestampName(prefix, ext) {
   const d = new Date();
-  const p = (n) => String(n).padStart(2, '0');
-  return `${prefix}_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.${ext}`;
+  const p = (n, w = 2) => String(n).padStart(w, '0');
+  // 秒级时间戳在快速连点导出时会生成同名文件（浏览器静默覆盖为 (1).xlsx 式重命名或直接冲突），
+  // 追加毫秒 + 会话内单调计数，保证同一秒内多次导出文件名仍唯一。
+  const ms = String(d.getMilliseconds()).padStart(3, '0');
+  timestampName._seq = (timestampName._seq || 0) + 1;
+  return `${prefix}_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}${ms}_r${p(timestampName._seq % 1000, 3)}.${ext}`;
 }
