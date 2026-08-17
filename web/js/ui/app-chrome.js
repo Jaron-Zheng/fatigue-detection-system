@@ -6,7 +6,7 @@
  */
 
 import { $, setText, toggleClass } from '../util/dom.js';
-import { CONFIG } from '../config.js';
+import { CONFIG, loadUserConfig, resetConfig } from '../config.js';
 import { toast } from './toast.js';
 
 export class AppChrome {
@@ -40,7 +40,11 @@ export class AppChrome {
       cur === 'dark' || (cur === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     const next = isDarkNow ? 'light' : 'dark';
     document.documentElement.dataset.theme = next;
-    localStorage.setItem('fatigue.theme', next);
+    try {
+      localStorage.setItem('fatigue.theme', next);
+    } catch {
+      /* 存储写满/隐私模式：主题本会话内仍生效，仅不持久化 */
+    }
     this._syncThemeIcon();
     // 图表颜色取自 CSS 变量，主题切换后需要重新取色并重绘
     setTimeout(() => this._onThemeChanged(), 60);
@@ -73,7 +77,11 @@ export class AppChrome {
 
   toggleProMode() {
     const on = !document.body.classList.contains('pro-mode');
-    localStorage.setItem('fatigue.proMode', on ? '1' : '0');
+    try {
+      localStorage.setItem('fatigue.proMode', on ? '1' : '0');
+    } catch {
+      /* 存储不可用：本会话内切换仍生效 */
+    }
     this._applyProMode(on, true);
   }
 
@@ -95,6 +103,46 @@ export class AppChrome {
         2600
       );
     }
+  }
+
+  /* ---------- 跨标签页同步 ---------- */
+
+  /**
+   * 监听 storage 事件，与其他标签页保持一致（storage 事件只在
+   * "别的窗口"修改 localStorage 时在本地触发，正好用作被动方同步）。
+   *
+   * 不同步的后果（批次三角色7实测）：标签 A 切主题/专业模式/保存参数后，
+   * 标签 B 的界面与内存 CONFIG 仍停留在旧值——B 随后生成的检测、消融
+   * 实验、报告全部基于过期参数，且没有任何提示，属于沉默型状态-产出不一致。
+   *
+   * @param {() => void} [onConfigReloaded] 配置被远端更新后的回调
+   *   （刷新指标卡窗口说明、重建设置抽屉滑块等依赖 CONFIG 的 DOM）
+   */
+  bindCrossTabSync(onConfigReloaded) {
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'fatigue.theme') {
+        const saved = e.newValue;
+        if (saved === 'light' || saved === 'dark') {
+          document.documentElement.dataset.theme = saved;
+        } else {
+          document.documentElement.dataset.theme = 'auto';
+        }
+        this._syncThemeIcon();
+        // 图表取色依赖 CSS 变量，主题回放后必须重绘（与 toggleTheme 同口径）
+        setTimeout(() => this._onThemeChanged(), 60);
+      } else if (e.key === 'fatigue.proMode') {
+        // notify=false：视觉立即对齐即可，不必用 toast 打断用户
+        this._applyProMode(e.newValue === '1', false);
+      } else if (e.key === 'fatigue.config.v1') {
+        // newValue 为 null 说明另一窗口"恢复默认"（removeItem），需整体回落；
+        // 否则重放补丁。saveUserConfig 每次写入完整分组，重放即得最新全量。
+        if (e.newValue === null) resetConfig();
+        else loadUserConfig();
+        this.syncButtonStates();
+        if (onConfigReloaded) onConfigReloaded();
+        toast('设置已在其他窗口更新', '本页参数已同步为最新值', 'info', 3200);
+      }
+    });
   }
 
   /* ---------- 状态同步与环境信息 ---------- */

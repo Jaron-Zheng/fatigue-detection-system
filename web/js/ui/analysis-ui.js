@@ -264,6 +264,23 @@ export class AnalysisPanel {
     toastOk('消融实验完成', `已对 ${r.rows.length} 个指标逐项评估`);
   }
 
+  /**
+   * 导入失败统一收口：提示 + 清状态。
+   * 失败后必须把 replaySamples 与徽标一并复位——否则上一份成功导入的文件
+   * 仍处于"激活"状态，后续敏感性/消融实验会静默基于旧文件计算，
+   * 而徽标还宣称"已导入并复现"，属于典型的状态-产出不一致。
+   */
+  _rejectReplay(title, msg, infoText) {
+    toastError(title, msg);
+    setText($('#replayInfo'), infoText);
+    this.replaySamples = null;
+    const badge = $('#replayBadge');
+    if (badge) {
+      setText(badge, '未导入');
+      badge.className = 'badge';
+    }
+  }
+
   async _onReplayFile(file) {
     if (!file) return;
     try {
@@ -277,12 +294,18 @@ export class AnalysisPanel {
       const text = await file.text();
       const parsed = parseSessionCsv(text);
       if (parsed.error) {
-        toastError('CSV 解析失败', parsed.error);
-        setText($('#replayInfo'), '解析失败：' + parsed.error);
+        this._rejectReplay('CSV 解析失败', parsed.error, '解析失败：' + parsed.error);
+        return;
+      }
+      const r = replaySession(parsed.samples, {});
+      if (!r.valid) {
+        // 解析成功但样本不足（如仅 1 行数据）：必须走业务提示，
+        // 不能让 r.avgScore 为 undefined 直接 .toFixed 抛 TypeError，
+        // 落进外层 catch 变成「读取文件失败: Cannot read properties of undefined」
+        this._rejectReplay('无法复现该文件', r.reason || '样本不足，至少需要 2 个采样点', '复现失败：' + (r.reason || '样本不足'));
         return;
       }
       this.replaySamples = parsed.samples;
-      const r = replaySession(parsed.samples, {});
 
       setText(
         $('#replayInfo'),

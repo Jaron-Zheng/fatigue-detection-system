@@ -102,6 +102,14 @@ class App {
     this.chrome.syncButtonStates();
     this.chrome.initTheme();
     this.chrome.initProMode();
+    // 跨标签同步：其他窗口改主题/专业模式/保存参数后，本页立即对齐，
+    // 避免后续检测与报告基于过期参数（批次三角色7缺陷修复）
+    this.chrome.bindCrossTabSync(() => {
+      // 依赖 CONFIG 的 DOM 必须一并刷新，否则说明文字与滑块仍是旧值
+      setText($('#sPerclos'), `最近 ${CONFIG.window.perclosSec} 秒`);
+      this.settings._build();
+      this.settings._syncSwitches();
+    });
     this.chrome.renderEnv();
     this.showIdleStage();
     // 动效必须最后启动：它要在 DOM 与主题都就位后才能正确测量与接管
