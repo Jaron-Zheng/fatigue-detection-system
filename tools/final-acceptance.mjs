@@ -2,7 +2,8 @@
  * final-acceptance.mjs — 终验｜总验收官
  *
  * 现象 A（状态-产出不一致）复测：专业模式开/关各导出一份 HTML 报告，
- *   逐项比对产出物——关闭时不得含专业区块，开启时必须含（附对比证据）。
+ *   逐项比对产出物——2026-08 需求变更后口径：无论开关，导出统一为
+ *   专业版详细报告（body 强制 pro-mode，含全部专业区块）。
  * 现象 B（守卫缺失）复测：无检测数据时三个导出按钮必须 disabled，
  *   且即便绕过 UI 强行调用导出链路也无文件产出（assertHasData 兜底）。
  *
@@ -108,7 +109,7 @@ console.log('\n==== 现象 A 复测：专业模式 × 下载报告内容 ====');
     await sleep(400);
   };
 
-  // A1 专业模式关闭 → 导出
+  // A1 专业模式关闭 → 导出（2026-08 需求变更后：统一专业版详细报告）
   await setPro(false);
   const htmlOff = await exportHtml();
   // A2 专业模式开启 → 导出（同一会话数据）
@@ -117,16 +118,20 @@ console.log('\n==== 现象 A 复测：专业模式 × 下载报告内容 ====');
 
   const PRO_MARKS = /id="(sensTable|replayResult|evalResult|rpParams)"/;
   const FOLD_NOTE = /本次会话未运行，无导出数据/;
-  const a1 = !PRO_MARKS.test(htmlOff);
-  const a2 = PRO_MARKS.test(htmlOn) || FOLD_NOTE.test(htmlOn);
-  if (a1) ok(`A1 专业模式关闭：导出不含专业区块（${htmlOff.length} 字节）`);
-  else bad('A1 专业模式关闭：导出仍泄漏专业区块 → 现象A仍存在');
+  const BODY_PRO = /class="[^"]*pro-mode/;
+  const a1 = PRO_MARKS.test(htmlOff) || FOLD_NOTE.test(htmlOff);
+  const a1Body = BODY_PRO.test(htmlOff.match(/<body[^>]*>/)?.[0] || '');
+  const a2 = (PRO_MARKS.test(htmlOn) || FOLD_NOTE.test(htmlOn)) && BODY_PRO.test(htmlOn.match(/<body[^>]*>/)?.[0] || '');
+  if (a1) ok(`A1 专业模式关闭：导出统一为专业版详细内容（${htmlOff.length} 字节）`);
+  else bad('A1 专业模式关闭：导出丢失专业区块 → 未按新口径导出');
+  if (a1Body) ok('A1b 专业模式关闭：导出 body 强制带 pro-mode（专业区块可见）');
+  else bad('A1b 专业模式关闭：导出 body 缺 pro-mode（专业区块会被 CSS 隐藏）');
   if (a2) ok(`A2 专业模式开启：导出含专业内容（${htmlOn.length} 字节）`);
-  else bad('A2 专业模式开启：导出丢失专业内容 → 现象A仍存在');
-  if (a1 && a2 && htmlOn.length !== htmlOff.length) {
-    ok(`A3 产出物对比：off=${htmlOff.length}B / on=${htmlOn.length}B，内容随模式正确分流（Δ=${htmlOn.length - htmlOff.length}B）`);
+  else bad('A2 专业模式开启：导出丢失专业内容');
+  if (a1 && a2 && /id="rpParams"/.test(htmlOff) && /id="rpParams"/.test(htmlOn)) {
+    ok(`A3 产出物对比：off=${htmlOff.length}B / on=${htmlOn.length}B，两模式均含专业参数表（统一专业版口径）`);
   } else if (a1 && a2) {
-    bad('A3 两份导出内容相同 → 现象A仍存在');
+    bad('A3 两份导出均缺参数表 → 未按新口径导出');
   }
 
   // A4 报告页 UI 上可见的结论字段与导出文件一致（标题+结论）

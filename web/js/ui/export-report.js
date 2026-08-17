@@ -65,41 +65,51 @@ export async function exportReportHtml(recorder) {
   // 移除不需要打印的按钮区域
   clone.querySelectorAll('.no-print').forEach((el) => el.remove());
 
-  /* 专家区块按当前模式分流处理（第六轮开关混沌实测修复：
-   * 此前折叠逻辑不区分模式——普通模式导出会把空专业卡折成
-   * 「未运行」可见文案，专业术语泄漏给普通用户；而专业模式导出
-   * 时分析卡没跑也折成同样文案，导致两份文件肉眼一模一样）。
+  /* 专家区块统一按「专业版详细报告」导出（用户 2026-08 需求变更：
+   * 无论导出时专业模式开关如何，HTML 报告都包含全部专业数据区块。
+   * 页面上的开关只影响在线浏览口径，导出物是归档/交付文件，
+   * 始终给最完整的数据）。
    *
-   * 普通模式：.pro-only 在页面上本就 display:none，用户看到什么
-   *   报告里就该只有什么——从导出克隆里整体剥离，不留痕迹。
-   * 专业模式：空壳折叠——敏感性分析/离线复现/视频评测三张卡在
-   *   「分析未运行」时结果是空的，原样导出会得到带标题的大白板卡，
-   *   答辩交付物观感很差。规则：卡内不存在任何"有内容的结果容器"
-   *   就把整卡替换为一行紧凑说明。结果容器由各卡自身的渲染逻辑
-   *   填充（表格行/结论文本/结果块），空 = 未运行。 */
+   * 空壳折叠仍然保留：敏感性分析/离线复现/视频评测三张卡在
+   * 「分析未运行」时结果是空的，原样导出会得到带标题的大白板卡。
+   * 规则：卡内不存在任何"有内容的结果容器"就把整卡替换为一行
+   * 紧凑说明。结果容器由各卡自身的渲染逻辑填充
+   * （表格行/结论文本/结果块），空 = 未运行。 */
   const PRO_RESULT_HOSTS = ['#sensTable', '#sensConclusion', '#replayResult', '#evalResult'];
-  const proModeOn = document.body.classList.contains('pro-mode');
-  if (!proModeOn) {
-    clone.querySelectorAll('.pro-only').forEach((el) => el.remove());
-  } else {
-    for (const card of [...clone.querySelectorAll('.card.pro-only')]) {
-      const hasResult = PRO_RESULT_HOSTS.some((sel) => {
-        const host = card.querySelector(sel);
-        if (!host) return false;
-        return (host.textContent || '').trim().length > 0 || host.children.length > 0;
-      });
-      // 「检测参数与环境」的结果就是 #rpParams 表本身，有数据行即保留；
-      // 不认 .field-row——那是评测卡的输入控件行，不代表跑出了结果
-      const hasRows = card.querySelectorAll('.tbl tr, #rpParams tr').length > 0;
-      if (!hasResult && !hasRows) {
-        const title = (card.querySelector('h3, .card-title')?.textContent || '专业分析').trim();
-        const note = document.createElement('p');
-        note.className = 't-tertiary';
-        note.style.cssText = 'margin:0;padding:14px 20px;font-size:13px;';
-        note.textContent = `「${title}」本次会话未运行，无导出数据（在线页面上运行后重新导出即可包含结果）`;
-        card.replaceWith(note);
-      }
+  for (const card of [...clone.querySelectorAll('.card.pro-only')]) {
+    const hasResult = PRO_RESULT_HOSTS.some((sel) => {
+      const host = card.querySelector(sel);
+      if (!host) return false;
+      return (host.textContent || '').trim().length > 0 || host.children.length > 0;
+    });
+    // 「检测参数与环境」的结果就是 #rpParams 表本身，有数据行即保留；
+    // 不认 .field-row——那是评测卡的输入控件行，不代表跑出了结果
+    const hasRows = card.querySelectorAll('.tbl tr, #rpParams tr').length > 0;
+    if (!hasResult && !hasRows) {
+      const title = (card.querySelector('h3, .card-title')?.textContent || '专业分析').trim();
+      const note = document.createElement('p');
+      note.className = 't-tertiary';
+      note.style.cssText = 'margin:0;padding:14px 20px;font-size:13px;';
+      note.textContent = `「${title}」本次会话未运行，无导出数据（在线页面上运行后重新导出即可包含结果）`;
+      card.replaceWith(note);
     }
+  }
+
+  /* 副标题统一详细口径：普通模式下在线页面的副标题省略采样点数
+   * （report.js 按 pro-mode 分流），导出统一为专业版时补齐，
+   * 保证导出文件之间口径一致。 */
+  const subtitleEl = clone.querySelector('#rpSubtitle');
+  if (
+    subtitleEl &&
+    recorder &&
+    recorder.samples &&
+    recorder.samples.length > 0 &&
+    !subtitleEl.textContent.includes('个采样点')
+  ) {
+    subtitleEl.textContent = subtitleEl.textContent.replace(
+      /(持续\s[^·]+?)\s·/,
+      `$1 · ${recorder.samples.length} 个采样点 ·`
+    );
   }
 
   // 收集当前页面所有已加载的 CSS 文本（内联样式表 + <link> 表）
@@ -137,13 +147,18 @@ export async function exportReportHtml(recorder) {
   // 变量读取完毕，还原用户当前主题
   if (prevTheme && prevTheme !== 'light') htmlEl.setAttribute('data-theme', prevTheme);
 
-  // 同步 body 状态类：pro-mode 决定 .pro-only 区块在导出文件里是否可见。
-  // 之前 body 硬编码且不带任何类，导致专家模式无论开关，
-  // 导出的报告里专业内容全被 .pro-only{display:none} 吞掉，两份文件一模一样。
-  const bodyStateClass = document.body.className
-    .split(/\s+/)
-    .filter((c) => c && c !== 'has-motion') // 运行时动画类不属于文档状态
-    .join(' ');
+  /* 导出 body 强制带 pro-mode（需求变更后的统一口径）：
+   * 内联 CSS 依赖 body.pro-mode 后代选择器恢复 .pro-only 显示，
+   * 无论导出时页面开关状态如何，导出文件里专业区块都必须可见。
+   * 其余运行时状态类照常同步，仅剔除动画类。 */
+  const bodyStateClass = [
+    ...new Set(
+      document.body.className
+        .split(/\s+/)
+        .filter((c) => c && c !== 'has-motion') // 运行时动画类不属于文档状态
+        .concat(['pro-mode'])
+    ),
+  ].join(' ');
 
   const title = document.getElementById('rpTitle')?.textContent || '疲劳检测报告';
 

@@ -97,8 +97,11 @@ console.log('\n---- 角色 10 · 导出一致性（主题 × 专业模式） ---
     const hasProSection = /id="(sensTable|replayResult|evalResult|rpParams)"/.test(html.content);
     const hasFoldNote = /本次会话未运行，无导出数据/.test(html.content);
     if (!isHtmlOkTheme) bad(`[${c.theme}/pro=${c.pro}] HTML 导出主题内联异常`);
-    if (c.pro && !hasProSection && !hasFoldNote) bad(`[${c.theme}/pro=${c.pro}] 专业模式 HTML 缺专业区块`);
-    if (!c.pro && hasProSection) bad(`[${c.theme}/pro=${c.pro}] 普通模式 HTML 泄漏专业区块（现象A同族）`);
+    // 2026-08 需求变更：HTML 统一导出专业版——无论开关，专业区块都必须在
+    if (!hasProSection && !hasFoldNote) bad(`[${c.theme}/pro=${c.pro}] HTML 缺专业区块（统一专业版口径）`);
+    if (!/class="[^"]*pro-mode/.test(html.content.match(/<body[^>]*>/)?.[0] || '')) {
+      bad(`[${c.theme}/pro=${c.pro}] 导出 body 缺 pro-mode（专业区块会被 CSS 隐藏）`);
+    }
     if (!html.name.endsWith('.html')) bad(`HTML 文件名异常：${html.name}`);
 
     // JSON

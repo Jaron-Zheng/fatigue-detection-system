@@ -1,13 +1,13 @@
 /**
- * toggle-chaos-test.mjs — 开关状态一致性混沌测试（第六轮）
+ * toggle-chaos-test.mjs — 开关状态一致性混沌测试（第六轮，2026-08 需求变更后更新）
  *
  * 核心思想：不测"功能能不能点"，测"开关状态在乱序操作后是否仍然真实"——
- * 打开→关闭→打开，功能必须是打开的；导出的文件必须与开关状态一致。
+ * 打开→关闭→打开，功能必须是打开的。
  *
- * 重点复现用户报告：专业模式下下载的 HTML 报告有时和普通模式一样。
- * 嫌疑：exportReportHtml 的空壳折叠不区分专业模式（export-report.js L69-87），
- * 普通模式导出会把空的专业卡折成「未运行」可见文字；专业模式导出时
- * 三张分析卡没跑也折成同样文字 → 两份文件肉眼相同。
+ * 需求变更（2026-08-17）：HTML 报告统一导出专业版详细内容——
+ * 无论专业模式开关，导出文件都必须包含全部专业区块（body 强制 pro-mode）。
+ * 开关只影响在线浏览口径，不再影响导出物。
+ * CSV / JSON 导出与专业模式完全无关（只依赖 recorder 数据），本套件一并验证。
  */
 import { chromium } from 'playwright-core';
 import { mkdirSync, readFileSync, rmSync } from 'node:fs';
@@ -87,57 +87,61 @@ await runSession();
   else bad('专业导出缺参数表');
 }
 
-// ---------- T3 【复现用户 bug】普通模式导出不得含专业折叠文案 ----------
+// ---------- T3 【新口径】普通模式导出也必须是专业版详细报告 ----------
 {
   await page.evaluate(() => { if (document.body.classList.contains('pro-mode')) window.__fatigue.app.chrome.toggleProMode(); });
   await sleep(300);
   const s = await state();
   if (s.proClass) { bad('前置失败：无法切回普通模式'); }
   else {
-    const { body, html } = await exportHtml('T3-normal');
-    const noProBody = !/pro-mode/.test(body);
-    if (noProBody) ok('普通模式导出 body 无 pro-mode');
-    else bad(`普通模式导出 body 泄漏 pro-mode: ${body}`);
-    const leak = (html.match(/「[^”]*」本次会话未运行/g) || []).length;
-    if (leak === 0) ok('普通模式导出无专业折叠文案泄漏');
-    else bad(`普通模式导出泄漏 ${leak} 条专业折叠文案（用户报告的 bug 实锤）`);
-    if (!/id="rpParams"/.test(html)) ok('普通模式导出不含专业参数表（整体剥离干净）');
-    else bad('普通模式导出仍含专业参数表 DOM');
-    // pro-only 元素本身应不可见（display:none 规则存在且 body 无 pro-mode）
+    const { body, html } = await exportHtml('T3-normal-pro-export');
+    if (/class="[^"]*pro-mode/.test(body)) ok('普通模式导出 body 强制带 pro-mode（统一专业版）');
+    else bad(`普通模式导出丢失 pro-mode（退化为简版）: ${body}`);
+    if (/id="rpParams"/.test(html) && /<tr/.test(html.match(/id="rpParams"[\s\S]{0,2000}/)?.[0] || '')) ok('普通模式导出含专业参数表数据行');
+    else bad('普通模式导出缺专业参数表（需求变更后必须包含）');
+    // pro-only 隐藏规则仍应存在（被 body.pro-mode 复活规则覆盖，两份规则都要在）
     if (/\.pro-only\{[^}]*display:\s*none/.test(html.replace(/\s/g, '')) || /\.pro-only\s*\{[^}]*display:none/.test(html)) ok('导出文件含 .pro-only 隐藏规则');
     else bad('导出文件缺 .pro-only 隐藏规则');
+    if (/body\.pro-mode\s+\.pro-only\s*\{\s*display:\s*revert/.test(html)) ok('导出文件含 pro-only 复活规则');
+    else bad('导出文件缺 pro-only 复活规则（专业区块会被隐藏）');
+    // 副标题统一详细口径：普通模式在线页面省略采样点，导出应补齐
+    if (/个采样点/.test(html)) ok('普通模式导出副标题补齐采样点数（详细口径）');
+    else bad('普通模式导出副标题缺采样点数');
   }
 }
 
-// ---------- T4 专业 vs 普通两份文件必须肉眼可辨 ----------
+// ---------- T4 普通 vs 专业两份文件：统一专业版，内容口径一致 ----------
 {
-  const n = readFileSync(`${OUT}/T3-normal.html`, 'utf8');
+  const n = readFileSync(`${OUT}/T3-normal-pro-export.html`, 'utf8');
   await page.evaluate(() => { if (!document.body.classList.contains('pro-mode')) window.__fatigue.app.chrome.toggleProMode(); });
   await sleep(300);
-  const { body } = await exportHtml('T4-pro2');
+  await exportHtml('T4-pro2');
   const p = readFileSync(`${OUT}/T4-pro2.html`, 'utf8');
-  const diffMarker = /class="[^"]*pro-mode/.test(body) && !/pro-mode/.test(n.match(/<body[^>]*>/)?.[0] || '');
-  if (diffMarker) ok('两份文件 body 类可区分（专业/普通）');
-  else bad('两份文件无法区分');
+  // 两份文件都必须带 pro-mode 且含专业参数表
+  const nOk = /class="[^"]*pro-mode/.test(n.match(/<body[^>]*>/)?.[0] || '') && /id="rpParams"/.test(n);
+  const pOk = /class="[^"]*pro-mode/.test(p.match(/<body[^>]*>/)?.[0] || '') && /id="rpParams"/.test(p);
+  if (nOk && pOk) ok('两份导出均为专业版（body 带 pro-mode + 含参数表）');
+  else bad(`导出版本不一致: 普通=${nOk} 专业=${pOk}`);
   // 关键差异点：专业版含 pro-only 复活规则（cssText 序列化带空格，正则需兼容）
   const proHasParamsVisible = /body\.pro-mode\s+\.pro-only\s*\{\s*display:\s*revert/.test(p);
   if (proHasParamsVisible) ok('专业版含 pro-only 复活规则');
   else bad('专业版缺 pro-only 复活规则');
 }
 
-// ---------- T5 导出瞬间狂切开关（竞态）：文件状态必须取导出那一刻 ----------
+// ---------- T5 导出瞬间狂切开关（竞态）：无论开关，导出恒为专业版 ----------
 {
-  // 连续点击导出+切换，验证每次导出的 body 类都自洽（要么 pro 要么普通，不出现半截）
+  // 连续点击导出+切换，验证每次导出都自洽（统一专业版，不出现半截或退化）
   for (let i = 0; i < 4; i++) {
     const wantPro = i % 2 === 1;
     await page.evaluate((w) => {
       const has = document.body.classList.contains('pro-mode');
       if (has !== w) window.__fatigue.app.chrome.toggleProMode();
     }, wantPro);
-    const { body } = await exportHtml(`T5-${i}`);
-    const got = /class="[^"]*pro-mode/.test(body);
-    if (got === wantPro) ok(`第 ${i + 1} 次导出状态一致（${wantPro ? '专业' : '普通'}）`);
-    else bad(`第 ${i + 1} 次导出状态错乱: 期望${wantPro ? '专业' : '普通'} 实得 ${body}`);
+    const { body, html } = await exportHtml(`T5-${i}`);
+    const gotPro = /class="[^"]*pro-mode/.test(body);
+    const gotParams = /id="rpParams"/.test(html);
+    if (gotPro && gotParams) ok(`第 ${i + 1} 次导出统一专业版（页面开关=${wantPro ? '开' : '关'}）`);
+    else bad(`第 ${i + 1} 次导出错乱: pro-mode=${gotPro} 参数表=${gotParams}`);
   }
 }
 
@@ -224,6 +228,40 @@ await runSession();
   if (changed !== null && afterNoSave === before) ok(`不保存关闭后参数未变（${before}s）`);
   else if (changed === null) ok('未找到时长滑块（跳过：UI 无该项）');
   else bad(`不保存关闭后参数被改: ${before}→${afterNoSave}`);
+}
+
+// ---------- T10 CSV / JSON 与专业模式无关：两种模式导出内容一致 ----------
+{
+  /** 点击导出按钮并保存下载文件，返回文本内容 */
+  async function exportDl(btnId, tag) {
+    const dlPromise = page.waitForEvent('download', { timeout: 10000 });
+    await page.evaluate((id) => document.getElementById(id).click(), btnId);
+    const dl = await dlPromise;
+    const file = `${OUT}/${tag}`;
+    await dl.saveAs(file);
+    return readFileSync(file, 'utf8');
+  }
+  await runSession();
+  // 普通模式导出 CSV / JSON
+  await page.evaluate(() => { if (document.body.classList.contains('pro-mode')) window.__fatigue.app.chrome.toggleProMode(); });
+  await sleep(300);
+  const csvOff = await exportDl('btnExportCsv', 'T10-csv-off.csv');
+  const jsonOff = await exportDl('btnExportJson', 'T10-json-off.json');
+  // 专业模式导出 CSV / JSON（同一会话数据）
+  await page.evaluate(() => { if (!document.body.classList.contains('pro-mode')) window.__fatigue.app.chrome.toggleProMode(); });
+  await sleep(300);
+  const csvOn = await exportDl('btnExportCsv', 'T10-csv-on.csv');
+  const jsonOn = await exportDl('btnExportJson', 'T10-json-on.json');
+
+  if (csvOff === csvOn && csvOff.length > 0) ok(`CSV 与专业模式无关（两种模式字节级一致，${csvOff.length}B）`);
+  else bad(`CSV 受专业模式影响: off=${csvOff.length}B on=${csvOn.length}B`);
+  const jOff = JSON.parse(jsonOff);
+  const jOn = JSON.parse(jsonOn);
+  if (jOff.samples?.length === jOn.samples?.length && jOff.samples.length > 0 && jOff.events?.length === jOn.events?.length) {
+    ok(`JSON 与专业模式无关（samples=${jOff.samples.length} events=${jOff.events.length} 两模式一致）`);
+  } else {
+    bad(`JSON 受专业模式影响: off samples=${jOff.samples?.length} on samples=${jOn.samples?.length}`);
+  }
 }
 
 if (errors.length === 0) ok('全程无未捕获异常');
