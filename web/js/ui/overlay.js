@@ -29,7 +29,15 @@ import {
   IRIS_RIGHT_CENTER,
   NOSE_TIP,
 } from '../core/landmarks.js';
-import { DEG2RAD } from '../util/math.js';
+import { DEG2RAD, clamp } from '../util/math.js';
+
+/** #rrggbb + alpha → rgba() 字符串（示意脸的状态色需要不同透明度分层） */
+function hexA(hex, a) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
+  if (!m) return `rgba(255,255,255,${a})`;
+  const n = parseInt(m[1], 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+}
 
 export class Overlay {
   constructor(canvas) {
@@ -171,11 +179,16 @@ export class Overlay {
   }
 
   /**
-   * 模拟模式下的示意脸绘制。
+   * 模拟模式下的示意脸绘制（v2 重设计）。
    *
    * 模拟模式没有真实视频与关键点，但答辩演示时需要让观众"看到"发生了什么，
    * 所以这里用 EAR / MAR / 头部角度直接驱动一张矢量示意脸：
-   * 眼睛开合高度 ∝ EAR，嘴部张开高度 ∝ MAR，整张脸随 yaw/roll 偏转。
+   *   · 眼睛是上下两条眼睑曲线围成的杏仁形，闭眼 = 上眼睑真实下落盖住眼睛，
+   *     而不是把椭圆压扁——观众能看懂"眼皮在合上"这个动作本身；
+   *   · 嘴的张开走下颌旋转语义：下唇与下巴随 jawOpen 下垂，哈欠时呈圆形开口；
+   *   · 头/颈/肩三层结构给出驾驶坐姿语境，随 pitch/yaw/roll 一起运动；
+   *   · 疲劳语义细节：眉毛下沉内倾（困倦眉）、中重度出现眼袋弧线；
+   *   · 头周一圈等级色状态环 + 极淡光晕，替代 v1 的大面积光斑。
    * 它同时也是很好的算法教学演示——观众能直观看到特征量与面部状态的对应关系。
    */
   drawSynthetic(feat, state) {
@@ -186,130 +199,350 @@ export class Overlay {
     if (!feat) return;
 
     const cx = w / 2;
-    const cy = h / 2;
-    const R = Math.min(w, h) * 0.30;
+    const cy = h * 0.46;
+    const R = Math.min(w, h) * 0.26;
 
     const yaw = (feat.yaw || 0) * DEG2RAD;
     const roll = (feat.roll || 0) * DEG2RAD;
     const pitch = (feat.pitch || 0) * DEG2RAD;
 
-    ctx.save();
-    ctx.translate(cx + Math.sin(yaw) * R * 0.5, cy + Math.sin(pitch) * R * 0.4);
-    ctx.rotate(roll);
+    /* ---- 派生量 ----
+     * EAR 0.30=全睁 0.055=全闭 → 归一化开合度；哈欠用 jawOpen（0..1）。
+     * breathing：3.8s 周期的轻微起伏，让静息状态也不是一张死脸。 */
+    const openRatio = clamp((feat.ear - 0.055) / (0.3 - 0.055), 0, 1);
+    const jaw = clamp(feat.jawOpen ?? clamp((feat.mar - 0.06) / (0.85 - 0.06), 0, 1), 0, 1);
+    const level = (state && state.level) || 'awake';
+    const LV = {
+      awake: '#30d158',
+      mild: '#ffd60a',
+      moderate: '#ff9f0a',
+      severe: '#ff453a',
+    };
+    const lvColor = LV[level] || LV.awake;
+    const fatigueK = level === 'severe' ? 1 : level === 'moderate' ? 0.6 : level === 'mild' ? 0.3 : 0;
+    const breath = Math.sin((feat.ts || 0) / 1900) * R * 0.012;
 
-    // 背景光晕：按等级着色，强化状态感知
-    const levelColor =
-      state && state.level === 'severe'
-        ? 'rgba(255,69,58,0.30)'
-        : state && state.level === 'moderate'
-        ? 'rgba(255,159,10,0.24)'
-        : state && state.level === 'mild'
-        ? 'rgba(255,214,10,0.20)'
-        : 'rgba(48,209,88,0.16)';
-    const glow = ctx.createRadialGradient(0, 0, R * 0.5, 0, 0, R * 2.1);
-    glow.addColorStop(0, levelColor);
+    /* 头部整体变换：yaw 平移 + roll 旋转 + pitch 下沉 + 呼吸 */
+    ctx.save();
+    ctx.translate(cx + Math.sin(yaw) * R * 0.55, cy + Math.sin(pitch) * R * 0.38 + breath);
+    ctx.rotate(roll);
+    const persp = Math.cos(yaw); // 侧转时脸宽轻微压缩（透视暗示）
+
+    /* ---- 肩部与颈部（坐姿语境，画在头后面） ---- */
+    this._synShoulders(ctx, R);
+    this._synNeck(ctx, R, persp);
+
+    /* ---- 状态环 + 光晕 ---- */
+    const glow = ctx.createRadialGradient(0, 0, R * 0.6, 0, 0, R * 1.42);
+    glow.addColorStop(0, hexA(lvColor, 0.10 + fatigueK * 0.14));
     glow.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = glow;
     ctx.beginPath();
-    ctx.arc(0, 0, R * 2.1, 0, Math.PI * 2);
+    ctx.arc(0, 0, R * 1.42, 0, Math.PI * 2);
     ctx.fill();
-
-    // 脸廓（椭圆随 yaw 压缩，模拟侧转的透视）
-    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = hexA(lvColor, 0.62);
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([R * 0.12, R * 0.1]);
     ctx.beginPath();
-    ctx.ellipse(0, 0, R * Math.cos(yaw) * 0.82, R * 1.12, 0, 0, Math.PI * 2);
+    ctx.arc(0, 0, R * 1.32, 0, Math.PI * 2);
     ctx.stroke();
+    ctx.setLineDash([]);
 
-    // 眼睛：高度由 EAR 决定
-    const EAR_OPEN = 0.30;
-    const openRatio = Math.max(0.03, Math.min(1, (feat.ear || 0) / EAR_OPEN));
-    const eyeW = R * 0.30;
-    const eyeH = R * 0.20 * openRatio;
-    const eyeY = -R * 0.22;
-    const closed = state && state.closed;
-    const eyeColor = closed ? this.colors.eyeClosed : this.colors.eye;
-    ctx.strokeStyle = eyeColor;
-    ctx.fillStyle = closed ? 'rgba(255,69,58,0.18)' : 'rgba(0,224,164,0.14)';
-    ctx.lineWidth = closed ? 3 : 2.2;
-    ctx.shadowColor = eyeColor;
-    ctx.shadowBlur = closed ? 14 : 6;
-    for (const sx of [-R * 0.42, R * 0.42]) {
-      ctx.beginPath();
-      if (eyeH < R * 0.02) {
-        ctx.moveTo(sx - eyeW / 2, eyeY);
-        ctx.lineTo(sx + eyeW / 2, eyeY);
-      } else {
-        ctx.ellipse(sx, eyeY, eyeW / 2, eyeH, 0, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      ctx.stroke();
-      // 瞳孔
-      if (eyeH > R * 0.05) {
-        ctx.save();
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = this.colors.iris;
-        ctx.beginPath();
-        ctx.arc(sx, eyeY, Math.min(eyeH * 0.55, R * 0.055), 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
-    }
-    ctx.shadowBlur = 0;
+    /* ---- 头（蛋形 + 发际 + 耳） ---- */
+    this._synHead(ctx, R, persp);
 
-    // 眉毛
-    ctx.strokeStyle = 'rgba(255,255,255,0.42)';
-    ctx.lineWidth = 2.4;
-    for (const sx of [-R * 0.42, R * 0.42]) {
-      ctx.beginPath();
-      ctx.moveTo(sx - eyeW * 0.55, eyeY - R * 0.16);
-      ctx.quadraticCurveTo(sx, eyeY - R * 0.235, sx + eyeW * 0.55, eyeY - R * 0.16);
-      ctx.stroke();
-    }
-
-    // 鼻
-    ctx.strokeStyle = 'rgba(255,255,255,0.34)';
-    ctx.lineWidth = 1.8;
-    ctx.beginPath();
-    ctx.moveTo(0, eyeY + R * 0.1);
-    ctx.lineTo(-R * 0.06, R * 0.16);
-    ctx.lineTo(R * 0.05, R * 0.17);
-    ctx.stroke();
-
-    // 嘴：高度由 MAR 决定
-    const mar = feat.mar || 0;
-    const mouthOpen = state && state.mouthOpen;
-    const mouthW = R * 0.56;
-    const mouthH = Math.max(R * 0.035, Math.min(R * 0.62, mar * R * 0.95));
-    const mouthY = R * 0.48;
-    ctx.strokeStyle = mouthOpen ? this.colors.mouth : 'rgba(255,255,255,0.5)';
-    ctx.fillStyle = mouthOpen ? 'rgba(255,214,10,0.20)' : 'rgba(255,255,255,0.06)';
-    ctx.lineWidth = mouthOpen ? 3 : 2;
-    if (mouthOpen) {
-      ctx.shadowColor = this.colors.mouth;
-      ctx.shadowBlur = 12;
-    }
-    ctx.beginPath();
-    ctx.ellipse(0, mouthY, mouthW / 2, mouthH / 2, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.shadowBlur = 0;
+    /* ---- 面部器官（眼/眉/鼻/嘴，画在头变换内） ---- */
+    this._synFace(ctx, R, persp, openRatio, jaw, fatigueK, state, Math.sin(yaw));
 
     ctx.restore();
 
-    // 说明文字（控制条已移出视频，底部空间可用）
-    ctx.fillStyle = 'rgba(255,255,255,0.85)';
-    ctx.font = '600 13px -apple-system, "PingFang SC", sans-serif';
+    /* ---- 底部说明：阶段胶囊 + 副标题（不随头动） ---- */
+    const phase = feat.phase || '--';
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText(`演示模式 · 当前阶段：${feat.phase || '--'}`, w / 2, h - 40);
-    ctx.font = '400 11px -apple-system, "PingFang SC", sans-serif';
+    ctx.textBaseline = 'middle';
+    const pillW = Math.max(150, ctx.measureText(`演示模式 · ${phase}`).width + 64);
+    const pillH = 28;
+    const pillY = h - 52;
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.strokeStyle = hexA(lvColor, 0.55);
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.roundRect(w / 2 - pillW / 2, pillY, pillW, pillH, pillH / 2);
+    ctx.fill();
+    ctx.stroke();
+    // 指示点
+    ctx.fillStyle = lvColor;
+    ctx.beginPath();
+    ctx.arc(w / 2 - pillW / 2 + 16, pillY + pillH / 2, 3.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.font = '600 13px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+    ctx.fillText(`演示模式 · ${phase}`, w / 2 + 8, pillY + pillH / 2 + 0.5);
+    ctx.font = '400 11px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.textBaseline = 'alphabetic';
     // 专业模式下说明信号来源；简洁模式只说这是模拟的，避免抛术语
     const sub = document.body.classList.contains('pro-mode')
       ? '示意脸由 EAR / MAR / 头部角度直接驱动，用于演示与自动化测试'
       : '这是模拟出来的脸，不使用摄像头';
-    ctx.fillText(sub, w / 2, h - 22);
+    ctx.fillText(sub, w / 2, h - 14);
+  }
+
+  /* ============ 示意脸 v3 的分部件绘制（坐标以头部中心为原点、R 为半径） ============ */
+
+  /** 肩部：一条大弧线给出"人坐在方向盘后"的剪影暗示（v3 抬高肩线，缩短颈部） */
+  _synShoulders(ctx, R) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.13)';
+    ctx.lineWidth = R * 0.13;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-R * 1.62, R * 1.86);
+    ctx.quadraticCurveTo(-R * 1.5, R * 1.16, 0, R * 1.1);
+    ctx.quadraticCurveTo(R * 1.5, R * 1.16, R * 1.62, R * 1.86);
+    ctx.stroke();
+    ctx.lineCap = 'butt';
+  }
+
+  /** 颈部：从下颌延伸到肩线的两笔 */
+  _synNeck(ctx, R, persp) {
+    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+    ctx.lineWidth = R * 0.09;
+    ctx.beginPath();
+    ctx.moveTo(-R * 0.26 * persp, R * 0.82);
+    ctx.lineTo(-R * 0.30 * persp, R * 1.18);
+    ctx.moveTo(R * 0.26 * persp, R * 0.82);
+    ctx.lineTo(R * 0.30 * persp, R * 1.18);
+    ctx.stroke();
+  }
+
+  /** 头（v3）：鹅蛋形 + 暖调柔和填充 + 平涂"发型帽" + 双耳 */
+  _synHead(ctx, R, persp) {
+    const hw = R * 0.72 * Math.max(0.72, persp); // 半宽
+    const hh = R * 1.02; // 半高
+    // 鹅蛋轮廓：颅顶圆 → 颞部 → 颊部收窄 → 圆下巴
+    ctx.beginPath();
+    ctx.moveTo(0, -hh);
+    ctx.bezierCurveTo(hw * 0.82, -hh, hw, -hh * 0.55, hw * 0.98, -hh * 0.08);
+    ctx.bezierCurveTo(hw * 0.96, hh * 0.4, hw * 0.5, hh * 0.9, 0, hh * 0.98);
+    ctx.bezierCurveTo(-hw * 0.5, hh * 0.9, -hw * 0.96, hh * 0.4, -hw * 0.98, -hh * 0.08);
+    ctx.bezierCurveTo(-hw, -hh * 0.55, -hw * 0.82, -hh, 0, -hh);
+    ctx.closePath();
+    // 皮肤：带一点暖调的柔和体量感（替代 v2 的冷白）
+    const skin = ctx.createLinearGradient(0, -hh, 0, hh);
+    skin.addColorStop(0, 'rgba(255,244,232,0.17)');
+    skin.addColorStop(0.7, 'rgba(255,248,240,0.09)');
+    skin.addColorStop(1, 'rgba(255,255,255,0.04)');
+    ctx.fillStyle = skin;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+    ctx.lineWidth = 1.7;
+    ctx.stroke();
+
+    // 发型帽：一瓣干净的平涂剪影（暖棕发色，近黑舞台上仍有体量）
+    ctx.beginPath();
+    ctx.moveTo(-hw * 0.88, -hh * 0.26);
+    ctx.quadraticCurveTo(-hw * 0.9, -hh * 0.97, 0, -hh * 0.955);
+    ctx.quadraticCurveTo(hw * 0.9, -hh * 0.97, hw * 0.88, -hh * 0.26);
+    // 下缘：中间略高的中分弧
+    ctx.quadraticCurveTo(hw * 0.52, -hh * 0.4, 0, -hh * 0.38);
+    ctx.quadraticCurveTo(-hw * 0.52, -hh * 0.4, -hw * 0.88, -hh * 0.26);
+    ctx.closePath();
+    const hair = ctx.createLinearGradient(0, -hh, 0, -hh * 0.3);
+    hair.addColorStop(0, 'rgba(178,146,112,0.30)');
+    hair.addColorStop(1, 'rgba(150,122,92,0.18)');
+    ctx.fillStyle = hair;
+    ctx.fill();
+
+    // 耳：与眼睛齐平的小椭圆，1/3 突出于脸廓外（v3 眼位在头部中点）
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.ellipse(s * hw * 1.03, 0, R * 0.078, R * 0.108, 0, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.07)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+      ctx.lineWidth = 1.3;
+      ctx.stroke();
+    }
+  }
+
+  /** 面部器官（v3）：杏仁眼+视线 / 干净拱形眉 / 极简鼻 / 下颌嘴 / 疲劳细节 */
+  _synFace(ctx, R, persp, openRatio, jaw, fatigueK, state, gaze = 0) {
+    const closed = state && state.closed;
+    const mouthOpen = state && state.mouthOpen;
+
+    /* ---- 疲劳红晕：轻度末段两颊渐起，疲劳越深越红 ---- */
+    if (fatigueK >= 0.3) {
+      for (const s of [-1, 1]) {
+        const g2 = ctx.createRadialGradient(s * R * 0.42, R * 0.12, 0, s * R * 0.42, R * 0.12, R * 0.2);
+        g2.addColorStop(0, `rgba(255,132,120,${0.08 + fatigueK * 0.12})`);
+        g2.addColorStop(1, 'rgba(255,132,120,0)');
+        ctx.fillStyle = g2;
+        ctx.beginPath();
+        ctx.arc(s * R * 0.42, R * 0.12, R * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    /* ---- 眼睛：位于头部纵向中点，间距约 1 眼宽（面部比例基准） ----
+     * 杏仁形 = 内外眼角之间上、下两条眼睑曲线。
+     * 上眼睑弧高随 openRatio 从全开落到 0，且随疲劳基线下垂 —— 闭眼与疲劳都可见。
+     * 虹膜随视线（yaw）同向偏移并被开口裁剪；睁眼带瞳孔与高光。 */
+    const eyeY = -R * 0.02;
+    const eyeDX = R * 0.33 * Math.max(0.78, persp);
+    const eyeW2 = R * 0.17; // 半宽
+    const lidH = R * 0.115 * (0.06 + 0.94 * openRatio) * (1 - fatigueK * 0.32); // 上眼睑弧高（含疲劳下垂）
+    const lowH = R * 0.068; // 下眼睑弧高（基本不动）
+    const eyeColor = closed ? this.colors.eyeClosed : this.colors.eye;
+
+    for (const s of [-1, 1]) {
+      const ex = s * eyeDX;
+
+      /* 眉毛：干净的拱形（暖灰，白眉在深色舞台像发光条），疲劳时下沉并内倾 */
+      const droop = fatigueK * R * 0.055 + (1 - openRatio) * R * 0.018;
+      const browY = eyeY - R * 0.15 - droop;
+      ctx.strokeStyle = 'rgba(205,192,174,0.66)';
+      ctx.lineWidth = R * 0.026;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      // 内侧端点比外侧低 → 内倾（困）
+      const inner = ex - s * eyeW2 * 1.0;
+      const outer = ex + s * eyeW2 * 1.18;
+      ctx.moveTo(inner, browY + R * 0.012 + fatigueK * R * 0.026);
+      ctx.quadraticCurveTo(ex, browY - R * 0.05, outer, browY + R * 0.014);
+      ctx.stroke();
+      ctx.lineCap = 'butt';
+
+      if (lidH > R * 0.012) {
+        /* 睁眼：眼睑透镜形 + 虹膜 + 瞳孔 + 高光 */
+        const lens = () => {
+          ctx.beginPath();
+          ctx.moveTo(ex - eyeW2, eyeY);
+          ctx.quadraticCurveTo(ex, eyeY - lidH * 2.0, ex + eyeW2, eyeY);
+          ctx.quadraticCurveTo(ex, eyeY + lowH * 2.0, ex - eyeW2, eyeY);
+          ctx.closePath();
+        };
+        lens();
+        ctx.fillStyle = 'rgba(8,12,17,0.88)';
+        ctx.fill();
+        ctx.save();
+        lens();
+        ctx.clip();
+        const irisR = R * 0.062;
+        const irisX = ex + gaze * R * 0.035;
+        const irisY = eyeY - lidH * 0.22 + lowH * 0.2; // 虹膜上移：上眼睑自然盖住虹膜上缘
+        ctx.fillStyle = hexA(this.colors.iris, 0.92);
+        ctx.beginPath();
+        ctx.arc(irisX, irisY, irisR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(4,8,12,0.75)';
+        ctx.beginPath();
+        ctx.arc(irisX, irisY, irisR * 0.45, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.beginPath();
+        ctx.arc(irisX - irisR * 0.32, irisY - irisR * 0.36, irisR * 0.24, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        // 眼睑描边：上缘清晰、下缘轻
+        ctx.strokeStyle = eyeColor;
+        ctx.lineWidth = 1.9;
+        ctx.shadowColor = eyeColor;
+        ctx.shadowBlur = 4;
+        ctx.beginPath();
+        ctx.moveTo(ex - eyeW2, eyeY);
+        ctx.quadraticCurveTo(ex, eyeY - lidH * 2.0, ex + eyeW2, eyeY);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+        ctx.lineWidth = 1.1;
+        ctx.beginPath();
+        ctx.moveTo(ex - eyeW2, eyeY);
+        ctx.quadraticCurveTo(ex, eyeY + lowH * 2.0, ex + eyeW2, eyeY);
+        ctx.stroke();
+      } else {
+        /* 闭眼：一条干净的下弯线（v3 去掉小尺寸下易显脏的睫毛撇） */
+        ctx.strokeStyle = closed ? this.colors.eyeClosed : 'rgba(255,255,255,0.62)';
+        ctx.lineWidth = 2.2;
+        ctx.lineCap = 'round';
+        ctx.shadowColor = closed ? this.colors.eyeClosed : 'transparent';
+        ctx.shadowBlur = closed ? 14 : 0;
+        ctx.beginPath();
+        ctx.moveTo(ex - eyeW2, eyeY - R * 0.012);
+        ctx.quadraticCurveTo(ex, eyeY + R * 0.05, ex + eyeW2, eyeY - R * 0.012);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.lineCap = 'butt';
+      }
+
+      /* ---- 眼袋：轻度末段起出现，疲劳越深越明显 ---- */
+      if (fatigueK >= 0.3) {
+        ctx.strokeStyle = `rgba(130,152,182,${0.16 + fatigueK * 0.2})`;
+        ctx.lineWidth = 1.3;
+        ctx.beginPath();
+        ctx.moveTo(ex - eyeW2 * 0.82, eyeY + R * 0.1);
+        ctx.quadraticCurveTo(ex, eyeY + R * 0.15, ex + eyeW2 * 0.82, eyeY + R * 0.1);
+        ctx.stroke();
+      }
+    }
+
+    /* ---- 鼻（v3）：鼻根起于两眼内眦连线，极简一笔 + 对称鼻翼 ---- */
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(gaze * R * 0.02, R * 0.02);
+    ctx.quadraticCurveTo(gaze * R * 0.045, R * 0.16, gaze * R * 0.015, R * 0.225);
+    ctx.stroke();
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.arc(s * R * 0.048 + gaze * R * 0.015, R * 0.24, R * 0.026, Math.PI * 0.05, Math.PI * 0.95);
+      ctx.stroke();
+    }
+
+    /* ---- 嘴：下颌旋转语义，唇形更收敛 ----
+     * 上唇基本不动（哈欠时略抬），下唇随 jaw 下垂；
+     * 开口内部填充深色，哈欠 (jaw>0.5) 时接近正圆。 */
+    const mw = R * 0.2 * Math.max(0.8, persp);
+    const my = R * 0.5;
+    const lipTop = my - R * 0.026 - jaw * R * 0.05;
+    const lipBot = my + R * 0.028 + jaw * R * 0.34;
+    const round = clamp((jaw - 0.35) / 0.65, 0, 1); // 圆口插值
+    ctx.beginPath();
+    ctx.moveTo(-mw, my - R * 0.006);
+    ctx.quadraticCurveTo(-mw * 0.5, lipTop, 0, lipTop);
+    ctx.quadraticCurveTo(mw * 0.5, lipTop, mw, my - R * 0.006);
+    // 下唇：从圆口的弧到闭合时的浅弧插值
+    const botCtrl = my + (lipBot - my) * (1 - round * 0.45);
+    ctx.quadraticCurveTo(mw * (1 - round * 0.15), botCtrl, 0, lipBot - round * R * 0.02);
+    ctx.quadraticCurveTo(-mw * (1 - round * 0.15), botCtrl, -mw, my - R * 0.006);
+    ctx.closePath();
+    ctx.fillStyle = jaw > 0.06 ? 'rgba(10,7,11,0.92)' : 'rgba(255,255,255,0.05)';
+    ctx.fill();
+    ctx.strokeStyle = mouthOpen ? this.colors.mouth : 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = mouthOpen ? 2.1 : 1.6;
+    if (mouthOpen) {
+      ctx.shadowColor = this.colors.mouth;
+      ctx.shadowBlur = 9;
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    // 下唇反光弧：闭合时的立体感（替代 v2 唇峰细线）
+    if (jaw <= 0.06) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(-mw * 0.55, my + R * 0.045);
+      ctx.quadraticCurveTo(0, my + R * 0.062, mw * 0.55, my + R * 0.045);
+      ctx.stroke();
+    }
+
+    /* ---- 下巴阴影：张口时随下颌下移 ---- */
+    const chinY = R * 0.79 + jaw * R * 0.1;
+    ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(-R * 0.09, chinY);
+    ctx.quadraticCurveTo(0, chinY + R * 0.032, R * 0.09, chinY);
+    ctx.stroke();
   }
 
   /**

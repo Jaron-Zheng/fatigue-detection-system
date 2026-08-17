@@ -233,7 +233,7 @@
       <!-- 原创视觉：Tesla 车机 HUD 风格的“驾驶舱预览”——透视路面 + 疲劳仪表，
            不使用人脸素材，不使用第三方品牌资产；配色全部走 --hero-* 令牌，
            浅色主题为白底细灰线，暗色主题为 Carbon Dark 底亮线。 -->
-      <figure class="vision-product" data-reveal="fade" role="img" aria-label="疲劳检测仪表预览：透视路面示意与实时疲劳指数仪表">
+      <figure class="vision-product" data-reveal="fade" aria-label="疲劳检测仪表预览：透视路面示意与实时疲劳指数仪表">
         <div class="vision-product-frame">
           <svg viewBox="0 0 820 340" aria-hidden="true">
             <!-- 面板 -->
@@ -918,7 +918,7 @@
 
 <!-- ============ 设置抽屉 ============ -->
 <div class="sheet-backdrop" id="sheetBackdrop"></div>
-<aside class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" aria-hidden="true">
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" aria-hidden="true">
   <div class="sheet-head">
     <h2 class="t-headline" id="sheetTitle">设置</h2>
     <button class="btn-icon" id="btnCloseSheet" type="button" aria-label="关闭设置"><svg aria-hidden="true"><use href="#i-close"></use></svg></button>
@@ -1006,7 +1006,7 @@
     <button class="btn btn-ghost" id="btnResetCfg" type="button">恢复默认</button>
     <button class="btn btn-primary" id="btnSaveCfg" type="button">保存参数</button>
   </div>
-</aside>
+</div>
 
 <script type="module" src="js/app.js"></script>
 </body>

@@ -333,14 +333,13 @@ console.log('\n---- 角色 12 · 纯键盘用户 ----');
     else bad('Esc 未关闭设置抽屉');
 
     // K5 空格触发专业模式按钮（aria-pressed 应翻转）
-    let pressed = null;
     for (let i = 0; i < 30; i++) {
       await page.keyboard.press('Tab');
       if (await page.evaluate(() => document.activeElement?.id === 'btnProMode')) break;
     }
     await page.keyboard.press('Space');
     await sleep(300);
-    pressed = await page.evaluate(() => document.getElementById('btnProMode').getAttribute('aria-pressed'));
+    const pressed = await page.evaluate(() => document.getElementById('btnProMode').getAttribute('aria-pressed'));
     if (pressed === 'true') ok('空格激活专业模式按钮（aria-pressed=true）');
     else bad(`空格未激活专业模式：aria-pressed=${pressed}`);
     await page.keyboard.press('Space'); // 还原

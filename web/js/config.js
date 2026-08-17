@@ -290,21 +290,111 @@ export function resetConfig() {
 }
 
 /**
+ * 数值参数的合法区间表（第五轮遗留项 #1）。
+ *
+ * loadUserConfig 原先只做类型校验：同类型但越界的值（如
+ * durationSec: -999、maxSampleGapMs: 0）会被原样接受——运行
+ * 不崩，但语义异常（负时长、零间隔会让窗口逻辑退化）。
+ * 本表按「配置路径 → { min, max }」在合并落值前做钳制；
+ * 未列出的数值字段不钳制（保持原有行为，不误伤新增字段）。
+ * 区间刻意取得比 UI 滑块更宽：只拦明显越界值，正常调参不受影响。
+ * 路径段支持 '*' 通配（用于 alarm.byLevel.<等级>.* 这类同形结构）。
+ */
+const NUMERIC_LIMITS = {
+  'capture.targetFps': { min: 1, max: 120 },
+  'calibration.durationSec': { min: 2, max: 60 },
+  'calibration.maxWaitSec': { min: 10, max: 300 },
+  'calibration.minSamples': { min: 10, max: 1000 },
+  'calibration.earCloseRatio': { min: 0.5, max: 0.95 },
+  'calibration.earOpenRatio': { min: 0.55, max: 1 },
+  'calibration.marOpenDelta': { min: 0.05, max: 1 },
+  'quality.minFaceWidthRatio': { min: 0.05, max: 0.6 },
+  'quality.maxFaceWidthRatio': { min: 0.5, max: 1 },
+  'quality.maxCenterOffset': { min: 0.1, max: 1 },
+  'quality.maxYawDeg': { min: 10, max: 90 },
+  'quality.maxRollDeg': { min: 5, max: 90 },
+  'quality.semanticOpenVeto': { min: 0, max: 1 },
+  'quality.warnAfterMs': { min: 100, max: 10000 },
+  'quality.lightingIntervalMs': { min: 100, max: 5000 },
+  'window.perclosSec': { min: 10, max: 300 },
+  'window.rateSec': { min: 10, max: 300 },
+  'window.waveSec': { min: 5, max: 120 },
+  'window.perclosMinObservationSec': { min: 2, max: 60 },
+  'window.perclosMinSamples': { min: 10, max: 2000 },
+  'window.maxSampleGapMs': { min: 50, max: 2000 },
+  'event.blinkMinMs': { min: 20, max: 500 },
+  'event.blinkMaxMs': { min: 100, max: 2000 },
+  'event.microsleepMs': { min: 100, max: 5000 },
+  'event.criticalClosureMs': { min: 500, max: 10000 },
+  'event.yawnMinMs': { min: 200, max: 5000 },
+  'event.yawnRefractoryMs': { min: 500, max: 30000 },
+  'event.faceLostReportMs': { min: 100, max: 5000 },
+  'event.nodPitchVelDegPerSec': { min: 10, max: 200 },
+  'event.nodRefractoryMs': { min: 200, max: 10000 },
+  'event.headDeviationDeg': { min: 5, max: 90 },
+  'event.distractionMinMs': { min: 200, max: 10000 },
+  'fusion.weights.*': { min: 0, max: 1 },
+  'fusion.emaAlpha': { min: 0.001, max: 1 },
+  'fusion.hysteresis': { min: 0, max: 30 },
+  'fusion.levelDwellMs': { min: 0, max: 10000 },
+  'fusion.minHoldMs.*': { min: 0, max: 60000 },
+  'alarm.byLevel.*.cooldownMs': { min: 0, max: 120000 },
+  'alarm.byLevel.*.beep.freq': { min: 200, max: 4000 },
+  'alarm.byLevel.*.beep.times': { min: 1, max: 10 },
+  'alarm.byLevel.*.beep.gain': { min: 0, max: 1 },
+  'record.sampleIntervalMs': { min: 100, max: 5000 },
+  'record.maxSamples': { min: 100, max: 50000 },
+  'record.maxEvents': { min: 100, max: 20000 },
+  'evaluation.stepMs': { min: 20, max: 1000 },
+  'evaluation.calibSec': { min: 0, max: 60 },
+};
+
+/**
+ * 按路径查区间：对表中每条「点分模式」做段级匹配（段相等或模式段为 '*'），
+ * 长度必须一致。返回 {min,max} 或 undefined。
+ * @param {string} path 形如 'fusion.weights.ear' 的点分路径
+ */
+function lookupLimit(path) {
+  const parts = path.split('.');
+  for (const [pattern, limit] of Object.entries(NUMERIC_LIMITS)) {
+    const segs = pattern.split('.');
+    if (segs.length !== parts.length) continue;
+    if (segs.every((s, i) => s === '*' || s === parts[i])) return limit;
+  }
+  return undefined;
+}
+
+/**
+ * 数值钳制：越界值收到最近的合法边界。
+ * @param {string} path
+ * @param {number} value
+ */
+function clampNumber(path, value) {
+  const limit = lookupLimit(path);
+  if (!limit) return value;
+  if (value < limit.min) return limit.min;
+  if (value > limit.max) return limit.max;
+  return value;
+}
+
+/**
  * 类型安全的深合并：只接受纯对象补丁，只覆盖目标已有键，
- * 数字字段必须为有限数值，原型污染键被忽略。
+ * 数字字段必须为有限数值且落在区间表内（越界钳制），原型污染键被忽略。
  * @param {object} target
  * @param {object} patch
+ * @param {string} [prefix] 当前子树在 CONFIG 中的点分路径（钳制表用）
  * @returns {void}
  */
-function deepMerge(target, patch) {
+function deepMerge(target, patch, prefix = '') {
   if (!isPlainObject(target) || !isPlainObject(patch)) return;
   for (const k of Object.keys(patch)) {
     const v = patch[k];
     if (!Object.prototype.hasOwnProperty.call(target, k) || isUnsafeKey(k)) continue;
     const current = target[k];
+    const path = prefix ? `${prefix}.${k}` : k;
     if (isPlainObject(current)) {
       if (!isPlainObject(v)) continue;
-      deepMerge(target[k], v);
+      deepMerge(target[k], v, path);
     } else if (Array.isArray(current)) {
       /* E9 数组形状校验（安全审计实测结论：localStorage 注入的
        * fusion.levels 数组可被整组替换——数组不是纯对象，原先走
@@ -323,7 +413,7 @@ function deepMerge(target, patch) {
         target[k] = v;
       }
     } else if (typeof current === typeof v && (typeof v !== 'number' || Number.isFinite(v))) {
-      target[k] = v;
+      target[k] = typeof v === 'number' ? clampNumber(path, v) : v;
     }
   }
 }

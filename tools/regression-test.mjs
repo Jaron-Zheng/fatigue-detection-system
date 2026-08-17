@@ -91,6 +91,25 @@ assert({}.polluted === undefined, '原型污染键被忽略');
 resetConfig();
 assert(CONFIG.fusion.emaAlpha === defaultEmaAlpha, '恢复默认配置后参数一致');
 
+// 数值区间钳制（第五轮遗留项 #1）：同类型越界值收到最近合法边界
+loadUserConfig({
+  getItem: () => JSON.stringify({
+    calibration: { durationSec: -999, minSamples: 999999 },
+    window: { maxSampleGapMs: 0 },
+    fusion: { weights: { perclos: 5 }, emaAlpha: 0.05 },
+    alarm: { byLevel: { mild: { cooldownMs: -1, beep: { freq: 99999, gain: 2 } } } },
+  }),
+});
+assert(CONFIG.calibration.durationSec === 2, '负时长被钳制到下界（durationSec=-999 → 2）');
+assert(CONFIG.calibration.minSamples === 1000, '超大样本数被钳制到上界（minSamples=999999 → 1000）');
+assert(CONFIG.window.maxSampleGapMs === 50, '零间隔被钳制到下界（maxSampleGapMs=0 → 50）');
+assert(CONFIG.fusion.weights.perclos === 1, '权重越界被钳制（weights.perclos=5 → 1）');
+assert(CONFIG.fusion.emaAlpha === 0.05, '区间内的合法值不受钳制影响（emaAlpha=0.05）');
+assert(CONFIG.alarm.byLevel.mild.cooldownMs === 0, '通配路径钳制生效（byLevel.mild.cooldownMs=-1 → 0）');
+assert(CONFIG.alarm.byLevel.mild.beep.freq === 4000, '通配嵌套路径钳制生效（beep.freq=99999 → 4000）');
+assert(CONFIG.alarm.byLevel.mild.beep.gain === 1, '通配嵌套路径钳制生效（beep.gain=2 → 1）');
+resetConfig();
+
 // ── 2. 模拟链路：清醒 → 中度疲劳 ──
 console.log('\n[2] 模拟链路 (SimDriver → Indicators → Fusion → Recorder)');
 const sim = new SimulatedDriver();

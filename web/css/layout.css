@@ -172,6 +172,17 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   .gn-links {
     gap: 0;
   }
+  /* 小屏右侧工具组：收窄间距并允许收缩，否则整条导航被撑出
+   * 横向滚动条（375px 屏实测溢出 71px 就是它） */
+  .gn-tail {
+    gap: 2px;
+    flex: 1 1 auto;
+    justify-content: flex-end;
+    min-width: 0;
+  }
+  .gn-tail .icon-btn {
+    padding-inline: 6px;
+  }
 }
 
 /* ============ 页面容器 ============ */

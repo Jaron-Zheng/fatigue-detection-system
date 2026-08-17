@@ -242,17 +242,17 @@ export class CameraSource {
       const timeout = new Promise((_, reject) => {
         timerId = setTimeout(() => reject(new Error('CAMERA_PERMISSION_TIMEOUT')), 15000);
       });
-      timeout._clear = () => clearTimeout(timerId);
+      const clearTimeout15s = () => clearTimeout(timerId);
       this.stream = await Promise.race([
         navigator.mediaDevices.getUserMedia(constraints).then((s) => {
-          timeout._clear();
+          clearTimeout15s();
           return s;
         }),
         timeout,
       ]);
     } catch (err) {
       if (err && err.message === 'CAMERA_PERMISSION_TIMEOUT') {
-        throw new Error('等待摄像头授权超时（15 秒无响应）。请在浏览器弹窗中点击「允许」，然后重新开始检测。');
+        throw new Error('等待摄像头授权超时（15 秒无响应）。请在浏览器弹窗中点击「允许」，然后重新开始检测。', { cause: err });
       }
       throw new Error(CameraSource.friendlyError(err), { cause: err });
     }

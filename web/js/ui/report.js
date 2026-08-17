@@ -135,6 +135,10 @@ export class ReportView {
     if (grid) grid.hidden = false;
     const printBtn = g('btnPrint');
     if (printBtn) printBtn.disabled = false;
+    for (const id of ['btnExportJson', 'btnExportCsv']) {
+      const btn = g(id);
+      if (btn) btn.disabled = false;
+    }
 
     /* ---------- 标题 ----------
      * 结论取本次达到过的最高等级；结束时的即时状态在副标题里单独说明，
@@ -427,8 +431,11 @@ export class ReportView {
     if (emptyCard) emptyCard.hidden = false;
     const grid = document.querySelector('#viewReport .report-grid');
     if (grid) grid.hidden = true;
-    const printBtn = document.getElementById('btnPrint');
-    if (printBtn) printBtn.disabled = true;
+    // 空态下三个导出动作一并禁用：否则会导出空文件还提示成功
+    for (const id of ['btnPrint', 'btnExportJson', 'btnExportCsv']) {
+      const btn = document.getElementById(id);
+      if (btn) btn.disabled = true;
+    }
   }
 
   _renderParams(table, summary) {
