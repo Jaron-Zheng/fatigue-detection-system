@@ -17,6 +17,16 @@
 </head>
 <body>
 
+<noscript>
+  <div style="font:400 17px/1.5 -apple-system,sans-serif;display:grid;place-items:center;height:100vh;margin:0;background:#f5f5f7;color:#1d1d1f;text-align:center">
+    <div>
+      <h1 style="font-size:28px;font-weight:600;margin:0 0 12px">需要启用 JavaScript</h1>
+      <p>本系统需要 JavaScript 运行。请在浏览器设置中启用 JavaScript 后刷新页面。</p>
+      <p style="color:#86868b">建议使用最新版 Chrome 或 Edge 浏览器。</p>
+    </div>
+  </div>
+</noscript>
+
 <a class="skip-link" href="#main">跳到主内容</a>
 
 <!-- ============ SVG 图标库（Lucide，github.com/lucide-icons/lucide，MIT） ============
@@ -155,12 +165,63 @@
       <path d="M8.5 2h7"/>
       <path d="M7 16h10"/>
     </symbol>
+    <!-- ===== 检测记录时间轴事件图标（timeline.js 使用） ===== -->
+    <!-- 长闭眼/微睡眠：向下凸的闭合眼睑 + 三根紧贴眼睑的短睫毛
+         （睫毛起点落在弧线上，脱节会被读成"獠牙/触角"） -->
+    <symbol id="i-eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 9.5c2.8 3 6 4.5 9 4.5s6.2-1.5 9-4.5"/>
+      <path d="m7.4 12.9-1.2 2.3"/>
+      <path d="M12 14v2.4"/>
+      <path d="m16.6 12.9 1.2 2.3"/>
+    </symbol>
+    <!-- 打哈欠：两只困倦的闭合眼（加深弧度确保读作眼睑而非犄角）+ 张大的嘴 -->
+    <symbol id="i-yawn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 8q3.4 4 6.8 0"/>
+      <path d="M14.2 8q3.4 4 6.8 0"/>
+      <ellipse cx="12" cy="15.2" rx="3" ry="3.8"/>
+    </symbol>
+    <!-- 点头：头部 + 向下 chevron（头部下沉运动） -->
+    <symbol id="i-nod" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="6.5" r="3.8"/>
+      <path d="M6.8 15.5 12 20.7l5.2-5.2"/>
+    </symbol>
+    <!-- 分神：眼睛 + 瞳孔偏移到眼角（视线离开前方） -->
+    <symbol id="i-look-away" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2 12s3.5-5.5 10-5.5S22 12 22 12s-3.5 5.5-10 5.5S2 12 2 12Z"/>
+      <circle cx="16.6" cy="12" r="1.7"/>
+    </symbol>
+    <!-- 人脸丢失：头肩像 + 否定斜杠 -->
+    <symbol id="i-face-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="8" r="4"/>
+      <path d="M6 21v-1a6 6 0 0 1 12 0v1"/>
+      <path d="M4 4l16 16"/>
+    </symbol>
+    <!-- 人脸找回：头肩像 -->
+    <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="7.5" r="4"/>
+      <path d="M5.5 21v-1a6.5 6.5 0 0 1 13 0v1"/>
+    </symbol>
+    <!-- 质量/光照偏低：短射线太阳（弱光） -->
+    <symbol id="i-sun-low" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 4.5v1.6"/><path d="M12 17.9v1.6"/><path d="M4.5 12h1.6"/><path d="M17.9 12h1.6"/>
+      <path d="m6.6 6.6 1.1 1.1"/><path d="m16.3 16.3 1.1 1.1"/><path d="m17.4 6.6-1.1 1.1"/><path d="m7.7 16.3-1.1 1.1"/>
+    </symbol>
+    <!-- 确认/合格：勾 -->
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m5 12.5 4.5 4.5L19 7.5"/>
+    </symbol>
+    <!-- 疲劳报警：铃铛（铃锤下移缩小，与钟沿拉开间距，1x 下不粘连） -->
+    <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5.8 9a6.2 6.2 0 0 1 12.4 0c0 5.9 2.3 7.4 2.3 7.4H3.5S5.8 14.9 5.8 9"/>
+      <path d="M10 20.4a2 2 0 0 0 4 0"/>
+    </symbol>
   </defs>
 </svg>
 
-<!-- ============ 顶部导航（Tesla 单层结构） ============
+<!-- ============ 顶部导航（Apple 单层结构） ============
      一条 56px 导航回答所有问题：左品牌、中视图入口、右工具与状态。
-     在首页 hero（Carbon Dark 画幅）之上时透明悬浮、白字；
+     在首页 hero 之上时透明悬浮、白字；
      滚动或进入其他视图后切换为实底（motion.js 控制 .is-scrolled）。 -->
 <header class="global-nav" id="globalNav">
   <nav class="global-nav-inner" aria-label="主导航">
@@ -169,9 +230,9 @@
       <span class="gn-wordmark">疲劳检测系统</span>
     </a>
     <ul class="gn-links">
-      <li><a href="#" data-goto="viewHome">概览</a></li>
-      <li><a href="#" data-goto="viewWork">实时检测</a></li>
-      <li><a href="#" data-goto="viewReport">检测报告</a></li>
+      <li><a href="#" data-goto="viewHome" title="回到产品概览：核心能力与测试历程">概览</a></li>
+      <li><a href="#" data-goto="viewWork" title="进入工作台：授权摄像头、8 秒校准后开始实时检测">实时检测</a></li>
+      <li><a href="#" data-goto="viewReport" title="查看最近一次会话的指标与图表，可导出 HTML / JSON / CSV">检测报告</a></li>
     </ul>
     <div class="gn-tail">
       <div class="gn-status" id="navStatus" role="status" aria-live="polite">
@@ -181,7 +242,7 @@
       <!-- 专业模式：默认关闭，普通用户看到的是极简界面；
            打开后展开全部技术指标与实验工具（写论文、答辩演示时用）。 -->
       <button class="gn-toggle" id="btnProMode" type="button" aria-pressed="false"
-              title="显示全部技术指标与实验分析工具">专业模式</button>
+              title="展开全部技术指标与实验分析工具，报告页也会给出更详细的判定依据">专业模式</button>
       <button class="gn-icon" id="btnMute" type="button" title="报警声音开关" aria-label="报警声音开关">
         <svg aria-hidden="true"><use href="#i-sound" id="muteIcon"></use></svg>
       </button>
@@ -198,41 +259,41 @@
 <main id="main">
 
 <!-- ============================================================ -->
-<!-- 视图一：首屏（Tesla 全幅段落结构）                            -->
+<!-- 视图一：首屏（Apple 全幅段落结构）                            -->
 <!-- ============================================================ -->
-<!-- Tesla 的骨架：一屏一讯息。hero 是一块 Carbon Dark 的"暗色画幅"
-     （对应 Tesla 的全屏摄影段），内容锚定在底部，主副 CTA 并排；
-     之后是白底段落与 Light Ash 收尾段，段落之间只靠留白分隔。 -->
+<!-- Apple 的骨架：一屏一讯息。hero 是一块深色的"暗色画幅"
+（对应 Apple 的全屏摄影段），内容锚定在底部，主副 CTA 并排；
+     之后是白底段落与浅灰 #f4f4f4 收尾段，段落之间只靠留白分隔。 -->
 <section class="view active" id="viewHome">
 
-  <!-- ---------- 段落 1：hero（Carbon Dark 画幅，100vh） ---------- -->
+  <!-- ---------- 段落 1：hero（深色画幅，100vh） ---------- -->
   <div class="ts-hero">
     <div class="ts-hero-inner">
       <p class="ts-promo" data-reveal="fade">
         <svg width="14" height="14" aria-hidden="true"><use href="#i-lock"></use></svg>
-        全部计算在本机浏览器完成，视频不上传
+        全部计算在本机浏览器完成，视频不上传。
       </p>
-      <h1 class="ts-hero-title t-balance" data-reveal>让每一次疲劳征兆<br>都被提前看见</h1>
+      <h1 class="ts-hero-title t-balance" data-reveal="blur">犯困之前，<br>提前预警。</h1>
       <!-- 注意：中文段落不要在源码里换行。HTML 会把换行折叠成一个空格，
            而中文标点本身已含间距，叠加后会出现明显的空洞。 -->
-      <p class="ts-hero-sub" data-reveal>用摄像头看着你的眼睛、嘴巴和头部动作，实时判断你有多困，在真正危险之前就出声提醒。打开网页就能用，不装软件、不用联网，画面也不会离开这台电脑。</p>
-      <p class="ts-hero-note pro-only" data-reveal>技术实现：融合 PERCLOS、眨眼动力学、哈欠、点头与头部姿态五类面部特征，经隶属函数归一化后模糊加权，实时输出 0–100 疲劳指数与四级预警。</p>
+      <p class="ts-hero-sub" data-reveal>摄像头跟踪眼睛开合、嘴部张合与头部姿态，实时输出 0–100 疲劳指数，超标即分级报警。无需安装，打开页面即可运行，画面全程留在本机。</p>
+      <p class="ts-hero-note pro-only" data-reveal>技术实现：PERCLOS、闭眼时长、眨眼频率与时长、哈欠、点头、视线偏离七类特征，经隶属函数归一化后模糊加权，实时输出 0–100 疲劳指数与四级预警。</p>
 
-      <!-- Tesla CTA 对：主 Electric Blue 200×40 + 次透明白，均 4px 圆角 -->
+      <!-- Apple CTA 对：主 Action Blue 胶囊 + 次透明框 -->
       <div class="ts-hero-cta" data-reveal>
-        <button class="btn btn-primary btn-lg" id="btnStart" type="button">
+        <button class="btn btn-primary btn-lg" id="btnStart" type="button" title="会请求摄像头权限，随后进行 8 秒睁眼基线校准">
           <svg width="18" height="18" aria-hidden="true"><use href="#i-play"></use></svg>
           开始检测
         </button>
-        <a class="btn btn-hero-ghost btn-lg" href="#tsFeatures">
+        <a class="btn btn-hero-ghost btn-lg" href="#tsFeatures" title="向下滚动，查看特征融合方式与测试数据">
           查看工作原理
           <svg width="18" height="18" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
         </a>
       </div>
 
-      <!-- 原创视觉：Tesla 车机 HUD 风格的“驾驶舱预览”——透视路面 + 疲劳仪表，
+<!-- 原创视觉：HUD 风格的"驾驶舱预览"——透视路面 + 疲劳仪表，
            不使用人脸素材，不使用第三方品牌资产；配色全部走 --hero-* 令牌，
-           浅色主题为白底细灰线，暗色主题为 Carbon Dark 底亮线。 -->
+           浅色主题为白底细灰线，暗色主题为深色底亮线。 -->
       <figure class="vision-product" data-reveal="fade" aria-label="疲劳检测仪表预览：透视路面示意与实时疲劳指数仪表">
         <div class="vision-product-frame">
           <svg viewBox="0 0 820 340" aria-hidden="true">
@@ -245,7 +306,7 @@
             <path class="hud-road" d="M288 318 406 162"></path>
             <path class="hud-road" d="M652 318 424 162"></path>
             <path class="hud-road" d="M532 318 414 162"></path>
-            <!-- 中央车道线（Electric Blue，断续） -->
+            <!-- 中央车道线（Action Blue，断续） -->
             <path class="hud-lane" d="M410 318 410 162"></path>
             <!-- 扫描线 -->
             <path class="hud-scan" d="M120 98h580"></path>
@@ -266,7 +327,7 @@
             <text class="hud-chip-text" x="752" y="75">清醒</text>
           </svg>
         </div>
-        <figcaption>你的画面，始终只留在你的设备上。</figcaption>
+        <figcaption>你的画面，只留在你的设备上。</figcaption>
       </figure>
 
       <div class="boot" id="bootBox" hidden>
@@ -280,57 +341,114 @@
   </div>
 
   <!-- ---------- 段落 2：四项能力（白底，2×2 大卡） ----------
-       Tesla 的白底段落：卡片 Light Ash 底、12px 圆角、无描边无阴影，
+       Apple 的白底段落：卡片浅灰底、12px 圆角、无描边无阴影，
        卡与卡之间靠 16px 间距和底色差分层。 -->
   <div class="ts-section" id="tsFeatures">
     <div class="ts-section-inner">
-      <h2 class="ts-section-title" data-reveal>看得见的，不只是一张脸。</h2>
-      <p class="ts-section-sub" data-reveal>四层判断叠在一起，才敢在你自己都还没察觉的时候提醒你。</p>
+      <h2 class="ts-section-title" data-reveal>七个信号，交叉印证。</h2>
+      <p class="ts-section-sub" data-reveal>单一特征容易误判。加权确认通过，系统才会报警。</p>
 
-      <div class="hero-features" data-reveal-group>
-        <div class="feat" data-reveal>
+      <div class="hero-features" data-staggered-group>
+        <div class="feat" data-staggered>
           <div class="feat-icon"><svg aria-hidden="true"><use href="#i-eye"></use></svg></div>
-          <h3>看清每一次眨眼</h3>
-          <p>在脸上定位 478 个点，眼睛睁多大、嘴巴张多开、头往哪偏，逐帧都算得清。</p>
+          <h3>478 点面部地标</h3>
+          <p>每帧定位眼睑、嘴部与头部的空间坐标，开合幅度、偏转角度全部量化，不依赖主观经验。</p>
         </div>
-        <div class="feat" data-reveal>
+        <div class="feat" data-staggered>
           <div class="feat-icon"><svg aria-hidden="true"><use href="#i-brain"></use></svg></div>
-          <h3>多个信号一起判断</h3>
-          <p>只看一项容易误判。眨眼、哈欠、点头、走神等七项一起看，结论更稳。</p>
+          <h3>七类特征加权融合</h3>
+          <p>PERCLOS、眨眼频率、哈欠、点头等七类特征按隶属度加权，单一信号异常不会直接触发报警。</p>
         </div>
-        <div class="feat" data-reveal>
+        <div class="feat" data-staggered>
           <div class="feat-icon"><svg aria-hidden="true"><use href="#i-target"></use></svg></div>
-          <h3>先认识你，再判断你</h3>
-          <p>开始前花几秒记住你睁眼时的样子。眼睛天生大小不同，标准也就该不同。</p>
+          <h3>8 秒基线校准</h3>
+          <p>检测开始前记录你正常状态下的睁眼幅度，后续判断以个人基线为参照——眼睛大小不同，阈值也不同。</p>
         </div>
-        <div class="feat" data-reveal>
+        <div class="feat" data-staggered>
           <div class="feat-icon"><svg aria-hidden="true"><use href="#i-shield"></use></svg></div>
-          <h3>画面不出这台电脑</h3>
-          <p>计算全在浏览器里完成，视频不上传、不存盘，关掉网页就什么都不剩。</p>
+          <h3>全程本机计算</h3>
+          <p>检测、报警、报告全部在浏览器内完成。视频不上传、不落盘，关闭页面后不留任何数据。</p>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- ---------- 段落 2.5：数据流向图（隐私架构，原创 SVG，全走设计令牌） ---------- -->
+  <div class="ts-section" id="tsPrivacy">
+    <div class="ts-section-inner">
+      <h2 class="ts-section-title" data-reveal>数据流向，全程可见。</h2>
+      <p class="ts-section-sub" data-reveal>画面从摄像头直接进入浏览器内存，分析完成即丢弃。没有上传，没有存储。</p>
+      <figure class="ts-flow-figure" data-reveal="fade" aria-label="数据流向图：摄像头画面进入本机内存完成分析，输出疲劳指数后丢弃，不上传、不落盘">
+        <svg viewBox="0 0 860 300" role="img" aria-hidden="false" focusable="false">
+          <style>
+            .flow-box { fill: var(--fill-quaternary); stroke: var(--fill-tertiary); stroke-width: 1.5; }
+            .flow-t { font: 600 15px var(--font-sans, sans-serif); fill: var(--text); text-anchor: middle; }
+            .flow-s { font: 400 12px var(--font-sans, sans-serif); fill: var(--text-tertiary); text-anchor: middle; }
+            .flow-arrow { stroke: var(--accent); stroke-width: 2; fill: none; marker-end: url(#flowArrow); }
+            .flow-no { stroke: var(--danger); stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; }
+            .flow-no-t { font: 600 12px var(--font-sans, sans-serif); fill: var(--danger); text-anchor: middle; }
+          </style>
+          <defs>
+            <marker id="flowArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0 0 L10 5 L0 10 z" fill="var(--accent)"/>
+            </marker>
+          </defs>
+          <!-- 节点 1：摄像头 -->
+          <rect class="flow-box" x="30" y="40" width="160" height="72" rx="10"/>
+          <text class="flow-t" x="110" y="70">摄像头画面</text>
+          <text class="flow-s" x="110" y="92">仅本机采集</text>
+          <!-- 节点 2：内存分析 -->
+          <rect class="flow-box" x="240" y="24" width="200" height="104" rx="10"/>
+          <text class="flow-t" x="340" y="52">浏览器内存分析</text>
+          <text class="flow-s" x="340" y="74">478 点面部地标</text>
+          <text class="flow-s" x="340" y="94">七特征提取 · 模糊加权融合</text>
+          <!-- 节点 3：输出 -->
+          <rect class="flow-box" x="490" y="40" width="170" height="72" rx="10"/>
+          <text class="flow-t" x="575" y="70">疲劳指数与报警</text>
+          <text class="flow-s" x="575" y="92">实时显示，可导出报告</text>
+          <!-- 节点 4：丢弃 -->
+          <rect class="flow-box" x="710" y="40" width="120" height="72" rx="10"/>
+          <text class="flow-t" x="770" y="70">画面丢弃</text>
+          <text class="flow-s" x="770" y="92">每帧即弃</text>
+          <!-- 主链路箭头 -->
+          <line class="flow-arrow" x1="190" y1="76" x2="234" y2="76"/>
+          <line class="flow-arrow" x1="440" y1="76" x2="484" y2="76"/>
+          <line class="flow-arrow" x1="660" y1="76" x2="704" y2="76"/>
+          <!-- 禁止路径：上传 / 落盘 -->
+          <line class="flow-no" x1="340" y1="128" x2="340" y2="196"/>
+          <line class="flow-no" x1="150" y1="196" x2="560" y2="196"/>
+          <line class="flow-no" x1="150" y1="196" x2="150" y2="170"/>
+          <line class="flow-no" x1="560" y1="196" x2="560" y2="170"/>
+          <text class="flow-no-t" x="192" y="164">不上传</text>
+          <text class="flow-no-t" x="355" y="188">无网络请求</text>
+          <text class="flow-no-t" x="512" y="164">不落盘</text>
+          <!-- 底部结论 -->
+          <text class="flow-s" x="430" y="248">关闭页面后，本机不保留任何画面数据</text>
+          <text class="flow-s" x="430" y="272">报告中的数字可导出，画面本身不可恢复</text>
+        </svg>
+      </figure>
+    </div>
+  </div>
+
   <!-- ---------- 段落 3：关键数字（白底，大留白） ----------
-       数字 40px/500，说明 14px Pewter，数字用 data-countup 从 0 滚上来。 -->
+       数字 40px/500，说明 14px 灰色，数字用 data-countup 从 0 滚上来。 -->
   <div class="ts-section ts-section-tight">
     <div class="ts-section-inner ts-center">
-      <h2 class="ts-section-title" data-reveal>算得多细，就能提醒得多早。</h2>
-      <div class="tile-stats" data-reveal-group>
-        <div class="tile-stat" data-reveal>
+      <h2 class="ts-section-title" data-reveal>数字，一目了然。</h2>
+      <div class="tile-stats" data-staggered-group>
+        <div class="tile-stat" data-staggered>
           <span class="tile-stat-num"><b data-countup>478</b></span>
-          <span class="tile-stat-label"><span class="tile-stat-unit">个面部关键点</span><span class="tile-stat-mod">逐帧定位</span></span>
+          <span class="tile-stat-label"><span class="tile-stat-unit">点面部地标</span><span class="tile-stat-mod">逐帧定位</span></span>
         </div>
-        <div class="tile-stat" data-reveal>
+        <div class="tile-stat" data-staggered>
           <span class="tile-stat-num"><b data-countup>7</b></span>
           <span class="tile-stat-label"><span class="tile-stat-unit">类疲劳特征</span><span class="tile-stat-mod">融合判断</span></span>
         </div>
-        <div class="tile-stat" data-reveal>
+        <div class="tile-stat" data-staggered>
           <span class="tile-stat-num"><b data-countup>4</b></span>
           <span class="tile-stat-label"><span class="tile-stat-unit">级预警</span><span class="tile-stat-mod">分档提醒</span></span>
         </div>
-        <div class="tile-stat" data-reveal>
+        <div class="tile-stat" data-staggered>
           <span class="tile-stat-num"><b data-countup>0</b></span>
           <span class="tile-stat-label"><span class="tile-stat-unit">字节上传</span><span class="tile-stat-mod">画面不出本机</span></span>
         </div>
@@ -338,13 +456,45 @@
     </div>
   </div>
 
-  <!-- ---------- 段落 4：收尾 CTA（Light Ash 底） ---------- -->
+  <!-- ---------- 段落 3.5：测试历程（真实数字，与 docs/测试报告.md 一致，可复查） ----------
+       复用段落 2 的 feat 卡组件，不新增任何 CSS。 -->
+  <div class="ts-section" id="tsVerify">
+    <div class="ts-section-inner">
+      <h2 class="ts-section-title" data-reveal>先测试，再交付。</h2>
+      <p class="ts-section-sub" data-reveal>六轮迭代，每轮配独立测试工具。以下数字与 docs/测试报告.md 一致，均可复现。</p>
+
+      <div class="hero-features" data-staggered-group>
+        <div class="feat" data-staggered>
+          <div class="feat-icon"><svg aria-hidden="true"><use href="#i-check"></use></svg></div>
+          <h3>4000 轮模糊测试</h3>
+          <p>向融合算法持续注入随机输入，4000 轮零崩溃、零数值越界，每轮结果可用种子复现。</p>
+        </div>
+        <div class="feat" data-staggered>
+          <div class="feat-icon"><svg aria-hidden="true"><use href="#i-warn"></use></svg></div>
+          <h3>20 个对抗场景</h3>
+          <p>连续点击、检测中刷新、暂停时切页等破坏性操作全部实测，20 项场景均有明确反馈，无卡死、无数据丢失。</p>
+        </div>
+        <div class="feat" data-staggered>
+          <div class="feat-icon"><svg aria-hidden="true"><use href="#i-mesh"></use></svg></div>
+          <h3>双引擎内核验证</h3>
+          <p>Firefox 与 WebKit 各执行 12 项断言，24/24 通过；Chrome 与 Edge 为主要适配目标。</p>
+        </div>
+        <div class="feat" data-staggered>
+          <div class="feat-icon"><svg aria-hidden="true"><use href="#i-target"></use></svg></div>
+          <h3>无障碍与键盘</h3>
+          <p>axe 扫描 10 个场景 0 critical；键盘专项 9/9 通过，Tab 导航、空格暂停、Esc 关闭均实测。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---------- 段落 4：收尾 CTA（浅灰 #f4f4f4 底） ---------- -->
   <div class="ts-section ts-section-ash ts-final">
     <div class="ts-section-inner ts-center">
-      <h2 class="ts-section-title" data-reveal>现在就开始一次检测</h2>
-      <p class="ts-section-sub" data-reveal>只需要一个摄像头和 8 秒的个人校准，不需要安装任何东西。</p>
+      <h2 class="ts-section-title" data-reveal>开始检测，很简单。</h2>
+      <p class="ts-section-sub" data-reveal>一个摄像头，8 秒基线校准，无需安装任何软件。</p>
       <div class="ts-final-cta" data-reveal>
-        <a class="btn btn-primary btn-lg" href="#" data-goto="viewWork">
+        <a class="btn btn-primary btn-lg" href="#" data-goto="viewWork" title="跳转到实时检测工作台，未启动时会先引导校准">
           <svg width="18" height="18" aria-hidden="true"><use href="#i-video"></use></svg>
           进入实时检测
         </a>
@@ -355,7 +505,7 @@
 </section>
 
 <!-- ============================================================ -->
-<!-- 视图二：检测工作台（Tesla 车机仪表组布局）                    -->
+<!-- 视图二：检测工作台（仪表组布局）                    -->
 <!-- ============================================================ -->
 <section class="view" id="viewWork">
   <div class="page">
@@ -535,7 +685,7 @@
       <div class="ws-side">
 
         <!-- 8 项指标：整块白面板内的紧凑行，2 列网格，
-             行间 Cloud Gray 发丝线，左侧 3px 状态色条是功能信息 -->
+             行间发丝线，左侧 3px 状态色条是功能信息 -->
         <div class="card metrics-panel">
           <div class="card-head">
             <div class="card-title">
@@ -640,12 +790,12 @@
 </section>
 
 <!-- ============================================================ -->
-<!-- 视图三：会话报告（Tesla 订单页头部模式）                      -->
+<!-- 视图三：会话报告（Apple 报告页头部模式）                      -->
 <!-- ============================================================ -->
 <section class="view" id="viewReport">
   <div class="page">
     <div class="report-head">
-      <!-- 头部左文右钮：标题与摘要靠左，动作按钮组靠右（Tesla 订单页排布） -->
+      <!-- 头部左文右钮：标题与摘要靠左，动作按钮组靠右（Apple 报告页排布） -->
       <div class="report-head-main">
         <div class="hero-eyebrow">
           <svg width="14" height="14" aria-hidden="true"><use href="#i-file-text"></use></svg>
@@ -908,13 +1058,10 @@
   <p id="footEnv" class="t-tertiary pro-only">--</p>
 </footer>
 
-<!-- ============ 报警层 ============ -->
+<!-- ============ 报警层 ============
+     视觉闪烁幕布仍在（红色脉冲边框）；文字通知已统一并入
+     toast 家族（js/ui/alarm-visuals.js → toastAlarm），独立横幅移除。 -->
 <div class="alarm-veil" id="alarmVeil" data-level="mild" aria-hidden="true"></div>
-<div class="alarm-banner" id="alarmBanner" role="alert" data-level="severe" aria-hidden="true">
-  <svg class="ab-icon" aria-hidden="true"><use href="#i-warn"></use></svg>
-  <span id="alarmText">检测到重度疲劳，请立即停车休息</span>
-  <button type="button" id="btnDismissAlarm">知道了</button>
-</div>
 
 <!-- ============ 设置抽屉 ============ -->
 <div class="sheet-backdrop" id="sheetBackdrop"></div>
@@ -925,22 +1072,7 @@
   </div>
   <div class="sheet-body">
 
-    <!-- 算法参数三组：普通用户改了只会让判定变差，收进专业模式。
-         做敏感性分析与消融实验时需要，所以保留而不删除。 -->
-    <div class="field-group pro-only">
-      <div class="group-title">融合权重（合计自动归一化）</div>
-      <div id="weightSliders"></div>
-    </div>
-
-    <div class="field-group pro-only">
-      <div class="group-title">判定阈值</div>
-      <div id="thresholdSliders"></div>
-    </div>
-
-    <div class="field-group pro-only">
-      <div class="group-title">时间窗口</div>
-      <div id="windowSliders"></div>
-    </div>
+    <!-- ======== 常用设置（权重最高，普通用户最常操作） ======= -->
 
     <div class="field-group">
       <div class="group-title">提醒方式</div>
@@ -981,6 +1113,8 @@
       </div>
     </div>
 
+    <!-- ======== 演示与自检（权重中，答辩/展示场景用） ======= -->
+
     <div class="field-group">
       <div class="group-title">演示</div>
       <div class="field-row">
@@ -1000,6 +1134,33 @@
         <div class="field-desc" style="max-width:100%">浏览器地址栏加 <code>?demo=moderate</code> 打开即演示（可选 awake / mild / moderate）</div>
       </div>
     </div>
+
+    <!-- E3 启动自检：环境能力清单，应用启动后自动填充 -->
+    <div class="field-group">
+      <div class="group-title" id="preflightTitle">启动自检</div>
+      <ul class="preflight-list" id="preflightList" aria-live="polite">
+        <li class="preflight-item"><span class="field-label">正在检查运行环境…</span></li>
+      </ul>
+    </div>
+
+    <!-- ======== 算法参数（权重最低，专业用户/论文用，收进专业模式） ======= -->
+
+    <!-- 算法参数三组：普通用户改了只会让判定变差，收进专业模式。
+         做敏感性分析与消融实验时需要，所以保留而不删除。 -->
+    <div class="field-group pro-only">
+      <div class="group-title">融合权重（合计自动归一化）</div>
+      <div id="weightSliders"></div>
+    </div>
+
+    <div class="field-group pro-only">
+      <div class="group-title">判定阈值</div>
+      <div id="thresholdSliders"></div>
+    </div>
+
+    <div class="field-group pro-only">
+      <div class="group-title">时间窗口</div>
+      <div id="windowSliders"></div>
+    </div>
   </div>
   <div class="sheet-foot">
     <span class="t-caption sheet-foot-note">上面的开关即时生效；「保存」记住算法参数</span>
@@ -1008,6 +1169,18 @@
   </div>
 </div>
 
+<!-- 浏览器兼容性检测：在 app.js 加载前检查关键 API -->
+<script>
+  (function(){
+    var errors = [];
+    if (!window.WebAssembly) errors.push('WebAssembly');
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) errors.push('摄像头 API (getUserMedia)');
+    try { var c = document.createElement('canvas'); if (!c.getContext('webgl2')) errors.push('WebGL2'); } catch(e) { errors.push('WebGL2'); }
+    if (errors.length > 0) {
+      document.body.innerHTML = '<div style="font:400 17px/1.5 -apple-system,sans-serif;display:grid;place-items:center;height:100vh;margin:0;background:#f5f5f7;color:#1d1d1f;text-align:center;padding:20px"><div><h1 style="font-size:28px;font-weight:600;margin:0 0 12px">浏览器兼容性不足</h1><p>以下功能不可用：<br><b>' + errors.join('、') + '</b></p><p style="color:#86868b">请使用最新版 <a href="https://www.google.com/chrome/" style="color:#0066cc">Chrome</a> 或 <a href="https://www.microsoft.com/edge" style="color:#0066cc">Edge</a> 浏览器。</p></div></div>';
+    }
+  })();
+</script>
 <script type="module" src="js/app.js"></script>
 </body>
 </html>

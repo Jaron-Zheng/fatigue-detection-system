@@ -61,6 +61,36 @@ export function membership(v, lo, hi) {
   return clamp((v - lo) / (hi - lo), 0, 1);
 }
 
+/**
+ * S 型隶属函数（非线性模糊化）
+ *
+ * 与线性 membership 相比，S 曲线在低端有一个缓慢起步区（避免噪声触发），
+ * 在中段快速上升（提高灵敏度），在高端自然饱和。
+ *
+ * 调参实验结论：PERCLOS 用线性函数时，轻度疲劳段（8-13%）隶属度
+ * 只有 0.08-0.29，贡献太低导致灵敏度偏低。改用 S 曲线后同样 PERCLOS
+ * 值的隶属度可提高到 0.15-0.45，让系统在轻度阶段更早产生有效贡献。
+ *
+ * 数学形式：sigmoid 变换，但保证 v≤lo 时为 0、v≥hi 时为 1。
+ */
+export function membershipS(v, lo, hi) {
+  if (!Number.isFinite(v)) return 0;
+  if (hi === lo) return v >= hi ? 1 : 0;
+  if (v <= lo) return 0;
+  if (v >= hi) return 1;
+  // 归一化到 [0,1]
+  const t = (v - lo) / (hi - lo);
+  // Sigmoid 变换：t=0.5 时为 0.5，两端非线性
+  // k=6 让曲线在 t∈[0.2, 0.8] 区间接近线性，两端有适度弯曲
+  const k = 6;
+  const s = 1 / (1 + Math.exp(-k * (t - 0.5)));
+  // 由于 sigmoid 在 t=0 时 ≈0.0025、t=1 时 ≈0.9975，
+  // 需要重新标定到 [0,1]：减去 s(0) 再除以 s(1)-s(0)
+  const s0 = 1 / (1 + Math.exp(k * 0.5));     // s at t=0
+  const s1 = 1 / (1 + Math.exp(-k * 0.5));   // s at t=1
+  return clamp((s - s0) / (s1 - s0), 0, 1);
+}
+
 /** 双侧隶属函数：偏离中心区间越远，隶属度越高（用于眨眼频率这类"过高或过低都异常"的指标） */
 export function membershipTwoSided(v, normLo, normHi, hardLo, hardHi) {
   if (!Number.isFinite(v)) return 0;

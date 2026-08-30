@@ -1,4 +1,4 @@
-/** base.css — 基础重置与排版（Tesla 设计语言） */
+/** base.css — 基础重置与排版（Apple 设计语言） */
 
 *,
 *::before,
@@ -11,6 +11,9 @@ html {
   scroll-behavior: smooth;
   /* 锚点跳转时给吸顶导航留位置，否则标题会藏到导航栏下面 */
   scroll-padding-top: calc(var(--nav-total) + var(--sp-4));
+  /* 与 body 同色——防止滚动条后方透出浏览器默认色，
+     在深色模式下形成右侧"书页痕迹"残影 */
+  background: var(--bg);
 }
 
 body {
@@ -19,7 +22,7 @@ body {
   font-size: var(--fs-body);
   font-weight: var(--fw-regular);
   line-height: var(--lh-normal);
-  /* Tesla 全站默认字距，不做负字距收紧 */
+  /* Apple 全站负字距收紧——不加就不是 Apple 味道 */
   letter-spacing: 0;
   color: var(--text);
   background: var(--bg);
@@ -43,7 +46,7 @@ dd {
   margin: 0;
 }
 
-/* Tesla 的标题与正文同一家族，只靠字号和 500 字重分层 */
+/* Apple 的标题与正文同一家族，只靠字号和 500 字重分层 */
 h1,
 h2,
 h3,
@@ -108,8 +111,8 @@ canvas {
 
 /**
  * 可见焦点环：键盘导航可达（无障碍要求）。
- * Tesla 的焦点表达是 box-shadow 动画，但 outline 不受祖先
- * overflow:hidden 裁切，这里沿用 outline 方案、颜色换成 Electric Blue。
+* Apple 的焦点表达是 box-shadow 动画，但 outline 不受祖先
+* overflow:hidden 裁切，这里沿用 outline 方案、颜色换成 Action Blue。
  */
 :focus-visible {
   outline: 2px solid var(--accent);
@@ -148,7 +151,7 @@ canvas {
   background: var(--accent-soft);
 }
 
-/* 滚动条：细窄、灰色，贴近车机系统的克制观感 */
+/* 滚动条：细窄、灰色，贴合 Apple 的克制观感 */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -176,7 +179,7 @@ canvas {
   }
 }
 
-/* Tesla 字重阶梯里没有 700：b/strong 的浏览器默认 bold 统一压到 500 */
+/* Apple 字重阶梯里没有 700：b/strong 的浏览器默认 bold 统一压到 500 */
 b,
 strong {
   font-weight: var(--fw-medium);
@@ -193,8 +196,8 @@ strong {
 }
 
 /* ---------- 排版工具类 ----------
- * 字重只有 400 / 500（Tesla 规则，没有 600/700）。
- * 标题靠字号跳变分层，颜色靠 Graphite/Pewter 分层。 */
+* 字重只有 400 / 500（Apple 规则，极少用 600/700）。
+* 标题靠字号跳变分层，颜色靠灰字体系分层。 */
 .t-hero {
   font-family: var(--font-display);
   font-size: var(--fs-hero);
@@ -217,7 +220,7 @@ strong {
 .t-headline {
   font-size: var(--fs-headline);
   font-weight: var(--fw-medium);
-  letter-spacing: 0;
+  letter-spacing: var(--ls-display);
 }
 /* 导语段：16px 常规字重，关键安全提示也走这一档 */
 .t-subhead {
@@ -231,8 +234,9 @@ strong {
 .t-caption {
   font-size: var(--fs-caption);
   color: var(--text-secondary);
+  letter-spacing: var(--ls-caption);
 }
-/* Tesla 不用大写转换；micro 只是小号 + Pewter 色 */
+/* Apple 不用大写转换；micro 只是小号 + 灰色 */
 .t-micro {
   font-size: var(--fs-micro);
   letter-spacing: 0;

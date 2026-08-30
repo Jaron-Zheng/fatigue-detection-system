@@ -142,6 +142,91 @@ export function sweepPositiveThreshold(pairs) {
 }
 
 /**
+ * ROC 与 PR 曲线：以连续疲劳指数为判别分数扫描阈值。
+ *
+ * 【为什么还要 ROC/PR】computeMetrics 只评估系统当前的工作点
+ * （实际的等级分界），ROC/PR 回答的是另一个问题：分数本身有多大
+ * 判别力、工作点选得合不合理。AUC 可与文献中的其他方法直接对比，
+ * 是"检测有效性"最标准的报告方式。
+ *
+ * 口径：按采样点计数，与混淆矩阵图的"按采样点计数"列一致。
+ *
+ * @param {{truth:string, score:number}[]} points 逐采样点（ignore/未标注自动剔除）
+ * @param {object} [opts]
+ * @param {number} [opts.step=1] 阈值步长（分）；1 分步长 → 101 个工作点
+ */
+export function computeRocPr(points, opts = {}) {
+  const step = opts.step ?? 1;
+  const valid = points.filter((p) => p.truth === 'normal' || p.truth === 'fatigue');
+  const P = valid.filter((p) => p.truth === 'fatigue').length;
+  const N = valid.length - P;
+
+  if (P === 0 || N === 0) {
+    return { roc: [], pr: [], auc: NaN, ap: NaN, positives: P, negatives: N, usable: false };
+  }
+
+  const roc = [];
+  const pr = [];
+  for (let th = 100; th >= 0; th -= step) {
+    let tp = 0;
+    let fp = 0;
+    for (const p of valid) {
+      if (p.score >= th) {
+        if (p.truth === 'fatigue') tp++;
+        else fp++;
+      }
+    }
+    const tpr = tp / P;
+    const fpr = fp / N;
+    // 预测正例数为 0 时查准率按惯例记 1（PR 曲线左端点）
+    const precision = tp + fp > 0 ? tp / (tp + fp) : 1;
+    roc.push({ threshold: th, tpr, fpr });
+    pr.push({ threshold: th, tpr, precision });
+  }
+
+  // AUC：ROC 按 FPR 升序做梯形积分
+  roc.sort((a, b) => a.fpr - b.fpr || a.tpr - b.tpr);
+  let auc = 0;
+  for (let i = 1; i < roc.length; i++) {
+    auc += ((roc[i].fpr - roc[i - 1].fpr) * (roc[i].tpr + roc[i - 1].tpr)) / 2;
+  }
+
+  // AP（平均精度）：按召回增量加权查准率（阶跃式，信息检索标准口径）
+  pr.sort((a, b) => a.tpr - b.tpr);
+  let ap = 0;
+  for (let i = 1; i < pr.length; i++) {
+    ap += (pr[i].tpr - pr[i - 1].tpr) * pr[i].precision;
+  }
+
+  return { roc, pr, auc, ap, positives: P, negatives: N, usable: true };
+}
+
+/**
+ * 基线对照：单一 PERCLOS 阈值判疲劳（文献经典方法）。
+ *
+ * 【为什么必须做】"七特征融合"的价值需要参照物来证明。PERCLOS
+ * 阈值法是疲劳检测文献最常用的单一特征基线（阈值多取 0.08–0.15）。
+ * 同一份标注数据上同时跑基线与融合系统，指标差值即融合的净贡献，
+ * 直接回应"为什么不用简单阈值就够"。
+ *
+ * @param {{truth:string, perclos:number, perclosReady?:number}[]} points
+ * @param {number[]} [thresholds] 待扫描的 PERCLOS 阈值（0–1 闭眼时间占比）
+ */
+export function computeBaseline(points, thresholds = [0.05, 0.08, 0.10, 0.12, 0.15]) {
+  return thresholds.map((t) => {
+    const pairs = points.map((p) => ({
+      truth: p.truth,
+      // PERCLOS 未就绪（窗口仍在累积）时按清醒处理，与融合系统同口径
+      pred: p.perclosReady === 0 ? 'awake' : p.perclos >= t ? 'mild' : 'awake',
+      // 基线对照只看按采样点计数口径，权重取 1 仅为满足 computeMetrics 的入参约定
+      weightMs: 1,
+    }));
+    const r = computeMetrics(pairs, 'mild');
+    return { threshold: t, byCount: r.byCount, matrix: r.matrix };
+  });
+}
+
+/**
  * 评估响应延迟：人工标注的疲劳区间开始后，系统需要多久才判为疲劳。
  *
  * 这个指标对疲劳检测特别重要——一个准确但滞后 60 秒的系统，

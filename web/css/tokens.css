@@ -1,19 +1,19 @@
 /**
- * tokens.css — 设计令牌（Tesla 设计语言）
+ * tokens.css — 设计令牌（Apple 设计语言）
  *
- * 基准来源：awesome-design-md-main/design-md/tesla/DESIGN.md
- *   · 单色系 + 唯一强调色 Electric Blue #3E6AE1（只用于主操作）
- *   · Carbon Dark #171A20 / Graphite #393C41 / Pewter #5C5E62 / Silver Fog #8E8E8E
- *   · Light Ash #F4F4F4 / Cloud Gray #EEEEEE
- *   · 圆角只有 4px（按钮）与 12px（卡片），没有胶囊
- *   · 全站零阴影，层次靠底色差与间距
- *   · 动效统一 0.33s cubic-bezier(0.5, 0, 0.75)，只过渡颜色
- *   · 字重只有 400 / 500，没有大写转换，没有负字距
+ * 基准来源：apple.com 官网参考 + Apple HIG 人机界面指南
+ *   · 单色系 + 唯一强调色 Action Blue #0071e3（主操作按钮专用）
+ *   · 深色 #171a20 / 次级灰 #393c41 / 第三档灰 #5c5e62 / 第四档蓝调灰 #767a82
+ *   · 浅色画布 #f4f4f4 / 白面板 #ffffff
+ *   · 圆角阶梯：4px(微) / 8px(小) / 12px(中) / 18px(大) / 9999px(胶囊)
+ *   · 柔和层阴影制造悬浮感（ambient + key 双光源）
+ *   · 动效分级 0.24s/0.32s/0.5s，缓动 cubic-bezier(0.4,0,0.6,1) 主曲线
+ *   · 字重 400/500，负字距 -0.374px(正文)/-0.012em(标题)
  *
  * 三条硬规则（全站不得违反）：
- *   · 交互色只有一支 Electric Blue；UI 外壳（按钮/链接/导航）不得出现第二种彩色
+ *   · 交互色只有一支 Action Blue；UI 外壳（按钮/链接/导航）不得出现第二种彩色
  *   · 语义色（四级疲劳/ok/warn/danger）只出现在数据可视化与报警上，属于功能信息
- *   · 任何组件不加 box-shadow
+ *   · 语义色不得用于按钮——按钮只有 Action Blue 和透明
  *
  * ⚠️ JS 用 cssVar() 按名字读取下列变量，改名会让图表和关键点叠加层失色：
  *   --accent --ok --warn --caution --danger 及其 -soft 变体
@@ -25,7 +25,7 @@
 
 :root {
   /* ---------- 字体 ----------
-   * Tesla 用 Universal Sans（专有字体，拿不到）。
+   * Apple 用 SF Pro（专有字体，Web 端用 system-ui 回落）。
    * Inter 是几何感最接近的开源替代；中文回落 PingFang / 微软雅黑。 */
   --font-sans: 'Inter', 'Inter var', system-ui, -apple-system, 'PingFang SC',
     'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
@@ -33,7 +33,7 @@
   --font-mono: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
 
   /* ---------- 字号阶梯 ----------
-   * Tesla 的 UI 文字几乎全部落在 14px；hero 封顶 40px。
+   * Apple 的 UI 文字基础 14px；hero 封顶 40px。
    * 14px 中文偏小，所以行高给足 1.5，关键安全提示走 16px（subhead）。 */
   --fs-hero: clamp(30px, 4.2vw, 40px);
   --fs-display: clamp(26px, 3.2vw, 32px);
@@ -47,9 +47,9 @@
    * 全站字号阶梯收口为 44或40(主数字)/32(概要数字)/26/20/16/14/12，不再有 11px。 */
   --fs-micro: 12px;
 
-  /* 字重阶梯：Tesla 只用 400 / 500。
+  /* 字重阶梯：Apple 只用 400 / 500。
    * semibold / bold 两个名字保留（旧代码在引用），值都映射到 500——
-   * 这不是漏改，是设计约束：更重的字重在 Tesla 语言里不存在。 */
+   * 这不是漏改，是设计约束：更重的字重在 Apple 语言里极少使用。 */
   --fw-light: 400;
   --fw-regular: 400;
   --fw-medium: 500;
@@ -61,39 +61,46 @@
   --lh-snug: 1.3;
   --lh-normal: 1.5;
 
-  /* Tesla 全站默认字距，不做负字距收紧
-   * （原 --ls-hero/--ls-tight/--ls-tighter/--ls-body 四个字距令牌已删：
-   *  全站 letter-spacing 一律直接写 0，无任何引用。） */
+  /* Apple 负字距：Apple 官网在 17px+ 字号统一使用负字距收紧。
+   * 这是 Apple "tight headline" 效果的核心——不加负字距就不是 Apple 味道。
+   * --ls-body:   -0.374px  — 按钮文字、正文（Apple SF Pro Text 17px 的标准 tracking）
+   * --ls-caption: -0.224px  — 14px 小字（Apple caption 的标准 tracking）
+   * --ls-display: -0.012em  — 大号标题（按 em 缩放，与 Apple hero-display -0.28px 对应） */
+  --ls-body: -0.374px;
+  --ls-caption: -0.224px;
+  --ls-display: -0.012em;
 
   /* ---------- 颜色（浅色） ----------
-   * 页面画布 Light Ash，卡片纯白——Tesla 的"白面板浮在浅灰底上"。 */
+   * 页面画布浅灰 #f4f4f4，卡片纯白——Apple 的"白面板浮在浅灰底上"。 */
   --bg: #f4f4f4;
   --bg-elevated: #ffffff;
   --bg-sunken: #ececec;
   --bg-inset: #f4f4f4;
-  --surface-glass: rgba(255, 255, 255, 0.75);
-  --surface-glass-strong: rgba(255, 255, 255, 0.92);
+  --surface-glass: rgba(255, 255, 255, 0.72);
+  --surface-glass-strong: rgba(255, 255, 255, 0.88);
+  --glass-blur: saturate(180%) blur(20px);
+  --glass-blur-light: saturate(150%) blur(10px);
 
   /* ---------- 首页 hero 与插画（跟随主题：默认亮色，暗色模式才变暗） ---------- */
   --hero-bg: #ffffff;
   --hero-text: #171a20;
   --hero-muted: #5c5e62;
-  /* A2：hero-faint 原 Silver Fog #8e8e8e（无蓝调中性灰，观感发脏），
+  /* A2：hero-faint 原无蓝调中性灰 #8e8e8e（观感发脏），
    * 校正为同明度带蓝调灰，与 --text-quaternary 同层级取值。 */
   --hero-faint: #767a82;
-  --hero-accent: #2f55bd;
+  --hero-accent: #0066cc;
   --hero-panel: #f4f4f4;
   --hero-chip-bg: #ffffff;
   --hero-line: #d0d1d2;
   /* A2：同上，插图内的强描线一并脱离无蓝调灰 */
   --hero-line-strong: #767a82;
 
-  /* 首页能力卡底色：浅色为 Light Ash，深色为微亮一档的面板色 */
+  /* 首页能力卡底色：浅色为浅灰 #f4f4f4，深色为微亮一档的面板色 */
   --feat-bg: #f4f4f4;
   --feat-bg-hover: #ececec;
 
   /* ---------- 首页全幅段落表面 ----------
-   * hero 段跟随主题（见 --hero-*）；收尾段 Light Ash。 */
+   * hero 段跟随主题（见 --hero-*）；收尾段浅灰 #f4f4f4。 */
   --tile-canvas: #ffffff;
   --tile-parchment: #f4f4f4;
   --tile-dark-1: #171a20;
@@ -106,28 +113,30 @@
    * 固定化为具体色值（观感与 rgba(255,255,255,.72) 等价），
    * 半透明白只保留给"视频画面/插图上的叠字"。 */
   --on-dark-muted: #b7bac0;
-  --link-on-dark: #739df2;
+  --link-on-dark: #2997ff;
 
   --text: #171a20;
-  /* Graphite / Pewter——Tesla 的灰字体系。
-   * A2：第四档原 Silver Fog #8e8e8e 是全站唯一无蓝调中性灰（发脏），
+  /* Apple 灰字体系：四档带蓝调灰，浅深色镜像对等。
+   * A2：第四档原无蓝调灰 #8e8e8e（发脏），
    * 校正为同明度带蓝调灰 #767a82（白底 4.3:1，小字也达标），
-   * 与深色档 #7e828a（Carbon Dark 底 4.4:1）感知明度镜像对等。 */
+   * 与深色档 #7e828a（深色底 4.4:1）感知明度镜像对等。 */
   --text-secondary: #393c41;
   --text-tertiary: #5c5e62;
   --text-quaternary: #767a82;
   --text-on-accent: #ffffff;
 
-  /* 全站唯一交互色：Electric Blue（#3E6AE1 对白字 4.7，达标） */
-  --accent: #3e6ae1;
-  --accent-hover: #3457b8;
-  --accent-active: #2c4a9c;
-  /* 强调色作为小字文字时用深一档，浅底软底上保证 ≥4.5 */
-  --accent-text: #2f55bd;
+  /* 全站唯一交互色：Apple Action Blue
+   * #0071e3 是 Apple 官网按钮真实使用色（从 apple.com 参考验证）
+   * 浅色面用 Action Blue #0066cc 做文字链接（保证 ≥4.5） */
+  --accent: #0071e3;
+  --accent-hover: #0077ed;
+  --accent-active: #006edb;
+  /* 文字链接色：Apple 的 Action Blue #0066cc，小字在白底 4.6:1 达标 */
+  --accent-text: #0066cc;
   --btn-bg: var(--accent);
   --btn-bg-hover: var(--accent-hover);
-  --link: #3e6ae1;
-  --accent-soft: rgba(62, 106, 225, 0.08);
+  --link: #0066cc;
+  --accent-soft: rgba(0, 113, 227, 0.08);
 
   --separator: #eeeeee;
   --separator-soft: rgba(23, 26, 32, 0.08);
@@ -144,15 +153,15 @@
   --caution-soft: rgba(179, 78, 0, 0.14);
   --danger: #c11f1a;
   --danger-soft: rgba(193, 31, 26, 0.13);
-  --info: #2f55bd;
-  --info-soft: rgba(47, 85, 189, 0.12);
+  --info: #0066cc;
+  --info-soft: rgba(0, 102, 204, 0.12);
   /* RGB 分量三元组：供发光阴影写 rgba(var(--danger-rgb), 0.42) */
   --ok-rgb: 20, 106, 56;
   --warn-rgb: 122, 90, 0;
   --caution-rgb: 179, 78, 0;
   --danger-rgb: 193, 31, 26;
-  --accent-rgb: 62, 106, 225;
-  --link-on-dark-rgb: 115, 157, 242;
+  --accent-rgb: 0, 113, 227;
+  --link-on-dark-rgb: 41, 151, 255;
   /* 报警发光专用色：报警底两主题都是暗的，发光色不随主题变 */
   --glow-ok: 20, 106, 56;
   --glow-warn: 122, 90, 0;
@@ -174,36 +183,43 @@
   --chart-grid: rgba(23, 26, 32, 0.07);
   --chart-axis: #767a82;
 
-  /* 关键点叠加层（画在视频上，深浅两套通用） */
-  --mesh: rgba(115, 157, 242, 0.45);
-  --mesh-eye: #35d0a0;
-  --mesh-eye-closed: #ff554b;
+  /* 关键点叠加层（画在视频上，深浅两套通用）
+   * v4 色彩纪律：常态只有白系单色线稿（Face ID 式的安静），
+   * 颜色只属于事件——闭眼 = systemRed，张嘴 = systemYellow。
+   * 颜色出现的那一刻，就是注意力该去的地方。
+   * --mesh 供降级点云；--mesh-line 是 Face ID 式稀疏网格线（更淡）。 */
+  --mesh: rgba(255, 255, 255, 0.25);
+  --mesh-line: rgba(255, 255, 255, 0.11);
+  --mesh-eye: rgba(255, 255, 255, 0.92);
+  --mesh-eye-closed: #ff453a;
   --mesh-mouth: #ffd60a;
-  --mesh-oval: rgba(255, 255, 255, 0.55);
-  --mesh-iris: #739df2;
+  --mesh-oval: rgba(255, 255, 255, 0.62);
+  --mesh-iris: rgba(255, 255, 255, 0.5);
 
   /* ---------- 圆角 ----------
-   * Tesla 只有两档：4px 交互元素 / 12px 大表面。
-   * --r-pill 原是胶囊，现在同样映射到 4px——.pill 类还在被大量引用，
-   * 让令牌本身失效比逐处改写更不容易漏。 */
-  --r-xs: 2px;
-  --r-sm: 4px;
-  --r-md: 4px;
+   * Apple 圆角阶梯：5px(微) / 8px(小) / 11px(中) / 18px(大) / pill(胶囊)
+   * 主 CTA 按钮用 pill（9999px）——Apple 标志性的胶囊形。
+   * 卡片用 12px（--r-lg），交互元素用 8px（--r-sm）。 */
+  --r-xs: 4px;
+  --r-sm: 8px;
+  --r-md: 12px;
   --r-lg: 12px;
-  --r-xl: 12px;
-  --r-2xl: 12px;
-  --r-pill: 4px;
+  --r-xl: 18px;
+  --r-2xl: 18px;
+  --r-pill: 9999px;
 
-  /* ---------- 阴影 ----------
-   * Tesla 全站零阴影。xs/sm/md/lg 全部置 none；
-   * xl 仅保留给设置抽屉这种真正覆盖在页面之上的图层，
-   * 且抽屉底色与页面已足够区分，实际渲染仍是极轻的一层。 */
-  --sh-xs: none;
-  --sh-sm: none;
-  --sh-md: none;
-  --sh-lg: none;
-  --sh-xl: inset 0 0 0 1px rgba(23, 26, 32, 0.06);
+  /* ---------- 阴影（Apple 风格层次体系） ----------
+   * Apple 用柔和的层阴影制造悬浮感，不是零阴影。
+   * 每层 = ambient(大范围低透明度) + key(窄边高透明度) 双光源。 */
+  --sh-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --sh-sm: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --sh-md: 0 4px 16px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+  --sh-lg: 0 12px 40px rgba(0, 0, 0, 0.10), 0 4px 12px rgba(0, 0, 0, 0.05);
+  --sh-xl: 0 20px 60px rgba(0, 0, 0, 0.12), 0 8px 20px rgba(0, 0, 0, 0.06);
   --sh-focus: 0 0 0 3px rgba(62, 106, 225, 0.4);
+  --sh-card: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --sh-card-hover: 0 12px 40px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04);
+  --sh-nav: 0 1px 0 rgba(0, 0, 0, 0.08);
 
   /* ---------- 间距（8pt 网格） ---------- */
   --sp-1: 4px;
@@ -220,34 +236,47 @@
   /* （--sp-17: 16px 已删：不在 8pt 阶梯上且零引用，同值用 --sp-4） */
   --sp-section: 80px;
 
-  /* ---------- 动效 ----------
-   * Tesla 的统一节奏：0.33s，一条曲线，只过渡颜色类属性。
-   * --ease-apple 是历史名（旧代码引用），值已换成 Tesla 曲线。 */
-  --ease: cubic-bezier(0.5, 0, 0, 0.75);
-  --ease-apple: cubic-bezier(0.5, 0, 0, 0.75);
-  --ease-out: cubic-bezier(0.5, 0, 0, 0.75);
-  --ease-spring: cubic-bezier(0.5, 0, 0, 0.75);
-  --ease-reveal: cubic-bezier(0.5, 0, 0, 0.75);
-  --dur-fast: 0.2s;
-  --dur-base: 0.33s;
-  --dur-slow: 0.33s;
-  --dur-hover: 0.33s;
-  --dur-reveal: 0.33s;
-  --dur-reveal-long: 0.33s;
-  --reveal-stagger: 70ms;
+  /* ---------- 动效（Apple 设计语言） ----------
+   * Apple 动效体系：缓动曲线分级 + 滚动位移浮现 + 错峰延迟
+   *   --ease:         主缓动 cubic-bezier(0.4, 0, 0.6, 1) — Apple 全站最高频
+   *   --ease-out:     减速曲线 cubic-bezier(0, 0, 0.2, 1) — Material/Apple 通用出场
+   *   --ease-spring:  弹簧曲线 cubic-bezier(0.34, 1.56, 0.64, 1) — 悬浮回弹
+   *   --ease-reveal:  Apple 出场主曲线 cubic-bezier(0.16, 1, 0.3, 1)
+   *                   — WWDC《Designing Fluid Interfaces》的 iOS sheet/浮层曲线：
+   *                     快起步、极缓落定。所有进场动画（reveal/视图切换/错峰）
+   *                     统一走这支，原 (0.25, 0.1, 0.3, 1) 已弃用。
+   *   --ease-drawer:  iOS 侧拉抽屉曲线 cubic-bezier(0.32, 0.72, 0, 1)
+   *                   — Ionic 团队对 Apple 抽屉实测采样的值，专用于 sheet。
+   * 时长分级：0.1s(按压) / 0.24s(快) / 0.32s(中) / 0.5s(慢) / 0.8s(长)
+   *   --dur-press: WWDC Response 原则——按压反馈必须 <120ms 才有"即时"感，
+   *   只用在 :active 态；松手回弹仍走 --dur-base 的弹簧曲线。
+   */
+  --ease: cubic-bezier(0.4, 0, 0.6, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-reveal: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --dur-press: 0.1s;
+  --dur-fast: 0.24s;
+  --dur-base: 0.32s;
+  --dur-slow: 0.5s;
+  --dur-hover: 0.32s;
+  --dur-reveal: 0.6s;
+  --dur-reveal-long: 0.8s;
+  --reveal-stagger: 60ms;
+  --reveal-shift: 30px;
+  --reveal-shift-lg: 60px;
+  --parallax-range: 20px;
 
-  /* Tesla 禁用位移/缩放类微动效，这些历史令牌全部归零 */
-  --reveal-shift: 0px;
-  --reveal-shift-lg: 0px;
-  --parallax-range: 0px;
-  --shift-sm: 0px;
-  --shift-md: 0px;
-  --card-hover-lift: 0px;
-  --card-hover-scale: 1;
-  --press-scale: 1;
+  /* Apple 风格微动效：位移、缩放、视差 */
+  --shift-sm: 4px;
+  --shift-md: 12px;
+  --card-hover-lift: -4px;
+  --card-hover-scale: 1.02;
+  --press-scale: 0.95;
 
   /* ---------- 布局 ----------
-   * 单层 56px 导航（Tesla 单行导航）。
+   * 单层 56px 导航（Apple 单行导航）。
    * --subnav-h 保留名字但置 0：吐司/报警按 --nav-total 定位，无需改动。 */
   --nav-h: 56px;
   --subnav-h: 0px;
@@ -257,7 +286,7 @@
 }
 
 /* ---------- 深色模式 ----------
- * Tesla 的暗面即车机语言：Carbon Dark 画布 + 微亮一档的面板。
+ * Apple 的暗面：深色画布 #171a20 + 微亮一档的面板。
  * 语义色换高明度版本，在 #171a20 上不发灰。 */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
@@ -283,7 +312,7 @@
      * hero 注脚同理固定为第四档灰，两主题层级镜像对等。 */
     --hero-muted: #a0a3a9;
     --hero-faint: #7e828a;
-    --hero-accent: #739df2;
+    --hero-accent: #2997ff;
     --hero-panel: rgba(255, 255, 255, 0.04);
     --hero-chip-bg: rgba(255, 255, 255, 0.06);
     --hero-line: rgba(255, 255, 255, 0.16);
@@ -296,18 +325,20 @@
     --text-secondary: #c9cbd0;
     --text-tertiary: #a0a3a9;
     /* A2：第四档微亮一档到 #7e828a，与浅色 #767a82 感知明度镜像对等
-     * （白底 4.3:1 ↔ Carbon Dark 底 4.4:1），层级间隔两主题一致。 */
+     * （白底 4.3:1 ↔ 深色底 4.4:1），层级间隔两主题一致。 */
     --text-quaternary: #7e828a;
 
-    --accent: #5a8bf2;
-    --accent-hover: #6e9bf5;
-    --accent-active: #4a7ce8;
-    --accent-text: #739df2;
-    /* 按钮底不随主题提亮太多：白字对 #3e6ae1 有 4.7，提亮会跌破 */
-    --btn-bg: #3e6ae1;
-    --btn-bg-hover: #3457b8;
-    --link: #739df2;
-    --accent-soft: rgba(90, 139, 242, 0.14);
+    /* Apple 深色模式：按钮底保持 #0071e3（白字 4.7:1 达标）
+     * 文字链接用 Sky Link Blue #2997ff——Apple 官网暗底上的标准 */
+    --accent: #2997ff;
+    --accent-hover: #40a8ff;
+    --accent-active: #1a8fff;
+    --accent-text: #2997ff;
+    --btn-bg: #0071e3;
+    --btn-bg-hover: #006edb;
+    --link: #2997ff;
+    --accent-soft: rgba(41, 151, 255, 0.14);
+    --accent-rgb: 41, 151, 255;
 
     --separator: #2c3038;
     --separator-soft: rgba(255, 255, 255, 0.09);
@@ -322,14 +353,14 @@
     --caution-soft: rgba(251, 146, 60, 0.14);
     --danger: #f87171;
     --danger-soft: rgba(248, 113, 113, 0.13);
-    --info: #739df2;
-    --info-soft: rgba(115, 157, 242, 0.14);
+    --info: #2997ff;
+    --info-soft: rgba(41, 151, 255, 0.14);
     --ok-rgb: 74, 222, 128;
     --warn-rgb: 251, 191, 36;
     --caution-rgb: 251, 146, 60;
     --danger-rgb: 248, 113, 113;
-    --accent-rgb: 90, 139, 242;
-    --link-on-dark-rgb: 115, 157, 242;
+    --accent-rgb: 41, 151, 255;
+    --link-on-dark-rgb: 41, 151, 255;
     --glow-ok: 20, 106, 56;
     --glow-warn: 122, 90, 0;
     --glow-caution: 179, 78, 0;
@@ -349,8 +380,11 @@
     /* A2：轴色随第四档灰同步微亮，保持同层级 */
     --chart-axis: #7e828a;
 
-    --sh-xl: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
-    --sh-focus: 0 0 0 3px rgba(90, 139, 242, 0.45);
+  --sh-xl: 0 20px 60px rgba(0, 0, 0, 0.4), 0 8px 20px rgba(0, 0, 0, 0.2);
+  --sh-focus: 0 0 0 3px rgba(90, 139, 242, 0.45);
+  --sh-card: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --sh-card-hover: 0 12px 40px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.15);
+  --sh-nav: 0 1px 0 rgba(255, 255, 255, 0.06);
   }
 }
 
@@ -367,8 +401,10 @@
   --bg-elevated: #1e2229;
   --bg-sunken: #12151a;
   --bg-inset: #242932;
-  --surface-glass: rgba(23, 26, 32, 0.75);
-  --surface-glass-strong: rgba(23, 26, 32, 0.92);
+  --surface-glass: rgba(23, 26, 32, 0.72);
+  --surface-glass-strong: rgba(23, 26, 32, 0.88);
+  --glass-blur: saturate(180%) blur(20px);
+  --glass-blur-light: saturate(150%) blur(10px);
 
   --tile-canvas: #171a20;
   --tile-parchment: #1e2229;
@@ -381,7 +417,7 @@
   /* A2：同 prefers-color-scheme 深色块——hero 次级文字固定化，镜像浅色层级 */
   --hero-muted: #a0a3a9;
   --hero-faint: #7e828a;
-  --hero-accent: #739df2;
+  --hero-accent: #2997ff;
   --hero-panel: rgba(255, 255, 255, 0.04);
   --hero-chip-bg: rgba(255, 255, 255, 0.06);
   --hero-line: rgba(255, 255, 255, 0.16);
@@ -396,14 +432,14 @@
   /* A2：同上，第四档镜像校正 */
   --text-quaternary: #7e828a;
 
-  --accent: #5a8bf2;
-  --accent-hover: #6e9bf5;
-  --accent-active: #4a7ce8;
-  --accent-text: #739df2;
-  --btn-bg: #3e6ae1;
-  --btn-bg-hover: #3457b8;
-  --link: #739df2;
-  --accent-soft: rgba(90, 139, 242, 0.14);
+  --accent: #2997ff;
+  --accent-hover: #40a8ff;
+  --accent-active: #1a8fff;
+  --accent-text: #2997ff;
+  --btn-bg: #0071e3;
+  --btn-bg-hover: #006edb;
+  --link: #2997ff;
+  --accent-soft: rgba(41, 151, 255, 0.14);
 
   --separator: #2c3038;
   --separator-soft: rgba(255, 255, 255, 0.09);
@@ -418,14 +454,14 @@
   --caution-soft: rgba(251, 146, 60, 0.14);
   --danger: #f87171;
   --danger-soft: rgba(248, 113, 113, 0.13);
-  --info: #739df2;
-  --info-soft: rgba(115, 157, 242, 0.14);
+  --info: #2997ff;
+  --info-soft: rgba(41, 151, 255, 0.14);
   --ok-rgb: 74, 222, 128;
   --warn-rgb: 251, 191, 36;
   --caution-rgb: 251, 146, 60;
   --danger-rgb: 248, 113, 113;
-  --accent-rgb: 90, 139, 242;
-  --link-on-dark-rgb: 115, 157, 242;
+  --accent-rgb: 41, 151, 255;
+  --link-on-dark-rgb: 41, 151, 255;
   --glow-ok: 20, 106, 56;
   --glow-warn: 122, 90, 0;
   --glow-caution: 179, 78, 0;
@@ -444,6 +480,9 @@
   /* A2：轴色随第四档灰同步微亮，保持同层级 */
   --chart-axis: #7e828a;
 
-  --sh-xl: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+  --sh-xl: 0 20px 60px rgba(0, 0, 0, 0.4), 0 8px 20px rgba(0, 0, 0, 0.2);
   --sh-focus: 0 0 0 3px rgba(90, 139, 242, 0.45);
+  --sh-card: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --sh-card-hover: 0 12px 40px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.15);
+  --sh-nav: 0 1px 0 rgba(255, 255, 255, 0.06);
 }

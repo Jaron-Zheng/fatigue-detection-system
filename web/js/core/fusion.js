@@ -41,6 +41,12 @@ export const INDICATOR_META = {
 export class FusionEngine {
   constructor() {
     this.ema = new Ema(CONFIG.fusion.emaAlpha, 0);
+    // 趋势加速器：跟踪 EMA 的一阶导数（分数变化速率）
+    // 当分数在快速上升时，给一个正向加成；下降时做微小阻尼。
+    // 这让系统在疲劳恶化期更快响应，在恢复期稍慢回落——
+    // 符合安全系统的「宁可早报不可晚报」原则。
+    this.trendEma = 0;       // EMA 一阶差分的平滑值
+    this.prevRaw = 0;       // 上一帧原始分数
     this.level = 'awake';
     this.levelSince = 0;
     this.pendingLevel = null;
@@ -56,6 +62,8 @@ export class FusionEngine {
 
   reset() {
     this.ema = new Ema(CONFIG.fusion.emaAlpha, 0);
+    this.trendEma = 0;
+    this.prevRaw = 0;
     this.level = 'awake';
     this.levelSince = 0;
     this.pendingLevel = null;
@@ -88,6 +96,9 @@ export class FusionEngine {
      * 否则开局 2 秒内的一次眨眼会让 PERCLOS 瞬间冲到 30%+（分母太小），
      * 直接产生误报。
      */
+    // PERCLOS：线性隶属函数。
+    // 调参实验：S 曲线在模拟数据上无优势（低端延迟抵消了中段加成），
+    // 但在真实噪声场景中 S 曲线的低端噪声抑制可能有价值，保留为可选项。
     const mPerclos = ind.perclosReady === false ? 0 : membership(ind.perclos, 0.06, 0.32);
 
     // 最长闭眼时长：300ms 内属正常眨眼；1500ms 已是明确微睡眠
@@ -148,8 +159,31 @@ export class FusionEngine {
       contrib[k].points = wsum > 0 ? (contrib[k].weight * contrib[k].membership / wsum) * 100 : 0;
     }
 
-    /* ---------- 时序平滑 ---------- */
+    /* ---------- 时序平滑 + 趋势加速器 ----------
+     * EMA 做一阶低通滤波后，额外计算一阶导数（趋势）。
+     * 趋势为正（分数在上升）时，给正向加成（更快触发报警）；
+     * 趋势为负（在恢复）时，给轻微阻尼（防止过早恢复）。
+     * 不对称设计：上升加速 > 下降阻尼，因为「早报 0.5 秒」的价值
+     * 远大于「晚恢复 0.5 秒」的代价。
+     * 趋势加速器有独立的 EMA 平滑，避免单帧噪声引发跳变。
+     *
+     * 参数已提取到 CONFIG.fusion（trendAlpha / trendMultiplier /
+     * trendMaxBoost / trendMinBoost），增强现实感评估后
+     * trendMaxBoost 从 5 提升到 8，加快疲劳上升期响应。 */
     let score = this.ema.push(raw);
+
+    // 一阶差分 + 自身 EMA 平滑
+    const trendAlpha = CONFIG.fusion.trendAlpha ?? 0.08;
+    const rawDelta = raw - this.prevRaw;
+    this.trendEma = this.trendEma + trendAlpha * (rawDelta - this.trendEma);
+    this.prevRaw = raw;
+
+    // 趋势加成：正趋势加成上限 CONFIG.fusion.trendMaxBoost，负趋势阻尼下限 CONFIG.fusion.trendMinBoost
+    const trendMultiplier = CONFIG.fusion.trendMultiplier ?? 1.5;
+    const trendMax = CONFIG.fusion.trendMaxBoost ?? 5;
+    const trendMin = CONFIG.fusion.trendMinBoost ?? -2;
+    const trendBoost = clamp(this.trendEma * trendMultiplier, trendMin, trendMax);
+    score += trendBoost;
 
     /* ---------- 安全兜底（override） ----------
      * 眼睛已经连续闭合超过临界时长（默认 1.8s）时，等同于失去对车辆的控制，

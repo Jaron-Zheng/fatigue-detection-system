@@ -1,9 +1,9 @@
-/** layout.css — 页面布局（Tesla 设计语言）：单层导航、全幅段落、仪表台、视频舞台、报警层、报告 */
+/** layout.css — 页面布局（Apple 设计语言）：单层导航、全幅段落、仪表台、视频舞台、报警层、报告 */
 
-/* ============ 单层导航（Tesla 结构） ============
+/* ============ 单层导航（Apple 结构） ============
  * 一条 56px 导航：左品牌（logo + 加宽字距 wordmark）、中视图入口、
- * 右状态与工具。默认实底；在首页 hero（Carbon Dark 画幅）之上且
- * 未滚动时透明悬浮、白字——Tesla 顶栏压在摄影 hero 上的模式。
+ * 右状态与工具。默认实底；在首页 hero 之上且
+ * 未滚动时透明悬浮、白字——Apple 顶栏压在摄影 hero 上的模式。
  * .is-scrolled 由 motion.js 在滚动后加回。 */
 .global-nav {
   position: sticky;
@@ -12,7 +12,10 @@
   height: var(--nav-h);
   background: var(--bg);
   transition: background-color var(--dur-base) var(--ease),
-    color var(--dur-base) var(--ease);
+    color var(--dur-base) var(--ease),
+    backdrop-filter var(--dur-base) var(--ease),
+    -webkit-backdrop-filter var(--dur-base) var(--ease),
+    box-shadow var(--dur-base) var(--ease);
 }
 .global-nav-inner {
   max-width: var(--content-max);
@@ -37,7 +40,7 @@
   width: 22px;
   height: 22px;
 }
-/* 品牌字标：Tesla wordmark 的加宽字距手法，颜色跟导航整体走 */
+/* 品牌字标：Apple wordmark 的加宽字距手法，颜色跟导航整体走 */
 .gn-wordmark {
   font-size: var(--fs-body);
   font-weight: var(--fw-medium);
@@ -45,7 +48,8 @@
   white-space: nowrap;
 }
 
-/* 中间入口：14px/500，Tesla 导航按钮规格（透明底 + hover 换底色） */
+/* 中间入口：14px/500，Apple 导航按钮规格
+ * hover 时文字色变蓝 + 底线展开（三层联动） */
 .gn-links {
   display: flex;
   align-items: center;
@@ -63,24 +67,78 @@
   font-size: var(--fs-body);
   font-weight: var(--fw-medium);
   color: inherit;
-  opacity: 0.78;
+  opacity: 0.88;
   white-space: nowrap;
-  transition: background-color var(--dur-base) var(--ease),
-    color var(--dur-base) var(--ease), opacity var(--dur-base) var(--ease);
+  transition: color var(--dur-base) var(--ease),
+    opacity var(--dur-base) var(--ease);
 }
+/* hover：文字色切蓝 + 底线展开（三层联动） */
 .gn-links a:hover {
   opacity: 1;
-  background: var(--fill-quaternary);
+  color: var(--accent-text);
   text-decoration: none;
 }
-/* 当前页高亮：Electric Blue 文字（浅色用深一档的 --accent-text 保证对比度）。
- * 之前只改透明度 0.78→1，肉眼几乎不可辨——用户看不出点击后已跳转。 */
+.gn-links a:hover::after {
+  transform: scaleX(1);
+}
+/* 当前页高亮：Apple 风格底横线指示器 + Action Blue 文字。
+ * 每个链接下方有一条底线（::after 伪元素），
+ * 用 transform: scaleX 控制展开/收起（GPU 合成层，不走 layout/paint）。
+ *
+ * 方向感知动画（完美复刻 apple.com 导航）：
+ * · 当前页底线 scaleX(1)，非当前页 scaleX(0)
+ * · 切换时旧链接底线朝切换方向收缩、新链接从同方向展开
+ * · JS 在 switchView 时给 .gn-links 加 dir-prev/dir-next 类，
+ *   CSS 递归设置 transform-origin：
+ *   - 向右切换：旧 origin-right（从右收起）、新 origin-left（从左展开）
+ *   - 向左切换：旧 origin-left（从左收起）、新 origin-right（从右展开）
+ * 这就是 Apple 官网导航底线滑动指示器的完整效果。 */
+.gn-links {
+  position: relative;
+}
+.gn-links a {
+  position: relative;
+}
+.gn-links a::after {
+  content: '';
+  position: absolute;
+  left: var(--sp-4);
+  right: var(--sp-4);
+  bottom: 2px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 1px;
+  /* transform: scaleX 走合成层，比 width 过渡更丝滑（Apple 官网同方案） */
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform var(--dur-base) var(--ease);
+}
 .gn-links a[aria-current='page'] {
   opacity: 1;
   color: var(--accent-text);
 }
+.gn-links a[aria-current='page']::after {
+  transform: scaleX(1);
+}
+
+/* ---- 方向感知底线动画（完美复刻 apple.com 导航切换） ----
+ * .gn-links 上由 JS 设置 dir-prev / dir-next：
+ *   dir-next = 向右切换（概览→工作台→报告）
+ *   dir-prev = 向左切换
+ * 旧链接（aria-current 已被移除）底线朝切换方向收缩；
+ * 新链接（aria-current 新加上）底线从同方向展开。
+ * hover 时底线用 center origin（不是切换，是停留）。 */
+.gn-links.dir-next a:not([aria-current='page']):not(:hover)::after { transform-origin: right; }
+.gn-links.dir-next a[aria-current='page']:not(:hover)::after { transform-origin: left; }
+.gn-links.dir-prev a:not([aria-current='page']):not(:hover)::after { transform-origin: left; }
+.gn-links.dir-prev a[aria-current='page']:not(:hover)::after { transform-origin: right; }
+/* hover 覆盖方向类：底线从 center 展开 */
+.gn-links a:hover::after { transform-origin: center; }
 body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-links a[aria-current='page'] {
   color: var(--hero-accent);
+}
+body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-links a[aria-current='page']::after {
+  background: var(--hero-accent);
 }
 .gn-spacer {
   flex: 1;
@@ -166,14 +224,38 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   }
 }
 @media (max-width: 640px) {
-  .gn-toggle {
-    display: none;
+  .global-nav-inner {
+    gap: var(--sp-2);
   }
   .gn-links {
     gap: 0;
+    margin: 0;
   }
-  /* 小屏右侧工具组：收窄间距并允许收缩，否则整条导航被撑出
-   * 横向滚动条（375px 屏实测溢出 71px 就是它） */
+  .gn-links a {
+    padding: 0 var(--sp-2);
+    font-size: 13px;
+  }
+  /* 专业模式按钮：手机端不隐藏，改为超紧凑胶囊。
+   * 原始文字"专业模式"用 font-size:0 隐藏（文本节点无法用子选择器选中），
+   * ::before 伪元素显示"专"一个字，宽度与图标按钮相当。
+   * is-on 激活态仍由 components.css #btnProMode.is-on 控制。 */
+  .gn-toggle {
+    flex: none;
+    min-height: 28px;
+    padding: 2px 7px;
+    font-size: 0;
+    line-height: 1;
+  }
+  .gn-toggle::before {
+    content: '专';
+    font-size: 12px;
+    letter-spacing: 0.02em;
+  }
+  /* 图标按钮不被压缩：保持 36px 方形热区 */
+  .gn-icon {
+    flex: none;
+  }
+  /* 小屏右侧工具组：收窄间距，推到右端 */
   .gn-tail {
     gap: 2px;
     flex: 1 1 auto;
@@ -184,6 +266,13 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
     padding-inline: 6px;
   }
 }
+/* 超小屏（≤360px）：导航链接再缩一档，防止 320px 设备溢出 */
+@media (max-width: 360px) {
+  .gn-links a {
+    padding: 0 6px;
+    font-size: 12px;
+  }
+}
 
 /* ============ 页面容器 ============ */
 .page {
@@ -192,12 +281,15 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   padding: 0 var(--sp-6) var(--sp-16);
 }
 
-/* ============ 首页：Tesla 全幅段落 ============
- * 一屏一讯息。hero 是 Carbon Dark 画幅（对应 Tesla 的全屏摄影段），
- * 其余段落白底、收尾段 Light Ash。段落之间不画线不加影，
+/* ============ 首页：Apple 全幅段落 ============
+ * 一屏一讯息。hero 是深色画幅（对应 Apple 的全屏摄影段），
+ * 其余段落白底、收尾段浅灰 #f4f4f4。段落之间不画线不加影，
  * 只靠底色与大片留白分隔。 */
 
-/* ---- hero 段（跟随主题：默认亮色白底，暗色模式才变 Carbon Dark） ---- */
+/* ---- hero 段（跟随主题：默认亮色白底，暗色模式才变深色） ----
+ * Apple 风格增强：添加微妙的径向渐变光源，营造空间深度感。
+ * 浅色模式下光源在上方中央，模拟自然光从顶部洒落；
+ * 暗色模式下光源更内敛，仅微亮一档面板色。 */
 .ts-hero {
   min-height: calc(100vh - var(--nav-h));
   display: grid;
@@ -206,6 +298,12 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   background: var(--hero-bg);
   color: var(--hero-text);
   transition: background-color var(--dur-base) var(--ease), color var(--dur-base) var(--ease);
+  /* Apple 风格径向光源：从顶部中央向下渐变 */
+  background-image: radial-gradient(
+    ellipse 80% 50% at 50% 0%,
+    rgba(var(--accent-rgb), 0.04) 0%,
+    transparent 70%
+  );
 }
 .ts-hero-inner {
   max-width: var(--content-max);
@@ -226,7 +324,7 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
 .ts-promo svg {
   flex: none;
 }
-/* hero 标题：40px/500 封顶（Tesla 的 hero 上限），不加字距 */
+/* hero 标题：40px/500 封顶（Apple 的 hero 上限） */
 .ts-hero-title {
   font-family: var(--font-display);
   font-size: var(--fs-hero);
@@ -236,6 +334,8 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   margin-bottom: var(--sp-4);
   text-wrap: balance;
   color: inherit;
+  /* Apple 风格：标题微微提亮，增加视觉重量 */
+  text-shadow: 0 0 40px rgba(var(--accent-rgb), 0.05);
 }
 .ts-hero-sub {
   font-size: var(--fs-subhead);
@@ -251,7 +351,7 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   max-width: 640px;
   margin: 0 auto;
 }
-/* Tesla CTA 对：主 Electric Blue 200px 定宽 + 次级底色按钮，均 4px 圆角 */
+/* Apple CTA 对：主 Action Blue 胶囊 + 次级透明框 */
 .ts-hero-cta {
   display: flex;
   gap: var(--sp-4);
@@ -272,10 +372,20 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   background: var(--fill-tertiary);
 }
 
-/* ---- hero 内的视觉主图（车机 HUD 风格，配色全部跟随 --hero-* 令牌） ---- */
+/* ---- hero 内的视觉主图（HUD 风格，配色全部跟随 --hero-* 令牌） ---- */
 .vision-product {
   width: min(100%, 820px);
   margin: 0 auto;
+}
+/* ---- 概览页"数据流向"图（tsPrivacy 段落）：仅布局，配色走全局令牌 ---- */
+.ts-flow-figure {
+  width: min(100%, 860px);
+  margin: 0 auto;
+}
+.ts-flow-figure svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
 }
 .vision-product-frame {
   width: 100%;
@@ -285,7 +395,7 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   height: auto;
   overflow: visible;
 }
-/* 面板：浅色 Light Ash / 暗色微亮，发丝描线 */
+/* 面板：浅色浅灰 / 暗色微亮，发丝描线 */
 .hud-panel {
   fill: var(--hero-panel);
   stroke: var(--hero-line);
@@ -302,7 +412,7 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   fill: none;
   stroke-linecap: round;
 }
-/* 中央车道线：唯一一支 Electric Blue */
+/* 中央车道线：唯一一支 Action Blue */
 .hud-lane {
   stroke: var(--accent);
   stroke-width: 2;
@@ -375,6 +485,25 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
 .ts-section {
   padding: var(--sp-12) var(--sp-6);
   background: var(--tile-canvas);
+  /* Apple 风格：段落顶部微妙的渐变线，模拟光影分界 */
+  position: relative;
+}
+.ts-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(100%, 1200px);
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--separator) 20%,
+    var(--separator) 80%,
+    transparent 100%
+  );
+  opacity: 0.6;
 }
 /* tight 档同步对齐 48px——统计条区段不再出现 40/48 的上下断拍 */
 .ts-section-tight {
@@ -409,14 +538,27 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   margin-right: auto;
 }
 
-/* ---- 能力卡（Light Ash 底、12px 圆角、无描边无投影） ----
+/* 概览页面所有段落的标题与副标题统一居中，保持视觉一致性 */
+#tsFeatures .ts-section-inner,
+#tsPrivacy .ts-section-inner,
+#tsVerify .ts-section-inner {
+  text-align: center;
+}
+#tsFeatures .ts-section-sub,
+#tsPrivacy .ts-section-sub,
+#tsVerify .ts-section-sub {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ---- 能力卡（浅灰底、12px 圆角、无描边无投影） ----
  * 列数固定：4 / 2 / 1 三档。auto-fit 在中等宽度会排出 3+1 的孤儿行，
  * 视觉上比挤一点更糟糕。 */
 .hero-features {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: var(--sp-4);
-  text-align: left;
+  text-align: center;
 }
 @media (max-width: 1100px) {
   .hero-features {
@@ -432,15 +574,23 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   background: var(--feat-bg);
   border-radius: var(--r-lg);
   padding: var(--sp-6);
-  transition: background-color var(--dur-hover) var(--ease);
+  transition: background-color var(--dur-hover) var(--ease),
+    transform var(--dur-hover) var(--ease),
+    box-shadow var(--dur-hover) var(--ease);
+  /* Apple 风格：卡片内嵌微光，hover 时发光 */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 .feat:hover {
   background: var(--feat-bg-hover);
+  /* Apple 风格：hover 时柔和上浮 + 发光阴影 */
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.03);
 }
-/* 图标：无底色容器，Electric Blue 线稿直接置顶（Tesla 的裸线稿语法） */
+/* 图标：无底色容器，Action Blue 线稿直接置顶（Apple 的裸线稿语法） */
 .feat-icon {
   color: var(--accent);
   margin-bottom: var(--sp-4);
+  display: flex;
+  justify-content: center;
 }
 .feat-icon svg {
   width: 24px;
@@ -458,10 +608,10 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   line-height: 1.6;
 }
 
-/* ---- 数字段落：40px 数字 + Pewter 小字 + 大留白 ----
+/* ---- 数字段落：40px 数字 + 灰色小字 + 大留白 ----
  * 列数必须固定为 4：auto-fit 会在中等宽度塌成 3 列，
  * 把末位数字挤到第二行（真人实测报告的缺陷）。列间用竖向发丝线
- * 分隔——Tesla 规格表的排法，比分隔空隙更有秩序。 */
+ * 分隔——Apple 规格表的排法，比分隔空隙更有秩序。 */
 .tile-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -485,6 +635,8 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   letter-spacing: 0;
   color: var(--text);
   font-variant-numeric: tabular-nums;
+  /* Apple 风格：大数字微光发光，制造高级感 */
+  text-shadow: 0 0 30px rgba(var(--accent-rgb), 0.06);
 }
 .tile-stat-label {
   font-size: var(--fs-body);
@@ -535,7 +687,7 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   min-width: 200px;
 }
 
-/* 眉标：小号 Pewter 说明行（Tesla 不用大写与底色） */
+/* 眉标：小号灰色说明行（Apple 不用大写与底色） */
 .hero-eyebrow {
   display: inline-flex;
   align-items: center;
@@ -592,7 +744,7 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
 }
 
 /* ============ 工作台 ============ */
-/* ---- 顶部仪表条：车机仪表台模式 ----
+/* ---- 顶部仪表条：仪表台模式 ----
  * 左：当前等级与原因；中：疲劳指数环 + 大数字（车速表）；
  * 右：时长/峰值/均值。三段在宽屏上等权重排布。 */
 .cluster {
@@ -656,7 +808,7 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   }
 }
 
-/* 环形仪表：细环（车机仪表语言），stroke 由 JS 按等级换色 */
+/* 环形仪表：细环（Apple 仪表语言），stroke 由 JS 按等级换色 */
 .gauge {
   width: 128px;
   height: 128px;
@@ -695,6 +847,8 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   line-height: 1;
   letter-spacing: 0;
   font-variant-numeric: tabular-nums;
+  /* Apple 风格：仪表数字微光 */
+  text-shadow: 0 0 20px rgba(var(--accent-rgb), 0.08);
 }
 .gauge-cap {
   font-size: var(--fs-micro);
@@ -799,7 +953,7 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
 }
 
 /* ---- 视频舞台 ----
- * Tesla 零阴影：画面容器只靠近黑底色与 12px 圆角成型。 */
+ * Apple 画面容器：靠底色差与 12px 圆角成型。 */
 .stage {
   position: relative;
   border-radius: var(--r-lg);
@@ -808,7 +962,7 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   aspect-ratio: 4 / 3;
   /* 等级描边（frame-presenter 按疲劳等级切换类）：
    * 中度起视频边框持续描边，开车余光也能察觉（第四轮真人走查）。
-   * 用 outline 而不是 box-shadow——DESIGN.md 的 Tesla 纪律是全站零投影
+   * 用 outline 而不是 box-shadow——Apple 的纪律是 UI 组件不加投影
    * （design-audit R2 会拦截任何 box-shadow），outline 内嵌同样成环 */
 }
 .stage.level-warn {
@@ -952,7 +1106,7 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   flex-wrap: wrap;
 }
 
-/* 标定环形进度：Electric Blue 细环 */
+/* 标定环形进度：Action Blue 细环 */
 .calib-ring {
   width: 132px;
   height: 132px;
@@ -1053,12 +1207,9 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   vertical-align: middle;
 }
 
-/* ---- 事件时间线图标字号补丁 ----
- * A1：components.css 里 .tl-icon 字面量 11px，与全站 12px 下限破档；
- * 本文件在 components.css 之后加载，同特异性覆盖为 12px 档。 */
-.tl-icon {
-  font-size: var(--fs-caption);
-}
+/* ---- 事件时间线图标（SVG 化后遗留清理）----
+ * 旧文本字符时代的字号补丁已随 SVG 图标方案移除；
+ * 图标尺寸由 components.css 的 .tl-icon svg 接管。 */
 
 /* ============ 报警视觉层 ============ */
 .alarm-veil {
@@ -1095,76 +1246,11 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   }
 }
 
-/**
- * 报警横幅固定在顶部而非底部：桌面端视频舞台很高，放底部会压在
- * 面部区域上。Tesla 语言：Carbon Dark 底 + 左侧等级色条 + 4px 圆角，
- * 白字（两主题下底色都是 Carbon Dark，白字恒定达标）。
- */
-.alarm-banner {
-  position: fixed;
-  z-index: 470;
-  left: 50%;
-  top: calc(var(--nav-total) + var(--sp-3));
-  transform: translate(-50%, -180%);
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  padding: 12px 20px 12px 16px;
-  border-radius: var(--r-sm);
-  background: #171a20; /* lit-ok: 报警横幅固定 Carbon Dark 底 */
-  color: #fff; /* lit-ok: Carbon Dark 底上的白字，两主题恒定达标 */
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); /* lit-ok: 暗底上的极细描线 */
-  font-size: var(--fs-body);
-  font-weight: var(--fw-medium);
-  visibility: hidden;
-  opacity: 0;
-  transition: transform var(--dur-slow) var(--ease), opacity var(--dur-fast) var(--ease),
-    visibility var(--dur-fast) step-end;
-  max-width: calc(100vw - 32px);
-}
-.alarm-banner.show {
-  transform: translate(-50%, 0);
-  visibility: visible;
-  opacity: 1;
-  transition: transform var(--dur-slow) var(--ease), opacity var(--dur-fast) var(--ease),
-    visibility 0s;
-}
-/* 左侧等级色条：功能信息（严重程度），不属于装饰 */
-.alarm-banner[data-level='mild'] {
-  box-shadow: inset 4px 0 0 0 var(--warn), inset 4px 0 0 1px rgba(255, 255, 255, 0.12);
-}
-.alarm-banner[data-level='moderate'] {
-  box-shadow: inset 4px 0 0 0 var(--caution), inset 4px 0 0 1px rgba(255, 255, 255, 0.12);
-}
-/* A6：severe 整幅反色为红底白字/近黑字——最高级报警要"一眼跳出来"。
- * 底用 --danger、字用 --on-lv（浅色 #c11f1a+白 6.0:1 / 深色 #f87171+近黑 6.1:1，
- * 两主题恒 ≥4.5 达标）；原左侧红条在红底上不可见，改为中性深色条。 */
-.alarm-banner[data-level='severe'] {
-  background: var(--danger);
-  color: var(--on-lv);
-  box-shadow: inset 4px 0 0 0 rgba(0, 0, 0, 0.3);
-}
-.alarm-banner .ab-icon {
-  width: 20px;
-  height: 20px;
-  flex: none;
-}
-.alarm-banner button {
-  margin-left: var(--sp-1);
-  padding: 5px 13px;
-  border-radius: var(--r-sm);
-  background: rgba(255, 255, 255, 0.14); /* lit-ok: 暗底上的半透明白按钮 */
-  color: inherit;
-  font-size: 12px;
-  font-weight: var(--fw-medium);
-  transition: background-color var(--dur-base) var(--ease);
-}
-.alarm-banner button:hover {
-  background: rgba(255, 255, 255, 0.26); /* lit-ok: 同上 */
-}
+/* 报警文字通知已统一并入 toast 家族（见 components.css 的
+ * .toast[data-kind='alarm']），旧版顶部暗色横幅（.alarm-banner）随之移除。 */
 
 /* ============ 报告页 ============
- * Tesla 订单页头部模式：标题摘要靠左，动作按钮组靠右。 */
+ * Apple 订单页头部模式：标题摘要靠左，动作按钮组靠右。 */
 .report-head {
   padding: var(--sp-12) 0 var(--sp-8);
   display: grid;
@@ -1407,7 +1493,7 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   border-radius: var(--r-sm);
   position: relative;
 }
-/* 左侧 Electric Blue 竖线 */
+/* 左侧 Action Blue 竖线 */
 .advice-item::before {
   content: '';
   position: absolute;
@@ -1422,7 +1508,7 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   opacity: 0.85;
 }
 
-/* 数据表：Tesla 表格语法——Pewter 小字表头（不用大写）、发丝线分行 */
+/* 数据表：Apple 表格语法——灰色小字表头（不用大写）、发丝线分行 */
 .tbl {
   width: 100%;
   border-collapse: collapse;
@@ -1469,7 +1555,6 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   .global-nav,
   .controls,
   .alarm-veil,
-  .alarm-banner,
   .toast-host,
   .no-print {
     display: none !important;

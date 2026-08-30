@@ -1,12 +1,21 @@
 /**
- * overlay.js — 关键点可视化叠加层
+ * overlay.js — 关键点可视化叠加层（v4：单色纪律）
+ *
+ * 设计原则（Apple 式的克制，三条硬规则）：
+ *   1. 颜色即语义——常态只有白系线稿（安静的 Face ID 质感）；
+ *      红色只属于闭眼，黄色只属于张嘴。颜色出现的那一刻，
+ *      就是注意力该去的地方。
+ *   2. 线宽有体系——三档：1.25（次体：眉/虹膜）/ 1.5（主体：
+ *      脸廓/唇/常态眼线）/ 2.5（事件强调）。
+ *   3. 点云退成薄霜——478 点地标是论文证据，但证据不需要喊叫：
+ *      156 个 0.9px 圆点、16% 透明度，铺在皮肤上像一层薄霜，
+ *      证明模型在工作，而不抢主体的戏。
  *
  * 在视频上方用 Canvas 绘制：
- *   · 稀疏面部网格（科技感，同时证明模型确实在工作）
- *   · 眼部轮廓（睁眼绿 / 闭眼红，实时反映 EAR 判定结果）
- *   · 嘴部轮廓（张口时高亮，配合哈欠判定）
- *   · 脸部外轮廓与虹膜
- *   · 头部姿态坐标轴（直观展示 pitch/yaw/roll）
+ *   · 稀疏面部点云（薄霜质感，证明模型逐帧在工作）
+ *   · 脸廓 / 眉 / 唇 / 眼轮廓（单色线稿）
+ *   · 事件语义色：闭眼变红、张嘴变黄（含收敛的柔光）
+ *   · 头部姿态三轴（精修的 gizmo 风格，非调试工具风）
  *
  * 渲染性能：每帧只画约 250 个点 + 若干路径，
  * 在 1080p 下开销约 1~2ms，不会拖慢推理主循环。
@@ -46,16 +55,45 @@ export class Overlay {
     this.colors = this._readColors();
     this.w = 0;
     this.h = 0;
+    /* 稀疏网格边表（Face ID 式线框）：首次绘制时从 MediaPipe 官方
+     * 拓扑表 FACE_LANDMARKS_TESSELATION（2556 条边）中筛出两端点
+     * 都落在稀疏采样集里的 256 条边，缓存后逐帧复用。
+     * 拓扑静态不变，只需加载一次；加载失败则降级回点云。 */
+    this.meshEdges = null;
+    this._meshEdgesFailed = false;
+  }
+
+  /**
+   * 加载稀疏网格边表（异步，一次性）。
+   * 只读取 FaceLandmarker 的静态常量，不会触发 wasm/模型下载；
+   * 失败（如 vendor 路径异常）时静默降级为点云，不阻塞渲染。
+   */
+  async _loadMeshEdges() {
+    try {
+      const base = new URL('../../vendor', import.meta.url).href;
+      const mod = await import(`${base}/tasks-vision/vision_bundle.mjs`);
+      const tess = mod.FaceLandmarker.FACE_LANDMARKS_TESSELATION;
+      if (!Array.isArray(tess) || !tess.length) throw new Error('empty tessellation');
+      const sparse = new Set(MESH_SPARSE);
+      const edges = [];
+      for (const c of tess) {
+        if (sparse.has(c.start) && sparse.has(c.end)) edges.push([c.start, c.end]);
+      }
+      this.meshEdges = edges;
+    } catch {
+      this._meshEdgesFailed = true; // 永久降级点云，不再重试
+    }
   }
 
   _readColors() {
     return {
-      mesh: cssVar('--mesh', 'rgba(0,210,255,0.42)'),
-      eye: cssVar('--mesh-eye', '#00e0a4'),
+      mesh: cssVar('--mesh', 'rgba(255,255,255,0.25)'),
+      meshLine: cssVar('--mesh-line', 'rgba(255,255,255,0.14)'),
+      eye: cssVar('--mesh-eye', 'rgba(255,255,255,0.92)'),
       eyeClosed: cssVar('--mesh-eye-closed', '#ff453a'),
       mouth: cssVar('--mesh-mouth', '#ffd60a'),
-      oval: cssVar('--mesh-oval', 'rgba(255,255,255,0.55)'),
-      iris: cssVar('--mesh-iris', '#64d2ff'),
+      oval: cssVar('--mesh-oval', 'rgba(255,255,255,0.62)'),
+      iris: cssVar('--mesh-iris', 'rgba(255,255,255,0.5)'),
     };
   }
 
@@ -92,63 +130,84 @@ export class Overlay {
     const c = this.colors;
     const r = CONFIG.render;
 
-    // ---- 稀疏网格 ----
+    // ---- 稀疏网格：Face ID 式淡线框 ----
     if (r.showMesh) {
-      /* E4 批量绘制：156 个网格点原先逐点 beginPath/arc/fill（156 次
-       * 绘制调用）；改为单个 Path2D 收拢全部圆弧后一次 fill。每个圆弧
-       * 前先 moveTo 到圆心右侧（x+r, y），避免上一段弧的终点与下一段
-       * 弧的起点之间被补出连线。点还是那些点，肉眼完全等价。 */
-      ctx.fillStyle = c.mesh;
-      const dots = new Path2D();
-      for (const i of MESH_SPARSE) {
-        const p = map(lm[i]);
-        dots.moveTo(p.x + 1.15, p.y);
-        dots.arc(p.x, p.y, 1.15, 0, Math.PI * 2);
+      if (this.meshEdges) {
+        /* 256 条稀疏边（拓扑来自 MediaPipe 官方 FACE_LANDMARKS_TESSELATION）
+         * 收进单个 Path2D 一次 stroke——Apple Face ID 扫描网格的密度观感，
+         * 证明模型逐帧在工作，而安静得像背景。
+         * 裁剪到脸廓内：网格是"脸上的证据"，不允许溢出到发际之外。 */
+        ctx.save();
+        this._path(ctx, lm, CONTOUR_FACE_OVAL, map, true);
+        ctx.clip();
+        ctx.strokeStyle = c.meshLine;
+        ctx.lineWidth = 1;
+        const net = new Path2D();
+        for (const [a, b] of this.meshEdges) {
+          const pa = map(lm[a]);
+          const pb = map(lm[b]);
+          net.moveTo(pa.x, pa.y);
+          net.lineTo(pb.x, pb.y);
+        }
+        ctx.stroke(net);
+        ctx.restore();
+      } else {
+        /* 降级/待加载：薄霜点云（E4 批量绘制——单个 Path2D 收拢全部
+         * 圆弧后一次 fill，每段弧前 moveTo 到圆心右侧避免补出连线）。 */
+        ctx.fillStyle = c.mesh;
+        const dots = new Path2D();
+        for (const i of MESH_SPARSE) {
+          const p = map(lm[i]);
+          dots.moveTo(p.x + 0.9, p.y);
+          dots.arc(p.x, p.y, 0.9, 0, Math.PI * 2);
+        }
+        ctx.fill(dots);
+        if (!this._meshEdgesFailed) this._loadMeshEdges();
       }
-      ctx.fill(dots);
     }
 
-    // ---- 轮廓 ----
+    // ---- 轮廓：单色线稿 ----
     if (r.showContours) {
-      ctx.lineWidth = 1.6;
       ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
 
-      // 脸廓
+      // 脸廓（主体）
+      ctx.lineWidth = 1.5;
       this._path(ctx, lm, CONTOUR_FACE_OVAL, map, true);
       ctx.strokeStyle = c.oval;
       ctx.stroke();
 
-      // 眉毛
+      // 眉毛（次体）
       ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-      ctx.lineWidth = 1.3;
+      ctx.lineWidth = 1.25;
       this._path(ctx, lm, CONTOUR_LEFT_BROW, map, false);
       ctx.stroke();
       this._path(ctx, lm, CONTOUR_RIGHT_BROW, map, false);
       ctx.stroke();
 
-      // 眼睛：闭眼变红并加粗，配合发光提升可读性
+      // 眼睛：常态白线；闭眼变红加粗——颜色即语义
       /* E4：shadowBlur 只在闭眼（异常告警）时开启——常态睁眼每帧
-       * 给两条眼轮廓开 5px 高斯模糊是纯开销（GPU 按像素扩散），
-       * 且睁眼本就绿色细线、无需强调；闭眼时的 12px 红色发光是
+       * 给两条眼轮廓开高斯模糊是纯开销（GPU 按像素扩散），
+       * 且常态白线无需强调；闭眼时的 9px 红色柔光是
        * 告警视觉强调，语义保留。 */
       const eyeColor = state && state.closed ? c.eyeClosed : c.eye;
       ctx.strokeStyle = eyeColor;
-      ctx.lineWidth = state && state.closed ? 2.6 : 1.9;
+      ctx.lineWidth = state && state.closed ? 2.5 : 1.5;
       ctx.shadowColor = eyeColor;
-      ctx.shadowBlur = state && state.closed ? 12 : 0;
+      ctx.shadowBlur = state && state.closed ? 9 : 0;
       this._path(ctx, lm, CONTOUR_LEFT_EYE, map, true);
       ctx.stroke();
       this._path(ctx, lm, CONTOUR_RIGHT_EYE, map, true);
       ctx.stroke();
       ctx.shadowBlur = 0;
 
-      // 嘴：张口时高亮
+      // 嘴：张口时变黄——事件色
       const mouthOpen = state && state.mouthOpen;
-      ctx.strokeStyle = mouthOpen ? c.mouth : 'rgba(255,255,255,0.46)';
-      ctx.lineWidth = mouthOpen ? 2.4 : 1.5;
+      ctx.strokeStyle = mouthOpen ? c.mouth : 'rgba(255,255,255,0.5)';
+      ctx.lineWidth = mouthOpen ? 2.1 : 1.5;
       if (mouthOpen) {
         ctx.shadowColor = c.mouth;
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 8;
       }
       this._path(ctx, lm, CONTOUR_LIPS_OUTER, map, true);
       ctx.stroke();
@@ -161,7 +220,7 @@ export class Overlay {
     if (r.showIris && lm.length > IRIS_LEFT_CENTER) {
       ctx.strokeStyle = c.iris;
       ctx.fillStyle = c.iris;
-      ctx.lineWidth = 1.4;
+      ctx.lineWidth = 1.25;
       for (const ring of [IRIS_LEFT, IRIS_RIGHT]) {
         this._path(ctx, lm, ring, map, true);
         ctx.stroke();
@@ -169,27 +228,33 @@ export class Overlay {
       for (const idx of [IRIS_LEFT_CENTER, IRIS_RIGHT_CENTER]) {
         const p = map(lm[idx]);
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 2.1, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, 1.8, 0, Math.PI * 2);
         ctx.fill();
       }
     }
 
-    // ---- 头部姿态坐标轴 ----
+    // ---- 头部姿态三轴 ----
     this._drawPoseAxes(ctx, feat, map(lm[NOSE_TIP]), feat.scale);
   }
 
   /**
-   * 模拟模式下的示意脸绘制（v2 重设计）。
+   * 模拟模式下的示意脸绘制（v4：减法重设计）。
    *
-   * 模拟模式没有真实视频与关键点，但答辩演示时需要让观众"看到"发生了什么，
-   * 所以这里用 EAR / MAR / 头部角度直接驱动一张矢量示意脸：
-   *   · 眼睛是上下两条眼睑曲线围成的杏仁形，闭眼 = 上眼睑真实下落盖住眼睛，
-   *     而不是把椭圆压扁——观众能看懂"眼皮在合上"这个动作本身；
-   *   · 嘴的张开走下颌旋转语义：下唇与下巴随 jawOpen 下垂，哈欠时呈圆形开口；
-   *   · 头/颈/肩三层结构给出驾驶坐姿语境，随 pitch/yaw/roll 一起运动；
-   *   · 疲劳语义细节：眉毛下沉内倾（困倦眉）、中重度出现眼袋弧线；
-   *   · 头周一圈等级色状态环 + 极淡光晕，替代 v1 的大面积光斑。
-   * 它同时也是很好的算法教学演示——观众能直观看到特征量与面部状态的对应关系。
+   * v3 的问题不是画得不够多，而是画得太多：头发、耳朵、肩颈、红晕、
+   * 眼袋、鼻翼、下巴阴影——每一处都在往一张半透明脸上叠笔画，叠出
+   * 一团浑浊的"幽灵"。它努力想"像人"，却忘了自己的任务：
+   * **清楚地演示眼睛在闭、嘴在张、头在转。**
+   *
+   * v4 的设计纪律（Apple 式克制）：
+   *   · 线稿语言——头是干净的一笔鹅蛋描边，不再堆半透明填充；
+   *   · 删掉全部装饰部件（发/耳/肩/颈/红晕/眼袋/鼻翼/下巴阴影/大光晕）；
+   *   · 眼睛是唯一的主角，值得抠细节：真实解剖的上睑遮虹膜、单一
+   *     光源高光、外高内低的眼角；闭眼 = 红线下弯（事件色）；
+   *   · 嘴保留下颌旋转语义，哈欠开口 + 黄色描边（事件色）；
+   *   · 状态环改为连续细线——Apple 从不用虚线环。
+   *
+   * 它同时也是算法教学演示——观众能直观看到 EAR / MAR / 头部角度
+   * 与面部状态的对应关系。
    */
   drawSynthetic(feat, state) {
     if (!this.w) this.resize();
@@ -213,10 +278,10 @@ export class Overlay {
     const jaw = clamp(feat.jawOpen ?? clamp((feat.mar - 0.06) / (0.85 - 0.06), 0, 1), 0, 1);
     const level = (state && state.level) || 'awake';
     const LV = {
-      awake: '#30d158',
-      mild: '#ffd60a',
-      moderate: '#ff9f0a',
-      severe: '#ff453a',
+      awake: cssVar('--lv-awake', '#30d158'),
+      mild: cssVar('--lv-mild', '#ffd60a'),
+      moderate: cssVar('--lv-moderate', '#ff9f0a'),
+      severe: cssVar('--lv-severe', '#ff453a'),
     };
     const lvColor = LV[level] || LV.awake;
     const fatigueK = level === 'severe' ? 1 : level === 'moderate' ? 0.6 : level === 'mild' ? 0.3 : 0;
@@ -228,27 +293,14 @@ export class Overlay {
     ctx.rotate(roll);
     const persp = Math.cos(yaw); // 侧转时脸宽轻微压缩（透视暗示）
 
-    /* ---- 肩部与颈部（坐姿语境，画在头后面） ---- */
-    this._synShoulders(ctx, R);
-    this._synNeck(ctx, R, persp);
-
-    /* ---- 状态环 + 光晕 ---- */
-    const glow = ctx.createRadialGradient(0, 0, R * 0.6, 0, 0, R * 1.42);
-    glow.addColorStop(0, hexA(lvColor, 0.10 + fatigueK * 0.14));
-    glow.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = glow;
-    ctx.beginPath();
-    ctx.arc(0, 0, R * 1.42, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = hexA(lvColor, 0.62);
+    /* ---- 状态环：连续细线（Apple 不用虚线环） ---- */
+    ctx.strokeStyle = hexA(lvColor, 0.55);
     ctx.lineWidth = 1.5;
-    ctx.setLineDash([R * 0.12, R * 0.1]);
     ctx.beginPath();
-    ctx.arc(0, 0, R * 1.32, 0, Math.PI * 2);
+    ctx.arc(0, 0, R * 1.28, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.setLineDash([]);
 
-    /* ---- 头（蛋形 + 发际 + 耳） ---- */
+    /* ---- 头：一笔鹅蛋线稿 ---- */
     this._synHead(ctx, R, persp);
 
     /* ---- 面部器官（眼/眉/鼻/嘴，画在头变换内） ---- */
@@ -276,9 +328,9 @@ export class Overlay {
     ctx.arc(w / 2 - pillW / 2 + 16, pillY + pillH / 2, 3.2, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.92)';
-    ctx.font = '600 13px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+    ctx.font = '600 13px Inter, system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
     ctx.fillText(`演示模式 · ${phase}`, w / 2 + 8, pillY + pillH / 2 + 0.5);
-    ctx.font = '400 11px -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
+    ctx.font = '400 11px Inter, system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif';
     ctx.fillStyle = 'rgba(255,255,255,0.55)';
     ctx.textBaseline = 'alphabetic';
     // 专业模式下说明信号来源；简洁模式只说这是模拟的，避免抛术语
@@ -288,38 +340,16 @@ export class Overlay {
     ctx.fillText(sub, w / 2, h - 14);
   }
 
-  /* ============ 示意脸 v3 的分部件绘制（坐标以头部中心为原点、R 为半径） ============ */
+  /* ============ 示意脸 v4 的分部件绘制（坐标以头部中心为原点、R 为半径） ============ */
 
-  /** 肩部：一条大弧线给出"人坐在方向盘后"的剪影暗示（v3 抬高肩线，缩短颈部） */
-  _synShoulders(ctx, R) {
-    ctx.strokeStyle = 'rgba(255,255,255,0.13)';
-    ctx.lineWidth = R * 0.13;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(-R * 1.62, R * 1.86);
-    ctx.quadraticCurveTo(-R * 1.5, R * 1.16, 0, R * 1.1);
-    ctx.quadraticCurveTo(R * 1.5, R * 1.16, R * 1.62, R * 1.86);
-    ctx.stroke();
-    ctx.lineCap = 'butt';
-  }
-
-  /** 颈部：从下颌延伸到肩线的两笔 */
-  _synNeck(ctx, R, persp) {
-    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
-    ctx.lineWidth = R * 0.09;
-    ctx.beginPath();
-    ctx.moveTo(-R * 0.26 * persp, R * 0.82);
-    ctx.lineTo(-R * 0.30 * persp, R * 1.18);
-    ctx.moveTo(R * 0.26 * persp, R * 0.82);
-    ctx.lineTo(R * 0.30 * persp, R * 1.18);
-    ctx.stroke();
-  }
-
-  /** 头（v3）：鹅蛋形 + 暖调柔和填充 + 平涂"发型帽" + 双耳 */
+  /**
+   * 头（v4）：一笔鹅蛋线稿。
+   * 颅顶圆 → 颞部 → 颊部收窄 → 圆下巴，1.6px 白描边 + 一档极淡填充
+   * 给出体量。不再有发、耳和多层皮肤渐变——那些是 v3 浑浊的来源。
+   */
   _synHead(ctx, R, persp) {
     const hw = R * 0.72 * Math.max(0.72, persp); // 半宽
     const hh = R * 1.02; // 半高
-    // 鹅蛋轮廓：颅顶圆 → 颞部 → 颊部收窄 → 圆下巴
     ctx.beginPath();
     ctx.moveTo(0, -hh);
     ctx.bezierCurveTo(hw * 0.82, -hh, hw, -hh * 0.55, hw * 0.98, -hh * 0.08);
@@ -327,84 +357,41 @@ export class Overlay {
     ctx.bezierCurveTo(-hw * 0.5, hh * 0.9, -hw * 0.96, hh * 0.4, -hw * 0.98, -hh * 0.08);
     ctx.bezierCurveTo(-hw, -hh * 0.55, -hw * 0.82, -hh, 0, -hh);
     ctx.closePath();
-    // 皮肤：带一点暖调的柔和体量感（替代 v2 的冷白）
-    const skin = ctx.createLinearGradient(0, -hh, 0, hh);
-    skin.addColorStop(0, 'rgba(255,244,232,0.17)');
-    skin.addColorStop(0.7, 'rgba(255,248,240,0.09)');
-    skin.addColorStop(1, 'rgba(255,255,255,0.04)');
-    ctx.fillStyle = skin;
+    ctx.fillStyle = 'rgba(255,255,255,0.035)';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
-    ctx.lineWidth = 1.7;
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = 1.6;
     ctx.stroke();
-
-    // 发型帽：一瓣干净的平涂剪影（暖棕发色，近黑舞台上仍有体量）
-    ctx.beginPath();
-    ctx.moveTo(-hw * 0.88, -hh * 0.26);
-    ctx.quadraticCurveTo(-hw * 0.9, -hh * 0.97, 0, -hh * 0.955);
-    ctx.quadraticCurveTo(hw * 0.9, -hh * 0.97, hw * 0.88, -hh * 0.26);
-    // 下缘：中间略高的中分弧
-    ctx.quadraticCurveTo(hw * 0.52, -hh * 0.4, 0, -hh * 0.38);
-    ctx.quadraticCurveTo(-hw * 0.52, -hh * 0.4, -hw * 0.88, -hh * 0.26);
-    ctx.closePath();
-    const hair = ctx.createLinearGradient(0, -hh, 0, -hh * 0.3);
-    hair.addColorStop(0, 'rgba(178,146,112,0.30)');
-    hair.addColorStop(1, 'rgba(150,122,92,0.18)');
-    ctx.fillStyle = hair;
-    ctx.fill();
-
-    // 耳：与眼睛齐平的小椭圆，1/3 突出于脸廓外（v3 眼位在头部中点）
-    for (const s of [-1, 1]) {
-      ctx.beginPath();
-      ctx.ellipse(s * hw * 1.03, 0, R * 0.078, R * 0.108, 0, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255,255,255,0.07)';
-      ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,0.28)';
-      ctx.lineWidth = 1.3;
-      ctx.stroke();
-    }
   }
 
-  /** 面部器官（v3）：杏仁眼+视线 / 干净拱形眉 / 极简鼻 / 下颌嘴 / 疲劳细节 */
+  /**
+   * 面部器官（v4）：眼睛是主角 / 一笔眉 / 一笔鼻 / 下颌嘴。
+   * 删掉了 v3 的红晕、眼袋、鼻翼、下巴阴影——装饰笔画全部退场，
+   * 只留承载信息的四件：眉（疲劳下沉）、眼（开合）、鼻（中轴参照）、
+   * 嘴（哈欠开口）。
+   */
   _synFace(ctx, R, persp, openRatio, jaw, fatigueK, state, gaze = 0) {
-    const closed = state && state.closed;
     const mouthOpen = state && state.mouthOpen;
 
-    /* ---- 疲劳红晕：轻度末段两颊渐起，疲劳越深越红 ---- */
-    if (fatigueK >= 0.3) {
-      for (const s of [-1, 1]) {
-        const g2 = ctx.createRadialGradient(s * R * 0.42, R * 0.12, 0, s * R * 0.42, R * 0.12, R * 0.2);
-        g2.addColorStop(0, `rgba(255,132,120,${0.08 + fatigueK * 0.12})`);
-        g2.addColorStop(1, 'rgba(255,132,120,0)');
-        ctx.fillStyle = g2;
-        ctx.beginPath();
-        ctx.arc(s * R * 0.42, R * 0.12, R * 0.2, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
     /* ---- 眼睛：位于头部纵向中点，间距约 1 眼宽（面部比例基准） ----
-     * 杏仁形 = 内外眼角之间上、下两条眼睑曲线。
-     * 上眼睑弧高随 openRatio 从全开落到 0，且随疲劳基线下垂 —— 闭眼与疲劳都可见。
-     * 虹膜随视线（yaw）同向偏移并被开口裁剪；睁眼带瞳孔与高光。 */
+     * 杏仁形 = 内外眼角之间上、下两条眼睑曲线；上睑弧随 openRatio
+     * 从全开落到 0，且随疲劳基线下垂。虹膜随视线（yaw）同向偏移。 */
     const eyeY = -R * 0.02;
     const eyeDX = R * 0.33 * Math.max(0.78, persp);
     const eyeW2 = R * 0.17; // 半宽
     const lidH = R * 0.115 * (0.06 + 0.94 * openRatio) * (1 - fatigueK * 0.32); // 上眼睑弧高（含疲劳下垂）
     const lowH = R * 0.068; // 下眼睑弧高（基本不动）
-    const eyeColor = closed ? this.colors.eyeClosed : this.colors.eye;
 
     for (const s of [-1, 1]) {
       const ex = s * eyeDX;
 
-      /* 眉毛：干净的拱形（暖灰，白眉在深色舞台像发光条），疲劳时下沉并内倾 */
+      /* 眉毛：一笔拱形，疲劳时下沉并内倾（困倦眉） */
       const droop = fatigueK * R * 0.055 + (1 - openRatio) * R * 0.018;
       const browY = eyeY - R * 0.15 - droop;
-      ctx.strokeStyle = 'rgba(205,192,174,0.66)';
-      ctx.lineWidth = R * 0.026;
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.lineWidth = R * 0.024;
       ctx.lineCap = 'round';
       ctx.beginPath();
-      // 内侧端点比外侧低 → 内倾（困）
       const inner = ex - s * eyeW2 * 1.0;
       const outer = ex + s * eyeW2 * 1.18;
       ctx.moveTo(inner, browY + R * 0.012 + fatigueK * R * 0.026);
@@ -430,7 +417,7 @@ export class Overlay {
         const irisR = R * 0.062;
         const irisX = ex + gaze * R * 0.035;
         const irisY = eyeY - lidH * 0.22 + lowH * 0.2; // 虹膜上移：上眼睑自然盖住虹膜上缘
-        ctx.fillStyle = hexA(this.colors.iris, 0.92);
+        ctx.fillStyle = 'rgba(122,146,178,0.92)'; // 单一蓝灰，不再用主题虹膜色
         ctx.beginPath();
         ctx.arc(irisX, irisY, irisR, 0, Math.PI * 2);
         ctx.fill();
@@ -438,21 +425,19 @@ export class Overlay {
         ctx.beginPath();
         ctx.arc(irisX, irisY, irisR * 0.45, 0, Math.PI * 2);
         ctx.fill();
+        // 单一光源高光：虹膜 10 点方向（光源一致性）
         ctx.fillStyle = 'rgba(255,255,255,0.9)';
         ctx.beginPath();
         ctx.arc(irisX - irisR * 0.32, irisY - irisR * 0.36, irisR * 0.24, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
-        // 眼睑描边：上缘清晰、下缘轻
-        ctx.strokeStyle = eyeColor;
-        ctx.lineWidth = 1.9;
-        ctx.shadowColor = eyeColor;
-        ctx.shadowBlur = 4;
+        // 上眼睑线（清晰）、下眼睑线（轻）
+        ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.moveTo(ex - eyeW2, eyeY);
         ctx.quadraticCurveTo(ex, eyeY - lidH * 2.0, ex + eyeW2, eyeY);
         ctx.stroke();
-        ctx.shadowBlur = 0;
         ctx.strokeStyle = 'rgba(255,255,255,0.28)';
         ctx.lineWidth = 1.1;
         ctx.beginPath();
@@ -460,12 +445,12 @@ export class Overlay {
         ctx.quadraticCurveTo(ex, eyeY + lowH * 2.0, ex + eyeW2, eyeY);
         ctx.stroke();
       } else {
-        /* 闭眼：一条干净的下弯线（v3 去掉小尺寸下易显脏的睫毛撇） */
-        ctx.strokeStyle = closed ? this.colors.eyeClosed : 'rgba(255,255,255,0.62)';
+        /* 闭眼：红色下弯线 + 柔光（事件色——颜色即语义） */
+        ctx.strokeStyle = this.colors.eyeClosed;
         ctx.lineWidth = 2.2;
         ctx.lineCap = 'round';
-        ctx.shadowColor = closed ? this.colors.eyeClosed : 'transparent';
-        ctx.shadowBlur = closed ? 14 : 0;
+        ctx.shadowColor = this.colors.eyeClosed;
+        ctx.shadowBlur = 9;
         ctx.beginPath();
         ctx.moveTo(ex - eyeW2, eyeY - R * 0.012);
         ctx.quadraticCurveTo(ex, eyeY + R * 0.05, ex + eyeW2, eyeY - R * 0.012);
@@ -473,34 +458,22 @@ export class Overlay {
         ctx.shadowBlur = 0;
         ctx.lineCap = 'butt';
       }
-
-      /* ---- 眼袋：轻度末段起出现，疲劳越深越明显 ---- */
-      if (fatigueK >= 0.3) {
-        ctx.strokeStyle = `rgba(130,152,182,${0.16 + fatigueK * 0.2})`;
-        ctx.lineWidth = 1.3;
-        ctx.beginPath();
-        ctx.moveTo(ex - eyeW2 * 0.82, eyeY + R * 0.1);
-        ctx.quadraticCurveTo(ex, eyeY + R * 0.15, ex + eyeW2 * 0.82, eyeY + R * 0.1);
-        ctx.stroke();
-      }
     }
 
-    /* ---- 鼻（v3）：鼻根起于两眼内眦连线，极简一笔 + 对称鼻翼 ---- */
-    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-    ctx.lineWidth = 1.4;
+    /* ---- 鼻：一笔竖曲线，面部中轴参照（不再有鼻翼弧） ---- */
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 1.5;
+    ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(gaze * R * 0.02, R * 0.02);
-    ctx.quadraticCurveTo(gaze * R * 0.045, R * 0.16, gaze * R * 0.015, R * 0.225);
+    ctx.quadraticCurveTo(gaze * R * 0.045, R * 0.16, gaze * R * 0.015, R * 0.235);
     ctx.stroke();
-    for (const s of [-1, 1]) {
-      ctx.beginPath();
-      ctx.arc(s * R * 0.048 + gaze * R * 0.015, R * 0.24, R * 0.026, Math.PI * 0.05, Math.PI * 0.95);
-      ctx.stroke();
-    }
+    ctx.lineCap = 'butt';
 
-    /* ---- 嘴：下颌旋转语义，唇形更收敛 ----
+    /* ---- 嘴：下颌旋转语义 ----
      * 上唇基本不动（哈欠时略抬），下唇随 jaw 下垂；
-     * 开口内部填充深色，哈欠 (jaw>0.5) 时接近正圆。 */
+     * 开口内部填充深色，哈欠 (jaw>0.5) 时接近正圆；
+     * 张口时黄色描边 + 柔光（事件色）。 */
     const mw = R * 0.2 * Math.max(0.8, persp);
     const my = R * 0.5;
     const lipTop = my - R * 0.026 - jaw * R * 0.05;
@@ -510,7 +483,6 @@ export class Overlay {
     ctx.moveTo(-mw, my - R * 0.006);
     ctx.quadraticCurveTo(-mw * 0.5, lipTop, 0, lipTop);
     ctx.quadraticCurveTo(mw * 0.5, lipTop, mw, my - R * 0.006);
-    // 下唇：从圆口的弧到闭合时的浅弧插值
     const botCtrl = my + (lipBot - my) * (1 - round * 0.45);
     ctx.quadraticCurveTo(mw * (1 - round * 0.15), botCtrl, 0, lipBot - round * R * 0.02);
     ctx.quadraticCurveTo(-mw * (1 - round * 0.15), botCtrl, -mw, my - R * 0.006);
@@ -518,31 +490,13 @@ export class Overlay {
     ctx.fillStyle = jaw > 0.06 ? 'rgba(10,7,11,0.92)' : 'rgba(255,255,255,0.05)';
     ctx.fill();
     ctx.strokeStyle = mouthOpen ? this.colors.mouth : 'rgba(255,255,255,0.5)';
-    ctx.lineWidth = mouthOpen ? 2.1 : 1.6;
+    ctx.lineWidth = mouthOpen ? 2.1 : 1.5;
     if (mouthOpen) {
       ctx.shadowColor = this.colors.mouth;
-      ctx.shadowBlur = 9;
+      ctx.shadowBlur = 8;
     }
     ctx.stroke();
     ctx.shadowBlur = 0;
-    // 下唇反光弧：闭合时的立体感（替代 v2 唇峰细线）
-    if (jaw <= 0.06) {
-      ctx.strokeStyle = 'rgba(255,255,255,0.14)';
-      ctx.lineWidth = 1.6;
-      ctx.beginPath();
-      ctx.moveTo(-mw * 0.55, my + R * 0.045);
-      ctx.quadraticCurveTo(0, my + R * 0.062, mw * 0.55, my + R * 0.045);
-      ctx.stroke();
-    }
-
-    /* ---- 下巴阴影：张口时随下颌下移 ---- */
-    const chinY = R * 0.79 + jaw * R * 0.1;
-    ctx.strokeStyle = 'rgba(255,255,255,0.14)';
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.moveTo(-R * 0.09, chinY);
-    ctx.quadraticCurveTo(0, chinY + R * 0.032, R * 0.09, chinY);
-    ctx.stroke();
   }
 
   /**
@@ -577,10 +531,17 @@ export class Overlay {
     if (close) ctx.closePath();
   }
 
-  /** 以鼻尖为原点画三轴，长度随人脸尺度自适应 */
+  /**
+   * 头部姿态三轴（v4：gizmo 风格精修）。
+   *
+   * 保留 X/Y/Z 三色的学术语义（红=X 摆头 / 绿=Y 俯仰 / 蓝=Z 翻滚，
+   * 色值即 Apple 系统色），但呈现方式从"调试工具"收敛为设计软件里
+   * 的旋转操纵器：细线、圆头、原点锚点、轴端端点。三色是功能信息，
+   * 允许作为语义色出现——与叠加层的单色纪律不冲突。
+   */
   _drawPoseAxes(ctx, feat, origin, faceScale) {
     if (!Number.isFinite(feat.pitch)) return;
-    const L = Math.max(34, Math.min(78, (faceScale || 0.2) * this.w * 0.55));
+    const L = Math.max(30, Math.min(70, (faceScale || 0.2) * this.w * 0.5));
     const mirror = CONFIG.render.mirror ? -1 : 1;
     const p = feat.pitch * DEG2RAD;
     const y = feat.yaw * DEG2RAD * mirror;
@@ -592,21 +553,34 @@ export class Overlay {
 
     // R = Rz(roll)·Ry(yaw)·Rx(pitch)，只取投影到屏幕的 x、y 分量
     const axes = [
-      { v: [cr * cy, sr * cy], color: '#ff453a', label: 'X' },
-      { v: [cr * sy * sp - sr * cp, sr * sy * sp + cr * cp], color: '#30d158', label: 'Y' },
-      { v: [cr * sy * cp + sr * sp, sr * sy * cp - cr * sp], color: '#0a84ff', label: 'Z' },
+      { v: [cr * cy, sr * cy], color: '#ff453a' },
+      { v: [cr * sy * sp - sr * cp, sr * sy * sp + cr * cp], color: '#30d158' },
+      { v: [cr * sy * cp + sr * sp, sr * sy * cp - cr * sp], color: '#0a84ff' },
     ];
 
     ctx.save();
-    ctx.lineWidth = 2.4;
+    ctx.globalAlpha = 0.95;
+    ctx.lineWidth = 1.6;
     ctx.lineCap = 'round';
     for (const a of axes) {
+      const ex = origin.x + a.v[0] * L;
+      const ey = origin.y - a.v[1] * L;
       ctx.strokeStyle = a.color;
       ctx.beginPath();
       ctx.moveTo(origin.x, origin.y);
-      ctx.lineTo(origin.x + a.v[0] * L, origin.y - a.v[1] * L);
+      ctx.lineTo(ex, ey);
       ctx.stroke();
+      // 轴端点：小小的实心圆，操纵器的"把手"
+      ctx.fillStyle = a.color;
+      ctx.beginPath();
+      ctx.arc(ex, ey, 1.7, 0, Math.PI * 2);
+      ctx.fill();
     }
+    // 原点锚点：白色小点，三轴从这里生长
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.beginPath();
+    ctx.arc(origin.x, origin.y, 2.2, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
   }
 }

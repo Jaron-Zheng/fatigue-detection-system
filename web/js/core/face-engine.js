@@ -7,15 +7,22 @@
  * 视频帧从不离开本机，不存在隐私上传问题——这是选择端侧方案的首要理由。
  *
  * 兼容性策略：
- *   · 优先 GPU 委托（WebGL 后端），失败自动回退 CPU（XNNPACK）；
+ *   · 优先 GPU 委托（WebGL 后端），失败自动回退 CPU（XPNPACK）；
  *   · wasm 目录同时包含 SIMD 与非 SIMD 版本，运行时由 MediaPipe 自动择优；
- *   · 全部资源本地托管，断网可用。
+ *
+ * 资源加载策略（CDN 优先 + 同源回退）：
+ *   线上环境优先用 npmmirror CDN 加载 WASM/运行时（CORS 已支持），
+ *   CDN 不可用时回退到 GitHub Pages 同源加载。
+ *   模型文件（约 3.7MB）走 jsdelivr gh 镜像链（gcore→fastly→cdn，
+ *   实测 550–690KB/s），全部失败后回退同源（国内实测仅约 20KB/s，
+ *   是"加载不出来"的主因），本地运行始终同源加载。
  */
+
 
 import { CONFIG } from '../config.js';
 
 /**
- * 本地资源根路径。
+ * 资源根路径——基于当前模块位置解析出 vendor 目录的绝对 URL。
  *
  * 注意这里必须解析成绝对 URL，不能直接写 './vendor'：
  *   · 动态 import() 的相对路径基准是「当前模块文件」→ 会解析成 /js/core/vendor/...
@@ -24,6 +31,87 @@ import { CONFIG } from '../config.js';
  * 用 import.meta.url 换算出绝对 URL 后，两者都能正确命中。
  */
 const VENDOR_BASE = new URL('../../vendor', import.meta.url).href;
+
+/**
+ * 国内 CDN — npmmirror（淘宝 NPM 镜像），CORS 完整支持。
+ */
+const MP_VERSION = '1.0.0';
+const CDN_BASE = `https://registry.npmmirror.com/@mediapipe/tasks-vision/${MP_VERSION}/files`;
+const CDN_BUNDLE = `${CDN_BASE}/vision_bundle.mjs`;
+const CDN_WASM = `${CDN_BASE}/wasm`;
+
+/**
+ * 同源路径（GitHub Pages 仓库 vendor 目录）
+ */
+const LOCAL_BUNDLE = `${VENDOR_BASE}/tasks-vision/vision_bundle.mjs`;
+const LOCAL_WASM = `${VENDOR_BASE}/tasks-vision/wasm`;
+const MODEL_URL = `${VENDOR_BASE}/models/face_landmarker.task`;
+
+/**
+ * 模型镜像链 —— GitHub Pages 直连在国内实测约 20KB/s（3.7MB 需 3 分钟），
+ * 是线上"推理引擎加载不出来"的主因。jsdelivr gh 镜像实测 550–690KB/s，
+ * 依次尝试 gcore / fastly / cdn 三个域名，最后回退同源。
+ */
+const GH_REF = 'Jaron-Zheng/fatigue-detection-system@gh-pages';
+const MODEL_MIRRORS = [
+  `https://gcore.jsdelivr.net/gh/${GH_REF}/vendor/models/face_landmarker.task`,
+  `https://fastly.jsdelivr.net/gh/${GH_REF}/vendor/models/face_landmarker.task`,
+  `https://cdn.jsdelivr.net/gh/${GH_REF}/vendor/models/face_landmarker.task`,
+];
+const MIRROR_TIMEOUT_MS = 12000;
+
+/**
+ * 判断是否为本地运行环境。
+ */
+function isLocalEnv() {
+  const host = location.hostname;
+  return host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' ||
+    /^192\.168\./.test(host) || /^10\./.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host);
+}
+
+/**
+ * 尝试从指定 URL 加载 ES 模块，超时则回退。
+ */
+async function importWithTimeout(url, timeoutMs = 8000) {
+  const race = Promise.race([
+    import(url),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('CDN_TIMEOUT')), timeoutMs)),
+  ]);
+  return race;
+}
+
+/**
+ * 下载模型文件为 Uint8Array（供 modelAssetBuffer 使用）。
+ * 线上按镜像链依次尝试（前三个 jsdelivr 域名各设超时，同源兜底不限时）；
+ * 本地直接同源加载。全部失败时抛错，由调用方回退 modelAssetPath。
+ */
+async function fetchModelBuffer(onProgress = () => {}) {
+  const local = isLocalEnv();
+  const candidates = local ? [MODEL_URL] : [...MODEL_MIRRORS, MODEL_URL];
+  let lastErr = null;
+  for (let i = 0; i < candidates.length; i++) {
+    const url = candidates[i];
+    const isLast = i === candidates.length - 1;
+    const ctrl = new AbortController();
+    const timer = isLast ? null : setTimeout(() => ctrl.abort(), MIRROR_TIMEOUT_MS);
+    try {
+      const resp = await fetch(url, { signal: ctrl.signal });
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      const buf = new Uint8Array(await resp.arrayBuffer());
+      if (buf.length < 1024) throw new Error('file too small: ' + buf.length);
+      if (i > 0) {
+        onProgress('主源较慢，已切换镜像源 ' + i + '/' + (candidates.length - 1), 58);
+      }
+      return buf;
+    } catch (e) {
+      lastErr = e;
+      console.warn('[FaceEngine] 模型源失败（' + new URL(url).host + '）：', e.message);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+  throw lastErr || new Error('model fetch failed');
+}
 
 export class FaceEngine {
   constructor() {
@@ -58,23 +146,53 @@ export class FaceEngine {
    */
   async init(onProgress = () => {}) {
     try {
+      const local = isLocalEnv();
+
+      // --- 第一步：加载 vision_bundle.mjs ---
       onProgress('正在载入推理运行时…', 10);
-      const mod = await import(`${VENDOR_BASE}/tasks-vision/vision_bundle.mjs`);
+      let bundleUrl, wasmBase, mod;
+      if (local) {
+        // 本地：直接用本地文件
+        bundleUrl = LOCAL_BUNDLE;
+        wasmBase = LOCAL_WASM;
+        mod = await import(bundleUrl);
+      } else {
+        // 线上：CDN 优先，超时回退同源
+        bundleUrl = CDN_BUNDLE;
+        wasmBase = CDN_WASM;
+        try {
+          mod = await importWithTimeout(CDN_BUNDLE, 8000);
+          onProgress('CDN 加载成功，正在初始化…', 20);
+        } catch (cdnErr) {
+          console.warn('[FaceEngine] CDN 加载失败，回退同源：', cdnErr.message);
+          onProgress('CDN 较慢，切换备用源…', 15);
+          bundleUrl = LOCAL_BUNDLE;
+          wasmBase = LOCAL_WASM;
+          mod = await import(LOCAL_BUNDLE);
+        }
+      }
       const { FaceLandmarker, FilesetResolver } = mod;
 
+      // --- 第二步：初始化 WASM ---
       onProgress('正在初始化 WebAssembly…', 30);
-      const fileset = await FilesetResolver.forVisionTasks(`${VENDOR_BASE}/tasks-vision/wasm`);
+      const fileset = await FilesetResolver.forVisionTasks(wasmBase);
       this._vision = { FaceLandmarker, fileset };
 
-      const baseOptions = {
-        modelAssetPath: `${VENDOR_BASE}/models/face_landmarker.task`,
-      };
-
+      // --- 第三步：加载模型（镜像链下载 → modelAssetBuffer）---
       onProgress('正在加载人脸关键点模型…', 55);
-      // 先尝试 GPU，失败则回退 CPU
+      let modelBuffer = null;
+      try {
+        modelBuffer = await fetchModelBuffer(onProgress);
+      } catch (modelErr) {
+        console.warn('[FaceEngine] 模型镜像链全部失败，改用 modelAssetPath：', modelErr.message);
+      }
+      // 先尝试 GPU，失败则回退 CPU（buffer 会被引擎消耗，重试需传副本）
       const tryCreate = async (delegate) => {
+        const opts = modelBuffer
+          ? { modelAssetBuffer: modelBuffer.slice(), delegate }
+          : { modelAssetPath: MODEL_URL, delegate };
         return FaceLandmarker.createFromOptions(fileset, {
-          baseOptions: { ...baseOptions, delegate },
+          baseOptions: opts,
           runningMode: 'VIDEO',
           numFaces: 1,
           outputFaceBlendshapes: true,

@@ -15,6 +15,9 @@ export class ViewRouter {
   /** @param {object} app 应用组合根 */
   constructor(app) {
     this.app = app;
+    /** 视图顺序（用于判断切换方向） */
+    this._viewOrder = ['viewHome', 'viewWork', 'viewReport'];
+    this._lastView = 'viewHome';
   }
 
   bind() {
@@ -71,13 +74,54 @@ export class ViewRouter {
         toast('已自动继续检测', '刚才页面在后台被暂停，现在已恢复；如需暂停请点暂停按钮', 'info', 3200);
       }
     });
+
+    // 初始化导航高亮：HTML 中 viewHome 已有 active 类，但从未走过
+    // switchView，导航链接上缺少 aria-current="page"。
+    // 在这里补上，让首次打开时"概览"就是蓝色高亮。
+    const activeView = document.querySelector('.view.active');
+    if (activeView) {
+      for (const link of document.querySelectorAll('.gn-links a[data-goto]')) {
+        if (link.dataset.goto === activeView.id) {
+          link.setAttribute('aria-current', 'page');
+        } else {
+          link.removeAttribute('aria-current');
+        }
+      }
+    }
   }
 
   switchView(id) {
     const app = this.app;
+    const prevId = this._lastView;
+
+    // 点击当前视图不重播动画——Apple 的行为是同一页无动画
+    if (prevId === id) return;
+
+    // 判断切换方向：向右导航（概览→工作台→报告）为 forward，
+    // 向左导航为 backward。方向只驱动导航底线指示器的
+    // transform-origin（视图切换本身是解锁式缩放，无方向性）。
+    const prevIdx = this._viewOrder.indexOf(prevId);
+    const nextIdx = this._viewOrder.indexOf(id);
+    const direction = nextIdx >= prevIdx ? 'forward' : 'backward';
+
+    // 给导航链接容器加方向类，驱动底线的方向感知收缩/展开
+    const linksEl = document.querySelector('.gn-links');
+    if (linksEl) {
+      linksEl.classList.remove('dir-prev', 'dir-next');
+      // 先设置方向类，再换 aria-current，让底线 transform-origin 先就位
+      linksEl.classList.add(direction === 'forward' ? 'dir-next' : 'dir-prev');
+      // 动画结束后清除方向类，避免影响后续 hover 的 transform-origin
+      setTimeout(() => {
+        linksEl.classList.remove('dir-prev', 'dir-next');
+      }, 500); // --dur-base (0.32s) + 余量
+    }
+
+    // 切换 active：视图切换本身无转场动画（即时切换），
+    // 只有导航底线的方向感知收缩/展开保留动效
     for (const v of document.querySelectorAll('.view')) {
       v.classList.toggle('active', v.id === id);
     }
+
     // 导航高亮随一切视图切换更新（单一事实来源）：
     // start()/stopSession 走的是 switchView 而非 gotoView，
     // 只在 gotoView 里更新会漏掉「开始检测」「结束生成报告」两条路径
@@ -86,6 +130,7 @@ export class ViewRouter {
       if (active) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
     }
+
     // 视图切换后布局才确定，Canvas 需要在下一帧重新测量尺寸
     if (id === 'viewWork') {
       requestAnimationFrame(() => {
@@ -101,6 +146,8 @@ export class ViewRouter {
         runCountUp($('#viewReport'));
       });
     }
+
+    this._lastView = id;
   }
 
   gotoView(id) {
@@ -125,7 +172,7 @@ export class ViewRouter {
       if (id === 'viewHome') runCountUp(target);
     });
     // 视图切换用瞬时滚动：平滑滚动会与视图重排叠加成一段"看着没反应"的
-    // 过渡（尤其从首页长页面切回时），干脆的立即归顶才符合 Tesla 的切换手感
+    // 过渡（尤其从首页长页面切回时），干脆的立即归顶才符合 Apple 的切换手感
     window.scrollTo({ top: 0, behavior: 'auto' });
   }
 }

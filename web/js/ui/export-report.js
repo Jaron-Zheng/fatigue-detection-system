@@ -18,6 +18,40 @@ function assertHasData(recorder) {
 }
 
 /**
+ * 从已加载的 CSS 规则文本中提取 :root 选择器内定义的 CSS 变量值。
+ *
+ * tokens.css 的结构：
+ *   :root { --bg: #f4f4f4; ... }          ← 浅色默认值
+ *   :root[data-theme='dark'] { ... }       ← 手动深色覆盖
+ *   @media (prefers-color-scheme: dark) {
+ *     :root:not([data-theme='light']) { ... }  ← 系统深色
+ *   }
+ *
+ * 报告导出固定浅色主题，因此只需要 :root（不带属性选择器）的值。
+ * 解析方式：用正则匹配第一个 :root { ... } 块的内容，
+ * 再从其中逐条提取 --var: value; 对。
+ *
+ * 之所以不通过 DOM 读取（如临时修改 data-theme 后 getComputedStyle）：
+ * ReportView 注册了 MutationObserver 监听 documentElement 的 data-theme
+ * 属性，临时修改会异步触发 redraw()，在导出期间引入不必要的状态干扰。
+ * 从 CSS 文本直接解析完全零副作用，且结果与浅色主题的实际值一致。
+ */
+function extractLightVars(cssText, vars) {
+  // 匹配第一个不带属性选择器的 :root { ... } 块
+  // 排除 :root[data-theme=...] 和 :root:not(...)
+  const rootMatch = cssText.match(/(^|[\s}]):root\s*\{([^}]*)\}/);
+  const rootBody = rootMatch ? rootMatch[2] : '';
+  const parts = [];
+  for (const v of vars) {
+    // 在 :root 块内查找该变量的定义
+    const re = new RegExp(`${v.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*:\\s*([^;]+);`);
+    const m = rootBody.match(re);
+    if (m) parts.push(`${v}:${m[1].trim()}`);
+  }
+  return parts.join(';');
+}
+
+/**
  * 导出完整 JSON（参数、汇总、采样序列、事件列表）。
  * @param {import('../core/recorder.js').SessionRecorder} recorder
  * @param {object} ctx { lastInd, lastFusion, meta: { delegate, avgMs, frames } }
@@ -125,11 +159,14 @@ export async function exportReportHtml(recorder) {
   // 复制 CSS 变量当前计算值解析进来（确保颜色正确）。
   // 报告导出固定浅色主题：打印场景需要白底黑字，且导出文件里
   // body 背景被强制为白色，若沿用深色主题的变量会出现深色卡片
-  // 叠在白底上的"花屏"。临时切换同一帧内完成，不会闪。
-  const htmlEl = document.documentElement;
-  const prevTheme = htmlEl.getAttribute('data-theme');
-  if (prevTheme && prevTheme !== 'light') htmlEl.setAttribute('data-theme', 'light');
-  const computed = getComputedStyle(htmlEl);
+  // 叠在白底上的"花屏"。
+  //
+  // 关键修复：此前通过临时修改 documentElement 的 data-theme 来读取
+  // 浅色变量值，但 ReportView 构造函数注册了 MutationObserver 监听
+  // data-theme 变化，临时切换会异步触发 redraw()。虽然 redraw() 在
+  // hasReport=true 时不清数据，但这一过程在导出函数执行期间引入了
+  // 不确定的状态干扰。改为从已加载的 CSS 规则文本中提取 :root 的
+  // 浅色变量定义，完全不触碰 documentElement，零副作用。
   const vars = [
     '--bg','--bg-elevated','--bg-inset','--bg-sunken','--text','--text-secondary',
     '--text-tertiary','--text-quaternary','--accent','--accent-soft','--separator',
@@ -142,10 +179,7 @@ export async function exportReportHtml(recorder) {
     '--fs-hero','--fs-title','--fs-headline','--fs-subhead','--fs-body',
     '--fs-callout','--fs-caption','--fs-micro',
   ];
-  const resolvedVars = vars.map((v) => `${v}:${computed.getPropertyValue(v).trim()}`).join(';');
-
-  // 变量读取完毕，还原用户当前主题
-  if (prevTheme && prevTheme !== 'light') htmlEl.setAttribute('data-theme', prevTheme);
+  const resolvedVars = extractLightVars(cssText, vars);
 
   /* 导出 body 强制带 pro-mode（需求变更后的统一口径）：
    * 内联 CSS 依赖 body.pro-mode 后代选择器恢复 .pro-only 显示，
@@ -163,7 +197,7 @@ export async function exportReportHtml(recorder) {
   const title = document.getElementById('rpTitle')?.textContent || '疲劳检测报告';
 
   const html = `<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -179,7 +213,7 @@ body{background:var(--bg,#f4f4f4)!important;}
 #viewReport{display:block!important;max-width:1440px;margin:0 auto;padding:28px 24px 48px;}
 /* 边框一档加深：#e3e3e5 对灰底反差不足 6%，投影仪上看不清卡片边界 */
 .card{border:1px solid #d9d9de!important;border-radius:var(--r-lg,14px);}
-.global-nav,.subnav,.controls,.alarm-veil,.alarm-banner,.toast-host,.no-print{display:none!important;}
+.global-nav,.subnav,.controls,.alarm-veil,.toast-host,.no-print{display:none!important;}
 .view{display:block!important;}
 /* 导出的 HTML 里没有 .has-motion（那是 motion.js 在运行时加的），
    起始态本就不会命中；这条只是双保险，防止将来样式调整后

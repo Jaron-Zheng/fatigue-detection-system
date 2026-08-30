@@ -78,6 +78,7 @@ export class SettingsPanel {
     this._lastFocus = null;
     this._build();
     this._bind();
+    this._bindSwipe(); // 移动端 swipe-to-dismiss 手势
   }
 
   _build() {
@@ -362,7 +363,9 @@ export class SettingsPanel {
     this._lastFocus = document.activeElement;
     this.open = true;
     this.sheet.classList.add('open');
+    this.sheet.classList.add('was-open'); // 标记已打开过，关闭动画仅在曾打开后才匹配
     this.backdrop.classList.add('open');
+    this.backdrop.classList.add('was-open'); // backdrop 退场也依赖此标记
     this.sheet.setAttribute('aria-hidden', 'false');
     const first = this.sheet.querySelector('button, input, select');
     if (first) first.focus();
@@ -374,5 +377,53 @@ export class SettingsPanel {
     this.backdrop.classList.remove('open');
     this.sheet.setAttribute('aria-hidden', 'true');
     if (this._lastFocus && this._lastFocus.focus) this._lastFocus.focus();
+  }
+
+  /**
+   * 移动端手势：向右滑动关闭面板。
+   * Apple 的 sheet 支持 swipe-to-dismiss——手指从面板左侧向右滑超过 80px 即关闭。
+   * 滑动过程中面板跟手位移，松手后如果滑过阈值就关闭，否则弹回。
+   */
+  _bindSwipe() {
+    let startX = 0;
+    let currentX = 0;
+    let dragging = false;
+
+    const onDown = (e) => {
+      // 只在面板内容区滚动到顶时才启用手势
+      if (this.sheet.querySelector('.sheet-body').scrollTop > 0) return;
+      dragging = true;
+      startX = e.touches[0].clientX;
+      currentX = startX;
+      this.sheet.style.transition = 'none';
+    };
+
+    const onMove = (e) => {
+      if (!dragging) return;
+      currentX = e.touches[0].clientX;
+      const dx = Math.max(0, currentX - startX); // 只允许向右滑
+      this.sheet.style.transform = `translateX(${dx}px)`;
+      // backdrop 随滑动比例淡出
+      const ratio = Math.min(1, dx / 200);
+      this.backdrop.style.opacity = String(1 - ratio * 0.5);
+    }
+
+    const onUp = () => {
+      if (!dragging) return;
+      dragging = false;
+      const dx = currentX - startX;
+      this.sheet.style.transition = '';
+      this.backdrop.style.opacity = '';
+      if (dx > 80) {
+        this.hide();
+      } else {
+        // 弹回
+        this.sheet.style.transform = '';
+      }
+    };
+
+    this.sheet.addEventListener('touchstart', onDown, { passive: true });
+    this.sheet.addEventListener('touchmove', onMove, { passive: true });
+    this.sheet.addEventListener('touchend', onUp);
   }
 }

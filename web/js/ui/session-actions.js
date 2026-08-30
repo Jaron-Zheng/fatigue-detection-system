@@ -16,6 +16,11 @@ import { toast, toastOk, toastError } from './toast.js';
 /** 初始化推理引擎（带进度条；已就绪时直接返回） */
 export async function bootEngine(app) {
   if (app.engine.ready) return;
+  // 不可重入保护：init() 期间用户再次点"开始检测"或 ?demo= 自动触发
+  // 会看到 ready 仍为 false 并再次进入 init()，导致并行加载两份 WASM 模型——
+  // 轻则内存翻倍、重则 MediaPipe 内部状态冲突直接报错。
+  // 用 Promise 缓存保证同一加载过程只执行一次，并发调用全部等待同一 Promise。
+  if (app._engineBooting) return app._engineBooting;
   const box = $('#bootBox');
   box.hidden = false;
   const setProgress = (msg, pct) => {
@@ -23,13 +28,17 @@ export async function bootEngine(app) {
     $('#bootBar').style.width = pct + '%';
     app.dash.setStatus(msg, 'var(--warn)', true);
   };
-  try {
-    // 首屏可能已切走，仍然更新进度文本供状态栏使用
-    await app.engine.init(setProgress);
-    toastOk('推理引擎就绪', `委托 ${app.engine.delegate} · 模型已本地加载`);
-  } finally {
-    box.hidden = true;
-  }
+  app._engineBooting = (async () => {
+    try {
+      // 首屏可能已切走，仍然更新进度文本供状态栏使用
+      await app.engine.init(setProgress);
+      toastOk('推理引擎就绪', `委托 ${app.engine.delegate} · 模型已本地加载`);
+    } finally {
+      box.hidden = true;
+      app._engineBooting = null;
+    }
+  })();
+  return app._engineBooting;
 }
 
 /** 开启摄像头并登记设备列表 */
@@ -95,7 +104,11 @@ export function setSimulate(app, on, startStage = null) {
       app.startAbort = true;
       if (app.camera) app.camera.stop();
       app.loop.stop();
-      app.dash.setStatus('未启动');
+      app.alarm.reset();
+      app.alarmUi.hideVeil();
+      app.overlay.clear();
+      app.showIdleStage();
+      app.dash.setStatus('未启动', 'var(--text-tertiary)', false);
     }
   }
 }
@@ -106,6 +119,10 @@ export function cancelStart(app, status = '未启动') {
   const box = document.getElementById('bootBox');
   if (box) box.hidden = true;
   app.sm.send(SessionEvent.CANCEL);
+  app.alarm.reset();
+  app.alarmUi.hideVeil();
+  app.overlay.clear();
+  app.timeline.clear();
   app.showIdleStage();
   app.dash.setStatus(status, 'var(--text-tertiary)', false);
 }
@@ -116,6 +133,7 @@ export function resetSession(app) {
   app.fusion.reset();
   app.alarm.reset();
   app.rawWin.clear();
+  app.timeline.clear();
   app.lastInd = null;
   app.lastFusion = null;
   app.lastFeat = null;
@@ -128,7 +146,6 @@ export function stopSession(app) {
     app.startAbort = true;
     if (app.camera) app.camera.stop();
     app.alarm.reset();
-    app.alarmUi.hideBanner();
     app.alarmUi.hideVeil();
     cancelStart(app, '已取消启动');
     toast('已取消启动', '当前初始化/校准流程已停止', 'info', 2200);
@@ -139,7 +156,6 @@ export function stopSession(app) {
   app.recorder.end();
   if (app.camera) app.camera.stop();
   app.alarm.reset();
-  app.alarmUi.hideBanner();
   app.alarmUi.hideVeil();
   app.dash.setStatus('已结束', 'var(--text-tertiary)', false);
 
@@ -159,6 +175,10 @@ export function failStart(app, err) {
   if (box) box.hidden = true;
   app.sm.send(SessionEvent.FAIL);
   app.loop.stop();
+  app.alarm.reset();
+  app.alarmUi.hideVeil();
+  app.overlay.clear();
+  app.timeline.clear();
   const msg = (err && err.message) || String(err);
   app.stage.showError(msg, {
     onRetry: () => app.start(false),

@@ -15,10 +15,11 @@ import { fitCanvas, cssVar } from '../util/dom.js';
 /**
  * Canvas 的 ctx.font 是独立的 CSS 解析器，不支持 var()——
  * 写成 '10px var(--font-sans, ...)' 会被判为非法值静默忽略，
- * 刻度文字回退到默认 10px sans-serif，与全站 SF Pro 字族脱节。
+ * 刻度文字回退到默认 10px sans-serif，与全站 Inter 字族脱节。
  * 这里直接写具体字族栈（与 tokens.css 的 --font-sans 保持一致）。
  */
-const CHART_FONT = '10px -apple-system, "SF Pro Text", "PingFang SC", "Helvetica Neue", "Microsoft YaHei", Arial, sans-serif';
+const CHART_FONT =
+  '10px Inter, "Inter var", system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif';
 
 export class LineChart {
   /**

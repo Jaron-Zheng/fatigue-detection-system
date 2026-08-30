@@ -147,6 +147,8 @@ export function replaySession(samples, patch = {}) {
   };
 
   let ema = 0;
+  let trendEma = 0;  // 趋势加速器
+  let prevRaw = 0;   // 上一帧原始分数
   let peak = 0;
   let sum = 0;
   let count = 0;
@@ -210,6 +212,14 @@ export function replaySession(samples, patch = {}) {
 
     ema = ema + alpha * (raw - ema);
     let score = ema;
+
+    // 趋势加速器（与在线 FusionEngine 保持一致）
+    const trendAlpha = 0.08;
+    const rawDelta = raw - prevRaw;
+    trendEma = trendEma + trendAlpha * (rawDelta - trendEma);
+    prevRaw = raw;
+    const trendBoost = clamp(trendEma * 1.5, -2, 5);
+    score += trendBoost;
 
     /* 安全兜底 override：判据必须是「此刻正在持续闭眼」（currentClosureMs），
      * 不能用窗口内峰值（maxClosureMs）——后者在整个统计窗口内都保持高值，

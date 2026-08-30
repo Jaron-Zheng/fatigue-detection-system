@@ -44,6 +44,10 @@ export function installTestHooks(app, State) {
     get simPhase() {
       return app.sim.phaseName;
     },
+    /** E3 启动自检结果（null = 尚未完成） */
+    get preflight() {
+      return app.preflight;
+    },
     /** 启动模拟检测（自动化测试入口） */
     async startSimulation() {
       app.simulate = true;

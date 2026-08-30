@@ -112,8 +112,50 @@ class App {
     });
     this.chrome.renderEnv();
     this.showIdleStage();
+    // E3 启动自检：异步执行不阻塞首屏，结果渲染进设置抽屉。
+    // 任何一项异常都不弹窗打断用户——清单本身就是展示面。
+    this.preflight = null;
+    this._runPreflight();
     // 动效必须最后启动：它要在 DOM 与主题都就位后才能正确测量与接管
     initMotion();
+  }
+
+  /** 启动自检：环境探测 + 渲染到设置抽屉（E3） */
+  async _runPreflight() {
+    try {
+      const { runPreflight, preflightSummaryLabel } = await import('./core/preflight.js');
+      this.preflight = await runPreflight();
+      const ul = $('#preflightList');
+      if (!ul) return;
+      ul.replaceChildren(
+        ...this.preflight.items.map((it) => {
+          const li = document.createElement('li');
+          li.className = 'preflight-item';
+          li.dataset.status = it.status;
+          const dot = document.createElement('span');
+          dot.className = 'preflight-dot';
+          const label = document.createElement('span');
+          label.className = 'preflight-label';
+          label.textContent = it.label;
+          const status = document.createElement('span');
+          status.className = 'preflight-status';
+          status.textContent = { ok: '正常', warn: '降级', fail: '异常' }[it.status];
+          const detail = document.createElement('span');
+          detail.className = 'preflight-detail';
+          detail.textContent = it.detail;
+          li.append(dot, label, status, detail);
+          return li;
+        }),
+      );
+      const title = $('#preflightTitle');
+      if (title) {
+        title.textContent = `启动自检 · ${preflightSummaryLabel(this.preflight.summary)}`;
+      }
+    } catch (e) {
+      // 自检自身失败不应影响应用：清单保留占位并给出可读原因
+      const ul = $('#preflightList');
+      if (ul) ul.textContent = `自检未完成：${String(e && e.message ? e.message : e)}`;
+    }
   }
 
   /** 当前会话状态（唯一事实来源是状态机） */
@@ -162,7 +204,6 @@ class App {
     bindVideoControls(this);
 
     $('#btnTheme').addEventListener('click', () => this.chrome.toggleTheme());
-    $('#btnDismissAlarm').addEventListener('click', () => this.alarmUi.hideBanner());
 
     $('#btnFilterEvents').addEventListener('click', (e) => {
       const only = !this.timeline.onlyAbnormal;
@@ -238,7 +279,10 @@ class App {
     }
 
     // 报表页返回时的"再次检测"
-    if (this.sm.is(State.REPORT)) resetSession(this);
+    if (this.sm.is(State.REPORT)) {
+      resetSession(this);
+      this.report.resetReport();
+    }
     if (!this.sm.send(SessionEvent.START)) return;
 
     this.startAbort = false;
@@ -325,6 +369,8 @@ class App {
     this.indicators.reset();
     this.fusion.reset();
     this.alarm.reset();
+    this.rawWin.clear();
+    this.timeline.clear();
     this._beginCalibration();
   }
 
@@ -437,9 +483,10 @@ class App {
     /* ---- 报警 ---- */
     const alarmEv = this.alarm.update(fus.level, now, fus.override === 'critical_closure' ? '持续闭眼' : '');
     if (alarmEv) {
+      // 冷却期内的 suppressed 事件仍写入时间轴留痕，但不重复弹提示
       this.recorder.addEvent(alarmEv);
       this.timeline.add([alarmEv]);
-      this.alarmUi.showBanner(fus.level, CONFIG.alarm.byLevel[fus.level].speak || alarmEv.message);
+      if (!alarmEv.suppressed) this.alarmUi.notify(fus.level, fus);
     }
 
     /* ---- 记录 ---- */
@@ -529,6 +576,6 @@ installTestHooks(app, SessionState);
 
 console.log(
   '%c驾驶员疲劳检测系统 %c已就绪 · 全部推理在本地浏览器完成',
-  'font-weight:600;color:#3e6ae1',
+  'font-weight:600;color:#0071e3',
   'color:#5c5e62'
 );

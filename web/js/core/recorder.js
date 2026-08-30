@@ -407,19 +407,36 @@ export function csvCell(value) {
   return s;
 }
 
-/** 触发浏览器下载（不经过服务器，纯前端生成） */
+/** 触发浏览器下载（不经过服务器，纯前端生成）
+ *
+ * 安全保障：
+ *   1. download 属性是主防线——告诉浏览器这是下载而非导航；
+ *   2. rel="noopener" + target="_blank" 是兜底——即使浏览器因为
+ *      某些配置（如"自动打开某些类型文件"）忽略了 download 属性，
+ *      导航也会发生在新标签页而非当前页，不会丢失当前页面状态。
+ *      这正是用户反馈"下载报告后回到系统界面数据全没了"的根因——
+ *      某些浏览器/配置下 blob: URL 的 HTML 文件被当作可导航目标，
+ *      在当前标签页打开导致页面重新加载，内存中的会话状态全部丢失。
+ *   3. 清理时序用 setTimeout 0（而非 500ms），因为 click() 后浏览器
+ *      下载已启动，不需要长时间保持 <a> 在 DOM 中。
+ */
 export function downloadFile(filename, content, mime = 'application/octet-stream') {
   const blob = content instanceof Blob ? content : new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
+  a.rel = 'noopener';
+  a.target = '_blank';
+  a.style.display = 'none';
   document.body.appendChild(a);
   a.click();
+  // 用 setTimeout 而非 requestAnimationFrame：后者在标签页后台时
+  // 不会执行，导致 <a> 永久残留在 DOM 中
   setTimeout(() => {
-    document.body.removeChild(a);
+    if (a.parentNode) a.parentNode.removeChild(a);
     URL.revokeObjectURL(url);
-  }, 500);
+  }, 0);
 }
 
 // 会话内单调计数：同一秒内多次导出文件名仍唯一（见 timestampName）

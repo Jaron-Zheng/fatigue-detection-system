@@ -129,8 +129,22 @@ export class AlarmSystem {
 
     const last = this.lastFireAt[level] || 0;
     const escalated = levelChanged && this._idx(level) > this._idx(prevLevel);
-    // 等级升高时立即报警；否则遵守该等级的冷却时间
-    if (!escalated && ts - last < spec.cooldownMs) return null;
+    // 等级升高时立即报警；否则遵守该等级的冷却时间。
+    // 冷却期内的重复事件不静默丢弃：返回带 suppressed 标记的记录供时间轴
+    // 留痕（验收 TC-B5-02：抑制打扰不等于抹去痕迹，事后复盘能看到"冷却
+    // 期内还发生过一次"），但不响铃、不弹提示、不增加报警计数。
+    if (!escalated && ts - last < spec.cooldownMs) {
+      const zh = level === 'severe' ? '重度' : level === 'moderate' ? '中度' : '轻度';
+      return {
+        type: 'alarm',
+        level: level === 'severe' ? 'danger' : 'warn',
+        alarmLevel: level,
+        ts,
+        escalated: false,
+        suppressed: true,
+        message: `${zh}疲劳重复事件（冷却期内，抑制提醒）${reason ? ' · ' + reason : ''}`,
+      };
+    }
 
     this.lastFireAt[level] = ts;
     this.fireCount++;

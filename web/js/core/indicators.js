@@ -69,6 +69,9 @@ export class IndicatorEngine {
     this.headDeviateSince = 0;
     this.deviationAccumMs = 0;
     this.observeAccumMs = 0;
+    /** 分心事件去抖标志：reset 必须一并清除，否则上一会话已报过一次分心后，
+     * 新会话的首次头部偏离会因 _distractionReported 仍为 true 而无法上报。 */
+    this._distractionReported = false;
 
     this.faceLostSince = null;
     this.faceLostAccumMs = 0;

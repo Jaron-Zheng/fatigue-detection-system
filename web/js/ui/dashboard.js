@@ -96,10 +96,10 @@ export class Dashboard {
     const q = this.q;
     if (present) {
       setText(q.stageFaceText, '人脸已锁定');
-      setStyle(q.stageFaceText, 'color', '#30d158');
+      setStyle(q.stageFaceText, 'color', 'var(--ok)');
     } else {
       setText(q.stageFaceText, lostMs > 1500 ? '未检测到人脸' : '搜索人脸…');
-      setStyle(q.stageFaceText, 'color', '#ff9f0a');
+      setStyle(q.stageFaceText, 'color', 'var(--warn)');
     }
   }
 
@@ -115,7 +115,7 @@ export class Dashboard {
     const quality = ind.quality || { valid: true, reasons: [] };
     const lighting = ind.lighting || { valid: true, label: '' };
     let msg = null;
-    let color = '#ff9f0a';
+    let color = 'var(--warn)';
 
     // 没有人脸时整条胶囊都不显示：此刻的 quality 是丢失前的旧值，
     // 拿它提示「侧转过大」之类的原因会指向一个已经不成立的问题；
@@ -130,7 +130,7 @@ export class Dashboard {
 
     if (ind.dataValid === false && quality.reasons && quality.reasons.length) {
       msg = quality.reasons[0];
-      color = '#ff453a';
+      color = 'var(--danger)';
     } else if (!lighting.valid && lighting.label) {
       msg = lighting.label;
     } else if (ind.perclosReady === false && ind.facePresent) {
@@ -139,7 +139,7 @@ export class Dashboard {
       // 误以为在正常预热，而实际原因是画面里没人——那件事由人脸状态胶囊负责说。
       const sec = (ind.perclosObservedMs || 0) / 1000;
       msg = `正在积累数据 ${sec.toFixed(0)}s`;
-      color = '#64d2ff';
+      color = 'var(--accent)';
     }
 
     if (msg) {

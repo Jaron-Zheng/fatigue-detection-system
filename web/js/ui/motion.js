@@ -1,13 +1,15 @@
 /**
- * motion.js — 动效引擎
+ * motion.js — 动效引擎（Apple 设计语言）
  *
- * 只做三件 CSS 做不到的事：
+ * 职责：
  *   1. 判断元素何时进入视口，加 .is-inview（CSS 无法"只播一次"）
  *   2. 给同组元素编号，实现错峰进场
- *   3. 数字递增动画
- *   4. 顶栏滚动态
+ *   3. 数字递增动画（缓动曲线减速）
+ *   4. 顶栏滚动态切换（透明 → 毛玻璃）
+ *   5. 视差效果（元素随滚动轻微位移）
+ *   6. 功能卡片网格行内编号
  *
- * 视差、缓动曲线、位移幅度全部留在 motion.css 里——
+ * 视差幅度、缓动曲线、位移幅度全部留在 motion.css 里——
  * JS 不设任何具体数值，改动效只需要改 CSS。
  *
  * 设计前提：没有这个文件页面也必须是完好的。
@@ -46,6 +48,25 @@ function setupReveal(root = document) {
     kids.forEach((el, i) => el.style.setProperty('--i', String(i)));
   }
 
+  // 功能卡片网格：按行编号
+  for (const grid of root.querySelectorAll('.feat-grid')) {
+    const kids = grid.querySelectorAll('[data-reveal]');
+    // 简单地按 offsetTop 分组
+    const rows = new Map();
+    kids.forEach((el) => {
+      const top = el.offsetTop;
+      if (!rows.has(top)) rows.set(top, []);
+      rows.get(top).push(el);
+    });
+    const sortedTops = [...rows.keys()].sort((a, b) => a - b);
+    sortedTops.forEach((top, rowIdx) => {
+      rows.get(top).forEach((el, colIdx) => {
+        el.style.setProperty('--row', String(rowIdx));
+        el.style.setProperty('--i', String(colIdx));
+      });
+    });
+  }
+
   const io = new IntersectionObserver(
     (entries) => {
       for (const entry of entries) {
@@ -58,7 +79,7 @@ function setupReveal(root = document) {
     {
       // 底部负 margin：元素露出约一成才触发，
       // 避免刚冒头就播完，用户滚到时动画已经结束
-      rootMargin: '0px 0px -12% 0px',
+      rootMargin: '0px 0px -10% 0px',
       threshold: 0.01,
     }
   );
@@ -82,7 +103,7 @@ function setupReveal(root = document) {
  * @param {HTMLElement} el
  * @param {number} duration 毫秒
  */
-function countUp(el, duration = 900) {
+function countUp(el, duration = 1200) {
   const raw = (el.textContent || '').trim();
   // 允许前后有符号和单位，但必须以数字为主体
   const m = raw.match(/^([+-]?\d+(?:\.\d+)?)$/);
@@ -101,8 +122,12 @@ function countUp(el, duration = 900) {
   if (el._countUpRaf) cancelAnimationFrame(el._countUpRaf);
 
   const start = performance.now();
-  // 与 CSS 的 --ease-reveal 同形：末段极缓，数字"停"得自然
-  const ease = (t) => 1 - Math.pow(1 - t, 3);
+  // Apple 风格缓动：cubic-bezier(0.25, 0.1, 0.3, 1) 的 JS 近似
+  // 末段极缓，数字"停"得自然
+  const ease = (t) => {
+    // ease-out-quart: 1 - (1-t)^4 — 接近 Apple 的减速曲线
+    return 1 - Math.pow(1 - t, 4);
+  };
 
   function frame(now) {
     const t = Math.min(1, (now - start) / duration);
@@ -130,8 +155,8 @@ export function runCountUp(root = document) {
 
 /**
  * 页面滚过一定距离后给导航加 .is-scrolled，
- * 从首页 hero 上的透明悬浮切回实底。
- * 停在顶端时导航与 hero 画幅融为一体，看不出边界（Tesla 顶栏模式）。
+ * 从首页 hero 上的透明悬浮切回毛玻璃实底。
+ * Apple 顶栏的标志性效果。
  */
 function setupNavScroll() {
   const nav = document.querySelector('.global-nav');
@@ -155,6 +180,141 @@ function setupNavScroll() {
   update();
 }
 
+/* ==================== 视差效果 ==================== */
+
+/**
+ * [data-parallax] 元素随滚动产生轻微位移，制造深度感。
+ * 通过 CSS 变量 --scroll-y 驱动，具体幅度在 CSS 中定义。
+ */
+function setupParallax() {
+  if (reduceMotion()) return;
+
+  const items = document.querySelectorAll('[data-parallax]');
+  if (!items.length) return;
+
+  let ticking = false;
+  const update = () => {
+    const scrollY = window.scrollY;
+    for (const el of items) {
+      const rect = el.getBoundingClientRect();
+      // 只在元素附近时才更新，节省性能
+      if (rect.bottom > -200 && rect.top < window.innerHeight + 200) {
+        // 计算元素中心相对于视口中心的偏移
+        const center = rect.top + rect.height / 2;
+        const viewportCenter = window.innerHeight / 2;
+        const delta = (center - viewportCenter) / window.innerHeight;
+        el.style.setProperty('--scroll-y', delta.toFixed(4));
+      }
+    }
+    ticking = false;
+  };
+
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(update);
+    },
+    { passive: true }
+  );
+  update();
+}
+
+/* ==================== 滚动驱动 ==================== */
+
+/**
+ * Apple 风格的滚动驱动效果：
+ * 1. Hero 内容随滚动淡出 + 轻微上移
+ * 2. 导航栏在滚动后激活毛玻璃 + 从上方滑入
+ * 3. Hero 内的 SVG 插图产生轻微视差（比文字移动稍慢）
+ */
+function setupScrollDriven() {
+  if (reduceMotion()) return;
+
+  const hero = document.querySelector('.ts-hero');
+  const heroInner = document.querySelector('.ts-hero-inner');
+  const visionProduct = document.querySelector('.vision-product');
+  if (!hero) return;
+
+  let ticking = false;
+  const update = () => {
+    const scrollY = window.scrollY;
+    const heroHeight = hero.offsetHeight || window.innerHeight;
+    const progress = Math.min(1, scrollY / heroHeight);
+
+    // Hero 内容随滚动淡出 + 轻微上移
+    if (heroInner) {
+      const opacity = Math.max(0, 1 - progress * 1.3);
+      const translateY = progress * -30;
+      heroInner.style.setProperty('opacity', opacity.toFixed(3));
+      heroInner.style.setProperty('transform', `translateY(${translateY}px)`);
+    }
+
+    // SVG 插图视差：比文字移动稍慢
+    if (visionProduct) {
+      const parallaxY = progress * 15;
+      const scale = 1 - progress * 0.03;
+      visionProduct.style.setProperty(
+        'transform',
+        `translateY(${parallaxY}px) scale(${scale})`
+      );
+    }
+
+    ticking = false;
+  };
+
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(update);
+    },
+    { passive: true }
+  );
+  update();
+}
+
+/* ==================== Staggered Fade In ==================== */
+
+/**
+ * Apple StaggeredFadeIn 机制：
+ * 给 [data-staggered] 元素编号，与 [data-reveal-group] 类似但
+ * 使用单独的 data-staggered 属性，避免与现有 data-reveal 冲突。
+ */
+function setupStaggered(root = document) {
+  const items = root.querySelectorAll('[data-staggered]');
+  if (!items.length) return;
+
+  if (reduceMotion() || !('IntersectionObserver' in window)) {
+    items.forEach((el) => el.classList.add('is-inview'));
+    return;
+  }
+
+  // 组内编号
+  for (const group of root.querySelectorAll('[data-staggered-group]')) {
+    const kids = group.querySelectorAll(':scope > [data-staggered]');
+    kids.forEach((el, i) => el.style.setProperty('--i', String(i)));
+  }
+
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        entry.target.classList.add('is-inview');
+        io.unobserve(entry.target);
+      }
+    },
+    {
+      rootMargin: '0px 0px -10% 0px',
+      threshold: 0.05,
+    }
+  );
+
+  items.forEach((el) => io.observe(el));
+}
+
 /* ==================== 初始化 ==================== */
 
 /**
@@ -170,7 +330,10 @@ export function initMotion() {
   if (!reduceMotion()) html.classList.add('has-motion');
 
   setupReveal();
+  setupStaggered();
   setupNavScroll();
+  setupParallax();
+  setupScrollDriven();
 }
 
 /**
@@ -178,4 +341,5 @@ export function initMotion() {
  */
 export function refreshMotion(root = document) {
   setupReveal(root);
+  setupStaggered(root);
 }

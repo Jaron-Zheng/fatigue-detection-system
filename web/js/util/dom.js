@@ -84,6 +84,29 @@ export function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+/** 创建引用 index.html sprite symbol 的内联 SVG（createElementNS，不走 innerHTML）。
+ * toast 图标章与时间轴事件图标共用，保证全站一套视觉语言。 */
+export function svgUse(symbolId, size = 13) {
+  const NS = 'http://www.w3.org/2000/svg';
+  const XLINK = 'http://www.w3.org/1999/xlink';
+  const svg = document.createElementNS(NS, 'svg');
+  svg.setAttribute('width', String(size));
+  svg.setAttribute('height', String(size));
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '2');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  svg.setAttribute('aria-hidden', 'true');
+  const use = document.createElementNS(NS, 'use');
+  // href 的新式命名空间写法 + xlink 兼容旧引擎（Firefox 需要）
+  use.setAttributeNS(XLINK, 'xlink:href', `#${symbolId}`);
+  use.setAttribute('href', `#${symbolId}`);
+  svg.appendChild(use);
+  return svg;
+}
+
 /**
  * 高 DPI 屏幕下的 Canvas 尺寸适配。
  * 不做这一步，Retina 屏上的线条与文字会明显发虚。

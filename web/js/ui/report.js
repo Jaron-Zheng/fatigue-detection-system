@@ -393,6 +393,19 @@ export class ReportView {
   }
 
   /**
+   * 重置报告视图到空态。
+   * 在开始新检测时调用，确保用户取消后切回报告页不会看到上一会话的旧数据。
+   * hasReport 标志原先只在 render() 时设为 true、从不重置——
+   * 用户从报告页点"再次检测"后取消，状态回到 IDLE 但 hasReport 仍为 true，
+   * 此时切到报告页 redraw() 会用 _lastSummary 重绘旧报告，造成数据残留。
+   */
+  resetReport() {
+    this.hasReport = false;
+    this._lastSummary = null;
+    this._showEmpty();
+  }
+
+  /**
    * 状态时间分布色带。颜色是渲染时写入内联样式的，
    * 主题切换后必须由 redraw 重新取色重渲染，否则会残留上一主题的色值。
    */
