@@ -3,14 +3,18 @@
  *
  * 第三轮角色二从 app.js 拆出。自动化验收脚本（tools/ui-smoke.mjs、
  * tools/e2e-fake-camera-test.mjs 等）通过它驱动系统、读取内部状态。
- * 生产环境如需隐藏，可在 app.js 里按环境判断是否调用本函数。
+ * 仅本地环境（localhost / 局域网，即测试工具链起服务的地方）安装；
+ * GitHub Pages 等线上环境不暴露——__fatigue 可驱动模拟启停，
+ * 属于测试面而非产品面（2026-09 安全审计收口）。
  */
+import { isLocalEnv } from './core/face-engine.js';
 
 /**
  * @param {object} app 应用组合根
  * @param {object} State 状态枚举（SessionState）
  */
 export function installTestHooks(app, State) {
+  if (!isLocalEnv()) return; // 线上不安装，本地测试链路不受影响
   window.__fatigue = {
     app,
     State,

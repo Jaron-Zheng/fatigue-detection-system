@@ -118,9 +118,12 @@ console.log('\n[5] 首页关键元素');
   }
   // <a href> 超链接仅在被用户点击时才导航，不构成页面加载期的自动资源请求，
   // 剔除后再检测；face-engine.js 的 CDN 镜像链由 isLocalEnv() 保证本地形态同源。
+  // CSP meta 的 content 含 https:// 域名白名单——允许清单只是授权声明，
+  // 本身不发起任何请求（线上版加载链的收口见 index.html 内注释），一并剔除。
   const htmlNoReq = html
     .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/<a\s[^>]*href\s*=\s*(?:"[^"]*"|'[^']*')/gi, '<a');
+    .replace(/<a\s[^>]*href\s*=\s*(?:"[^"]*"|'[^']*')/gi, '<a')
+    .replace(/<meta\s[^>]*http-equiv\s*=\s*(?:"Content-Security-Policy"|'Content-Security-Policy')[^>]*>/gi, '<meta>');
   assert(!/https?:\/\/(?!127\.0\.0\.1|localhost)[a-z0-9.-]+\.[a-z]{2}/i.test(htmlNoReq), '首页无外部域名请求（离线可用）');
 }
 

@@ -12,6 +12,7 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const crypto = require('crypto');
 
 const ROOT = path.resolve(__dirname, '..');
 const VENDOR = path.join(ROOT, 'web', 'vendor');
@@ -102,10 +103,17 @@ function download(url, dest, redirects = 0) {
     }
   }
 
-  // 写一份清单，供前端做完整性自检
+  // 写一份清单，供前端做完整性自检（sha256 供 face-engine.js 校验
+  // CDN 镜像下载的模型：期望哈希永远来自本仓库，镜像被投毒也无法对上）
   const inventory = MANIFEST.map(([, rel]) => {
     const p = path.join(VENDOR, rel);
-    return { file: rel, exists: fs.existsSync(p), size: fs.existsSync(p) ? fs.statSync(p).size : 0 };
+    const exists = fs.existsSync(p) && fs.statSync(p).size > 0;
+    return {
+      file: rel,
+      exists,
+      size: exists ? fs.statSync(p).size : 0,
+      ...(exists ? { sha256: crypto.createHash('sha256').update(fs.readFileSync(p)).digest('hex') } : {}),
+    };
   });
   fs.writeFileSync(
     path.join(VENDOR, 'inventory.json'),

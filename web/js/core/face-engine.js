@@ -18,7 +18,6 @@
  *   是"加载不出来"的主因），本地运行始终同源加载。
  */
 
-
 import { CONFIG } from '../config.js';
 
 /**
@@ -62,11 +61,18 @@ const MIRROR_TIMEOUT_MS = 12000;
 
 /**
  * 判断是否为本地运行环境。
+ * （test-hooks.js 复用本函数做线上/本地分流，改动语义需两处同步。）
  */
-function isLocalEnv() {
+export function isLocalEnv() {
   const host = location.hostname;
-  return host === 'localhost' || host === '127.0.0.1' || host === '0.0.0.0' ||
-    /^192\.168\./.test(host) || /^10\./.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host);
+  return (
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host === '0.0.0.0' ||
+    /^192\.168\./.test(host) ||
+    /^10\./.test(host) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(host)
+  );
 }
 
 /**
@@ -81,13 +87,51 @@ async function importWithTimeout(url, timeoutMs = 8000) {
 }
 
 /**
+ * 模型完整性校验（防 CDN 投毒/损坏，2026-09 安全审计新增）。
+ *
+ * 期望哈希来自同源 vendor/inventory.json（fetch-vendor.js 生成，
+ * 随仓库一起版本化）——模型可以走 jsdelivr 镜像链，但期望值永远
+ * 从本仓库同源读取，攻击者即使控制镜像也无法让哈希对上。
+ * 校验失败的源按「源失败」处理：切换下一候选，最终回退同源。
+ *
+ * 已知边界（如实记录）：vision_bundle.mjs 与 wasm 走 MediaPipe
+ * 内部加载，无法在此处拦截校验，其防护依赖版本锁定路径 +
+ * index.html CSP 的 CDN 域白名单 + 同源兜底。
+ */
+
+/** 读同源 inventory.json 里模型的期望 SHA-256（小写十六进制）。失败返回 null（降级为不校验）。 */
+async function fetchExpectedModelSha() {
+  try {
+    const r = await fetch(`${VENDOR_BASE}/inventory.json`);
+    if (!r.ok) return null;
+    const inv = await r.json();
+    const m = (inv.files || []).find((f) => f.file === 'models/face_landmarker.task');
+    return m && typeof m.sha256 === 'string' ? m.sha256.toLowerCase() : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 计算 Uint8Array 的 SHA-256 十六进制。非安全上下文（如局域网 http）无 crypto.subtle，返回 null 表示跳过校验。 */
+async function sha256Hex(buf) {
+  if (!globalThis.crypto?.subtle) return null;
+  const d = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(d))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+/**
  * 下载模型文件为 Uint8Array（供 modelAssetBuffer 使用）。
  * 线上按镜像链依次尝试（前三个 jsdelivr 域名各设超时，同源兜底不限时）；
- * 本地直接同源加载。全部失败时抛错，由调用方回退 modelAssetPath。
+ * 本地直接同源加载。每个源下载完成后做 SHA-256 校验，失败视同源故障
+ * 切换下一候选。全部失败时抛错，由调用方回退 modelAssetPath。
  * @param {(msg: string, pct: number) => void} [onProgress] 加载进度回调
  */
 async function fetchModelBuffer(onProgress = () => {}) {
   const local = isLocalEnv();
+  const expectedSha = await fetchExpectedModelSha();
+  if (!expectedSha) console.warn('[FaceEngine] inventory.json 无模型哈希，跳过完整性校验');
   const candidates = local ? [MODEL_URL] : [...MODEL_MIRRORS, MODEL_URL];
   let lastErr = null;
   for (let i = 0; i < candidates.length; i++) {
@@ -100,6 +144,10 @@ async function fetchModelBuffer(onProgress = () => {}) {
       if (!resp.ok) throw new Error('HTTP ' + resp.status);
       const buf = new Uint8Array(await resp.arrayBuffer());
       if (buf.length < 1024) throw new Error('file too small: ' + buf.length);
+      const gotSha = await sha256Hex(buf);
+      if (expectedSha && gotSha && gotSha !== expectedSha) {
+        throw new Error(`integrity mismatch: sha256 ${gotSha.slice(0, 12)}… ≠ 期望 ${expectedSha.slice(0, 12)}…`);
+      }
       if (i > 0) {
         onProgress('主源较慢，已切换镜像源 ' + i + '/' + (candidates.length - 1), 58);
       }
@@ -345,7 +393,12 @@ export class CameraSource {
       audio: false,
       video: deviceId
         ? { deviceId: { exact: deviceId }, width: { ideal: c.width }, height: { ideal: c.height } }
-        : { facingMode: c.facingMode, width: { ideal: c.width }, height: { ideal: c.height }, frameRate: { ideal: 30 } },
+        : {
+            facingMode: c.facingMode,
+            width: { ideal: c.width },
+            height: { ideal: c.height },
+            frameRate: { ideal: 30 },
+          },
     };
 
     try {
@@ -371,7 +424,9 @@ export class CameraSource {
       ]);
     } catch (err) {
       if (err && err.message === 'CAMERA_PERMISSION_TIMEOUT') {
-        throw new Error('等待摄像头授权超时（15 秒无响应）。请在浏览器弹窗中点击「允许」，然后重新开始检测。', { cause: err });
+        throw new Error('等待摄像头授权超时（15 秒无响应）。请在浏览器弹窗中点击「允许」，然后重新开始检测。', {
+          cause: err,
+        });
       }
       throw new Error(CameraSource.friendlyError(err), { cause: err });
     }

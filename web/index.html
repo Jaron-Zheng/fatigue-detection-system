@@ -4,6 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
+<!-- CSP meta：GitHub Pages 是纯静态托管，不带 server.js 的安全响应头；
+     本标签让线上版获得与本地版同源的 CSP 防护（外链脚本拦截、注入面收敛）。
+     规则与 server.js SECURITY_HEADERS 逐条对齐，另放行线上加载链的 CDN 域：
+     · registry.npmmirror.com（推理运行时 vision_bundle + wasm）
+     · gcore/fastly/cdn.jsdelivr.net（模型 3.7MB 镜像链）
+     两层 CSP 并存时浏览器取交集（更严者生效）：本地多出的 CDN 白名单被
+     响应头收紧回 'self'，本地行为不变；线上无响应头，仅本标签生效。
+     注：frame-ancestors 在 meta 中被规范忽略，防嵌点击劫持仅由本地响应头承担。 -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://registry.npmmirror.com https://gcore.jsdelivr.net https://fastly.jsdelivr.net https://cdn.jsdelivr.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' blob: https://registry.npmmirror.com https://gcore.jsdelivr.net https://fastly.jsdelivr.net https://cdn.jsdelivr.com; worker-src 'self' blob: https://registry.npmmirror.com https://gcore.jsdelivr.net https://fastly.jsdelivr.net https://cdn.jsdelivr.com; form-action 'self'">
 <meta name="description" content="基于面部多特征融合的Web端驾驶员疲劳检测系统：浏览器端实时人脸关键点分析，融合PERCLOS、哈欠、点头、头部姿态等多维特征进行疲劳分级预警。">
 <title>驾驶员疲劳检测系统 · 基于面部多特征融合</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">

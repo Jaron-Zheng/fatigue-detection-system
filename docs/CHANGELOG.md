@@ -4,6 +4,44 @@
 每一项均可在 `system-delivery/comparison/文件变更清单.md` 中找到对应文件，
 在 `docs/代码审计报告.md` 中找到问题编号。
 
+## [3.4.1] — 安全审计四项修复（CSP meta / 模型哈希校验 / 部署令牌根修 / 测试钩子收口）
+
+### 修复 1：GitHub Pages 线上版补 CSP（web/index.html）
+
+- server.js 的全套安全响应头（CSP/COOP/CORP/COEP 等）只覆盖本地；
+  Pages 是纯静态托管不带任何头，线上版此前零 CSP 防护。
+- 新增 CSP `<meta>`，规则与本地响应头逐条对齐，另放行线上加载链
+  CDN 域（registry.npmmirror.com / gcore+fastly+cdn.jsdelivr.net）。
+  两层 CSP 并存取交集（更严者生效）：本地行为不变，线上获得防护。
+- 已知边界：frame-ancestors 在 meta 中被规范忽略，防嵌点击劫持
+  仍仅由本地响应头承担。
+
+### 修复 2：模型文件 SHA-256 完整性校验（防 CDN 投毒）
+
+- `vendor/inventory.json`：每个文件补 `sha256` 字段（fetch-vendor.js
+  生成时写入，随仓库版本化）。
+- `face-engine.js fetchModelBuffer`：期望哈希从同源 inventory.json
+  读取（攻击者控制镜像也无法让哈希对上），每个下载源完成后校验，
+  失败按「源失败」切换下一候选，最终回退同源；非安全上下文
+  （局域网 http 无 crypto.subtle）自动跳过校验并告警。
+- 已知边界：vision_bundle.mjs 与 wasm 走 MediaPipe 内部加载无法
+  拦截校验，防护依赖版本锁定路径 + CSP 域白名单 + 同源兜底。
+
+### 修复 3：deploy-github.cjs 令牌泄漏根修
+
+- 旧版向本仓库 `git remote add deploy <token-url>` 且失败路径直接
+  `process.exit(1)` 跳过清理——令牌随 git 输出泄漏进日志（已发生一次）。
+- 现令牌只经 push 参数传递、从不写入任何 git config；临时部署目录
+  try/finally 无条件清理；所有输出经 `redact()` 脱敏；令牌优先经
+  `GH_TOKEN` 环境变量传入（argv 兼容保留）。
+- 残余已接受风险：push 参数在进程列表秒级瞬时可见（本机窗口期）。
+
+### 修复 4：测试钩子线上不安装（test-hooks.js）
+
+- `window.__fatigue` 可驱动模拟启停，属测试面而非产品面。现复用
+  `face-engine.js isLocalEnv()`（已导出）分流：localhost/局域网安装
+  （测试工具链不受影响），GitHub Pages 等线上环境不暴露。
+
 ## [3.4.0] — 真实标注数据评测与 R5 参数调优
 
 ### 真实数据评测工具链（tools/，新增）
