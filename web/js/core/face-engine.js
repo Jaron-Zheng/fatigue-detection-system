@@ -84,6 +84,7 @@ async function importWithTimeout(url, timeoutMs = 8000) {
  * 下载模型文件为 Uint8Array（供 modelAssetBuffer 使用）。
  * 线上按镜像链依次尝试（前三个 jsdelivr 域名各设超时，同源兜底不限时）；
  * 本地直接同源加载。全部失败时抛错，由调用方回退 modelAssetPath。
+ * @param {(msg: string, pct: number) => void} [onProgress] 加载进度回调
  */
 async function fetchModelBuffer(onProgress = () => {}) {
   const local = isLocalEnv();

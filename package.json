@@ -12,6 +12,8 @@
     "test:integration": "node tools/integration-test.mjs",
     "verify": "npm run check && npm run test",
     "verify:full": "node tools/full-verify.mjs",
+    "build:sea": "node tools/build-sea.cjs",
+    "build:installer": "node tools/build-installer.cjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format:check": "prettier --check \"web/js/**/*.js\" \"tools/**/*.mjs\" \"server/**/*.js\""

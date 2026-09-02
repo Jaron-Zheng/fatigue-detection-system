@@ -1,9 +1,7 @@
 node_modules/
 web/vendor/
-system-delivery/
 docs-evidence/
 docs/
 *.md
 package-lock.json
 一键启动.bat
-一键启动.ps1

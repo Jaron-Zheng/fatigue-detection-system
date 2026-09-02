@@ -1,7 +1,7 @@
 # 基于面部多特征融合的 Web 端驾驶员疲劳检测系统
 
-本科毕业设计。在浏览器内完成全部人脸关键点推理与疲劳判定，融合 PERCLOS、眨眼动力学、
-哈欠、点头与头部姿态五类面部特征，实时输出 0–100 疲劳指数与四级预警。
+本科毕业设计。在浏览器内完成全部人脸关键点推理与疲劳判定，采用**几何-语义双通道融合**方案，
+融合 PERCLOS、眨眼动力学、哈欠、点头与头部姿态五类面部特征，实时输出 0–100 疲劳指数与四级预警。
 
 **无需安装、无需联网、无需上传任何画面。** 所有视频帧只在本机浏览器内处理，
 既不经过服务器，也不写入磁盘。
@@ -12,7 +12,7 @@
 
 双击 **`一键启动.bat`**。脚本会启动本地服务器并自动打开浏览器。
 
-首次运行需要授权摄像头。页面加载后点「开始检测」，系统会先花 8 秒记录你睁眼时的
+首次运行需要授权摄像头。页面加载后点「开始检测」，系统会先花 5 秒记录你睁眼时的
 样子（个人校准），然后进入实时检测。
 
 ### 前置条件
@@ -70,66 +70,91 @@ npm run serve      # 启动但不打开浏览器
 ## 目录结构
 
 ```
-一键启动.bat            Windows 启动器（纯 ASCII，中文提示由 launch.js 输出）
-一键启动.ps1            PowerShell 启动器（支持 -Port / -NoBrowser）
-package.json            仅声明脚本，无运行时依赖
-server/server.js        零依赖静态服务器（安全头 + 路径穿越防护 + 端口自选）
-tools/launch.js         启动逻辑与中文提示（Node 版本检查 + 资源自检）
-tools/fetch-vendor.js   一次性拉取 MediaPipe 资源到 web/vendor（已完成，通常无需再跑）
-tools/project-check.mjs 静态检查（文件完整性 / JS 语法 / id 唯一 / 安全基线）
-tools/regression-test.mjs 算法链路回归测试（零依赖）
-tools/integration-test.mjs 服务器集成与安全测试（需服务器已运行）
-tools/full-verify.mjs   一条命令全量门禁（自动起停服务器，可直接接 CI）
-tools/screenshot.mjs    无头浏览器批量截图取证（CDP，UI 回归对比用）
+一键启动.bat              Windows 启动器（纯 ASCII，中文提示由 server.js 输出）
+package.json              仅声明脚本，无运行时依赖
+LICENSE                   MIT 许可
+app-icon.ico / .png       应用图标
+brand/                    品牌素材（矢量母版、logo）
 
-web/index.html          单页应用，三个视图：首屏 / 工作台 / 报告
-web/css/                tokens（设计变量）→ base → components → layout
-web/vendor/             MediaPipe Face Landmarker 模型与 WASM（本地化，离线可用）
+server/server.js          零依赖静态服务器（安全头 + 路径穿越防护 + 端口自选）
 
-web/js/app.js           主控制器：状态机 + 主循环 + 模块编排
-web/js/config.js        全部算法参数集中于此，含取值依据注释
+web/index.html            单页应用，三个视图：首屏 / 工作台 / 报告
+web/css/                  tokens → base → components → layout → motion
+web/favicon.svg           站点图标
+web/manifest.json         PWA 清单
+web/sw.js                 Service Worker（离线缓存）
+web/vendor/               MediaPipe Face Landmarker 模型与 WASM（本地化，离线可用）
 
-web/js/core/            算法层（与 UI 完全解耦）
-  face-engine.js          MediaPipe 封装，GPU 委托 + 自动回退 CPU
-  features.js             特征层：EAR / MAR / 欧拉角 / blendshape 双通道
-  calibration.js          个性化基线校准
-  quality.js              数据质量门控（取景 + 光照）
-  indicators.js           指标层：PERCLOS / 闭眼时长 / 眨眼 / 哈欠 / 点头 / 偏离
-  fusion.js               融合层：隶属函数 + 加权 + EMA + 四重防抖
-  alarm.js                分级声光报警 + 语音播报
-  recorder.js             会话记录、报告汇总、JSON / CSV 导出
-  csv-schema.js           CSV 列定义（导出与导入的唯一真相来源）
-  analysis.js             敏感性分析、权重消融、CSV 离线复现
-  evaluation.js           准确率指标计算（混淆矩阵、响应延迟）
-  evaluator.js            视频离线评测执行器（固定步长）
-  video-source.js         视频逐帧抽取与区间标注
-  sim-driver.js           合成驾驶员（演示模式）
-  landmarks.js            关键点索引常量
+web/js/app.js             主控制器：状态机 + 主循环 + 模块编排
+web/js/config.js          全部算法参数集中于此，含取值依据注释
+web/js/test-hooks.js      测试锚点（不参与运行时）
 
-web/js/ui/              展示层
-web/js/util/            数学、DOM、环形缓冲工具
+web/js/core/              算法层（与 UI 完全解耦）
+  face-engine.js            MediaPipe 封装，GPU 委托 + 自动回退 CPU
+  features.js               特征层：EAR / MAR / 欧拉角 / blendshape 双通道
+  calibration.js            个性化基线校准
+  quality.js                数据质量门控（取景 + 光照）
+  indicators.js             指标层：PERCLOS / 闭眼时长 / 眨眼 / 哈欠 / 点头 / 偏离
+  fusion.js                 融合层：隶属函数 + 加权 + EMA + 四重防抖
+  alarm.js                  分级声光报警 + 语音播报
+  recorder.js               会话记录、报告汇总、JSON / CSV 导出
+  csv-schema.js             CSV 列定义（导出与导入的唯一真相来源）
+  analysis.js               敏感性分析、权重消融、CSV 离线复现
+  evaluation.js             准确率指标计算（混淆矩阵、响应延迟）
+  evaluator.js              视频离线评测执行器（固定步长）
+  video-source.js           视频逐帧抽取与区间标注
+  sim-driver.js             合成驾驶员（演示模式）
+  landmarks.js              关键点索引常量
+  preflight.js              启动自检
+  render-loop.js            渲染循环
+  session-state-machine.js  会话状态机
 
-docs/技术文档.md         算法原理、参数依据、实测数据、评测方法论、已知局限
-docs/视频评测指南.md      视频离线评测操作流程
-docs/UI设计说明.md        Apple 风格设计系统与页面结构
-docs/代码审计报告.md      全项目审计问题清单与修复状态
-docs/Bug修复清单.md       缺陷现象/根因/修复/测试
-docs/测试报告.md          测试环境、命令、结果与未验证项
-docs/算法变更说明.md      算法参数可追溯性说明
-docs/启动故障排查.md      常见问题处理
+web/js/ui/                展示层（仪表盘 / 图表 / 覆盖层 / 报告 / 设置 / 时间线等）
+web/js/util/              数学、DOM、环形缓冲工具
+
+packager/                 打包配置
+  sea-launcher.js           SEA 启动器源码（注入 node.exe 生成 launcher.exe）
+  fatigue-detection.iss     Inno Setup 安装脚本
+
+tools/                    开发与打包工具
+  fetch-vendor.js           一次性拉取 MediaPipe 资源到 web/vendor
+  build-sea.cjs             构建 SEA launcher（把启动逻辑注入 node.exe）
+  build-installer.cjs       一键编译完整安装包（SEA + Inno Setup）
+  download-tools.cjs        下载打包所需工具（Node.js portable + Inno Setup + postject）
+  build-icons.cjs           从栅格化产物重建 app-icon.png / .ico
+  build-copyright-docs.cjs  生成软著登记鉴别材料
+  deploy-github.cjs         部署到 GitHub Pages（git push 方式）
+  deploy-github-api.cjs     部署到 GitHub Pages（API 上传方式）
+
+docs/技术文档.md           算法原理、参数依据、实测数据、评测方法论、已知局限
+docs/双通道融合技术论述.md   几何-语义双通道融合的创新点、实测数据与设计决策
+docs/系统测试报告.md        功能测试、对抗场景、基线对比、PWA离线、长会话稳定性
+docs/视频评测指南.md        视频离线评测操作流程
+docs/UI设计说明.md          Apple 风格设计系统与页面结构
+docs/启动故障排查.md        常见问题处理
+docs/安装包错误穷举与修复方案.md  安装包排查
+docs/安装许可协议.txt        安装许可
+docs/架构图.svg            系统架构图
+docs/执行摘要.pdf           项目摘要
+docs/DESIGN.md             设计规范
+
+docs-evidence/准确率评估报告.md     四轮优化历程与最终指标（灵敏度86.4%/特异度100%）
+docs-evidence/实验报告.md           参数敏感性、消融实验、基线对照的完整数据
+docs-evidence/答辩要点与交付清单.md  答辩准备用要点索引
+docs-evidence/figures/             论文实验数据与图表（CSV + SVG + PNG）
 ```
 
 数据流是单向的，便于调试与论文画图：
 
 ```
 摄像头帧
-   ↓ FaceEngine（WASM 推理）
+   ↓ FaceEngine（WASM 推理，MediaPipe Face Landmarker）
 478 关键点 + 52 blendshape + 4×4 姿态矩阵
    ↓ FeatureExtractor
-EAR / MAR / pitch,yaw,roll / 语义系数              ← 特征层
+EAR / MAR / pitch,yaw,roll / 语义系数              ← 特征层（几何+语义双通道）
    ↓ IndicatorEngine（滑动窗口 + 状态机）
 PERCLOS / 闭眼时长 / 眨眼率 / 哈欠 / 点头 …         ← 指标层
-   ↓ FusionEngine（隶属函数 + 加权 + EMA + 滞回）
+   ↓ FusionEngine（隶属函数 + 加权 + EMA + 趋势加速器 + 滞回）
 疲劳指数 0–100 + 四级等级                          ← 融合层
    ↓
 AlarmSystem / Dashboard / SessionRecorder
@@ -152,6 +177,28 @@ AlarmSystem / Dashboard / SessionRecorder
 
 ---
 
+## 实验数据与论文素材
+
+所有实验数据均可通过 `node tools/accuracy-eval.mjs` 一键复现，输出到 `docs-evidence/figures/`：
+
+| 数据/图表 | 文件 | 说明 |
+|---|---|---|
+| 核心指标 | `accuracy-summary.csv` | 灵敏度86.4%/特异度100%/F1 0.927/MCC 0.702 |
+| 基线对照 | `baseline-comparison.csv` | 5组PERCLOS阈值 vs 融合 |
+| 参数敏感性 | `sensitivity-analysis.csv` | 5参数×多取值的稳定区间分析 |
+| 权重消融 | `ablation-analysis.csv` | 逐项移除7指标后的分数变化 |
+| 对抗场景 | `adversarial-summary.csv` | 6类干扰场景零误报验证 |
+| 调参实验 | `param-tuning-results.csv` | 10组参数对比实验 |
+| ROC/PR曲线 | `ROC曲线.svg` / `PR曲线.svg` | AUC=0.9999 |
+| 基线对比图 | `基线对比.svg` | 灵敏度柱状图 |
+| 消融实验图 | `消融实验.svg` | 权重贡献柱状图 |
+| 检出延迟图 | `检出延迟.svg` | 10轮延迟柱状图 |
+| 敏感性曲线 | `敏感性-*.svg` | 5张各参数敏感性曲线 |
+
+详细分析见 [`docs-evidence/准确率评估报告.md`](docs-evidence/准确率评估报告.md)。
+
+---
+
 ## 测试
 
 ```bash
@@ -164,7 +211,7 @@ npm run verify:full  # 全量质量门禁：静态 + 回归 + 自动起服务器
 node tools/integration-test.mjs --port 5180
 ```
 
-最近一次完整结果见 [`docs/测试报告.md`](docs/测试报告.md)。
+最近一次完整结果见 [`docs/系统测试报告.md`](docs/系统测试报告.md)（175项回归测试 + 6项静态检查 + 6类对抗场景）。
 
 ---
 
@@ -186,17 +233,14 @@ npm run format:check  # Prettier 格式检查（存量代码未强制重排，�
 `AppConfig`（配置形状）、`FeatureSample`（特征层输出）、`CalibrationResult`（标定结果）、
 `ReplayPatch/ReplayResult`（离线重算）等。
 
-### 第三轮新增自动化脚本（无需 npm install，Node 直接跑）
+### 打包安装包（可选）
 
 ```bash
-node tools/a11y-test.mjs        # axe-core 无障碍扫描（10 场景×浅深主题）
-node tools/fuzz-test.mjs        # 算法模糊测试（默认 1000 轮随机剧本，--seed 可复现）
-node tools/perf-profile.mjs     # 长会话内存/长任务采样（--mode memory|infer）
-node tools/design-audit.mjs     # DESIGN.md Do's/Don'ts 保真度审计（computed style 逐条核对）
-node tools/check-literals.mjs   # 字面量色值检测（已接入 npm run check；--selftest 验证拦截能力）
-node tools/pwa-offline-test.mjs # PWA 断网实测（SW 注册→断网→重载→演示模式）
-node tools/analysis/gen-fixtures.mjs  # 生成论文图表脚本的示例数据
+node tools/download-tools.cjs   # 下载 Node.js portable + Inno Setup + postject
+node tools/build-installer.cjs   # 一键编译完整安装包（SEA + ISCC）
 ```
+
+输出：项目根目录 `疲劳检测系统_Setup_v1.0.0.exe`
 
 ---
 
@@ -224,7 +268,7 @@ node tools/analysis/gen-fixtures.mjs  # 生成论文图表脚本的示例数据
 - 视频帧只在浏览器内存中处理，不上传、不落盘
 - 本地服务器只提供静态文件，不接收任何上传
 - 关闭网页后不留下任何影像数据
-- 全部依赖（模型 15MB、WASM 22MB）已本地化，断网可用
+- 全部依赖（模型 3.6MB、WASM 22MB，合计约 26MB）已本地化，断网可用
 
 ---
 

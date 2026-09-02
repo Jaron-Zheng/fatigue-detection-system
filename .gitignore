@@ -7,5 +7,39 @@ node_modules/
 .DS_Store
 Thumbs.db
 
-# 测试素材（体积大，由 tools/gen-y4m.mjs 按需生成）
+# 打包构建产物（由 tools/build-sea.cjs / build-installer.cjs 按需生成）
+_pack/
+_gh-pages-deploy/
+*.exe
+
+# 测试素材与输出（由 tools/ 各脚本按需生成）
 tools/fixtures/
+shots/
+screenshot-*.png
+shot-*.png
+
+# 临时文件
+speed-test.txt
+
+# 临时调试脚本与中间产物
+_dump_tables.py
+_extract_structure.ps1
+_inspect_docx.py
+_inspect_flow.py
+_list.html
+_n_baidu.html
+_n_google.html
+_notice.html
+_notice2026.html
+_read_task.py
+_read_tpl.py
+_structure.txt
+_zcwj.html
+_tpl/
+
+# 大体积交付包（不应入库）
+*.zip
+*.zip.sha256
+
+# 临时截图验证产物
+%TEMP%/

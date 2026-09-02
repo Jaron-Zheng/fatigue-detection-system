@@ -34,7 +34,7 @@ function defaultEnv() {
         localStorage.setItem(k, '1');
         localStorage.removeItem(k);
         return null;
-      } catch (e) {
+      } catch {
         return '存储被浏览器策略禁用';
       }
     },

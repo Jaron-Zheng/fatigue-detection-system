@@ -194,7 +194,6 @@ function setupParallax() {
 
   let ticking = false;
   const update = () => {
-    const scrollY = window.scrollY;
     for (const el of items) {
       const rect = el.getBoundingClientRect();
       // 只在元素附近时才更新，节省性能

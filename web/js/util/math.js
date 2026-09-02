@@ -140,8 +140,8 @@ export class MedianFilter {
 export function matrixToEuler(data) {
   // 列主序：data[col*4 + row]
   const m00 = data[0], m10 = data[1], m20 = data[2];
-  const m01 = data[4], m11 = data[5], m21 = data[6];
-  const m02 = data[8], m12 = data[9], m22 = data[10];
+  const _m01 = data[4], m11 = data[5], m21 = data[6];
+  const _m02 = data[8], m12 = data[9], m22 = data[10];
 
   const sy = Math.hypot(m00, m10);
   let pitch, yaw, roll;

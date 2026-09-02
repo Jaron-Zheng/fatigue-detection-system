@@ -1,0 +1,180 @@
+{
+  "date": "2026-09-01T11:51:33.344Z",
+  "url": "http://127.0.0.1:5180/",
+  "scenarios": [
+    {
+      "name": "首页 · 浅色",
+      "violations": [
+        {
+          "id": "svg-img-alt",
+          "impact": "serious",
+          "help": "<svg> elements with an img or image role must have alternative text",
+          "nodes": 1,
+          "target": [
+            "svg[viewBox=\"0 0 860 300\"]"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "首页 · 深色",
+      "violations": [
+        {
+          "id": "svg-img-alt",
+          "impact": "serious",
+          "help": "<svg> elements with an img or image role must have alternative text",
+          "nodes": 1,
+          "target": [
+            "svg[viewBox=\"0 0 860 300\"]"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "工作台 · 普通 · 浅色",
+      "violations": [
+        {
+          "id": "page-has-heading-one",
+          "impact": "moderate",
+          "help": "Page should contain a level-one heading",
+          "nodes": 1,
+          "target": [
+            "html"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "工作台 · 普通 · 深色",
+      "violations": [
+        {
+          "id": "page-has-heading-one",
+          "impact": "moderate",
+          "help": "Page should contain a level-one heading",
+          "nodes": 1,
+          "target": [
+            "html"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "工作台 · 专业 · 浅色",
+      "violations": [
+        {
+          "id": "page-has-heading-one",
+          "impact": "moderate",
+          "help": "Page should contain a level-one heading",
+          "nodes": 1,
+          "target": [
+            "html"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "工作台 · 专业 · 深色",
+      "violations": [
+        {
+          "id": "page-has-heading-one",
+          "impact": "moderate",
+          "help": "Page should contain a level-one heading",
+          "nodes": 1,
+          "target": [
+            "html"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "报告页 · 浅色",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 1,
+          "target": [
+            "#btnBackWork"
+          ],
+          "details": [
+            {
+              "t": "#btnBackWork",
+              "m": "Element has insufficient color contrast of 4.27 (foreground color: #0071e3, background color: #f4f4f4, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "报告页 · 深色",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 2,
+          "target": [
+            ".span-full.card.pro-only:nth-child(6) > .card-head > .badge-info.badge",
+            "#evalBadge"
+          ],
+          "details": [
+            {
+              "t": ".span-full.card.pro-only:nth-child(6) > .card-head > .badge-info.badge",
+              "m": "Element has insufficient color contrast of 4.32 (foreground color: #2997ff, background color: #203247, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "t": "#evalBadge",
+              "m": "Element has insufficient color contrast of 4.32 (foreground color: #2997ff, background color: #203247, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "设置抽屉 · 浅色",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 1,
+          "target": [
+            "#btnBackWork"
+          ],
+          "details": [
+            {
+              "t": "#btnBackWork",
+              "m": "Element has insufficient color contrast of 4.27 (foreground color: #0071e3, background color: #f4f4f4, font size: 10.5pt (14px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "设置抽屉 · 深色",
+      "violations": [
+        {
+          "id": "color-contrast",
+          "impact": "serious",
+          "help": "Elements must meet minimum color contrast ratio thresholds",
+          "nodes": 2,
+          "target": [
+            ".span-full.card.pro-only:nth-child(6) > .card-head > .badge-info.badge",
+            "#evalBadge"
+          ],
+          "details": [
+            {
+              "t": ".span-full.card.pro-only:nth-child(6) > .card-head > .badge-info.badge",
+              "m": "Element has insufficient color contrast of 4.32 (foreground color: #2997ff, background color: #203247, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            },
+            {
+              "t": "#evalBadge",
+              "m": "Element has insufficient color contrast of 4.32 (foreground color: #2997ff, background color: #203247, font size: 9.0pt (12px), font weight: normal). Expected contrast ratio of 4.5:1"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 700" font-family="Inter, 'Microsoft YaHei', 'PingFang SC', sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#3e6ae1"/>
+    </marker>
+    <marker id="arrg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#767a82"/>
+    </marker>
+  </defs>
+
+  <rect width="1200" height="700" fill="#ffffff"/>
+  <text x="600" y="44" text-anchor="middle" font-size="24" font-weight="600" fill="#171a20">疲劳检测系统架构图（四层数据流）</text>
+  <text x="600" y="68" text-anchor="middle" font-size="13" fill="#5c5e62">摄像头帧 → 特征层 → 指标层 → 融合层 → 报警 / 展示 / 记录 ｜ 全部计算在浏览器本地完成</text>
+
+  <!-- ===== 输入源 ===== -->
+  <g>
+    <rect x="30" y="150" width="120" height="72" rx="4" fill="#f4f4f4" stroke="#d0d1d2"/>
+    <text x="90" y="180" text-anchor="middle" font-size="14" font-weight="600" fill="#171a20">摄像头</text>
+    <text x="90" y="200" text-anchor="middle" font-size="11" fill="#5c5e62">getUserMedia</text>
+    <rect x="30" y="245" width="120" height="60" rx="4" fill="#f4f4f4" stroke="#d0d1d2"/>
+    <text x="90" y="270" text-anchor="middle" font-size="14" font-weight="600" fill="#171a20">演示模式</text>
+    <text x="90" y="288" text-anchor="middle" font-size="11" fill="#5c5e62">sim-driver.js</text>
+  </g>
+
+  <!-- ===== MediaPipe 推理 ===== -->
+  <g>
+    <rect x="185" y="170" width="130" height="120" rx="4" fill="#ffffff" stroke="#3e6ae1" stroke-width="1.5"/>
+    <rect x="185" y="170" width="130" height="26" rx="4" fill="#3e6ae1"/>
+    <text x="250" y="188" text-anchor="middle" font-size="13" font-weight="600" fill="#ffffff">MediaPipe 推理</text>
+    <text x="250" y="220" text-anchor="middle" font-size="11" fill="#393c41">face-engine.js</text>
+    <text x="250" y="240" text-anchor="middle" font-size="11" fill="#5c5e62">478 关键点</text>
+    <text x="250" y="257" text-anchor="middle" font-size="11" fill="#5c5e62">52 blendshape</text>
+    <text x="250" y="274" text-anchor="middle" font-size="11" fill="#5c5e62">4×4 姿态矩阵</text>
+  </g>
+
+  <!-- ===== 特征层（双通道） ===== -->
+  <g>
+    <rect x="350" y="120" width="200" height="230" rx="4" fill="#ffffff" stroke="#d0d1d2"/>
+    <rect x="350" y="120" width="200" height="26" rx="4" fill="#171a20"/>
+    <text x="450" y="138" text-anchor="middle" font-size="13" font-weight="600" fill="#ffffff">特征层 features.js</text>
+    <rect x="362" y="158" width="176" height="62" rx="4" fill="#f4f4f4" stroke="#d0d1d2"/>
+    <text x="450" y="180" text-anchor="middle" font-size="12" font-weight="600" fill="#171a20">几何通道</text>
+    <text x="450" y="198" text-anchor="middle" font-size="11" fill="#5c5e62">EAR 眼纵横比 · MAR 嘴纵横比</text>
+    <text x="450" y="213" text-anchor="middle" font-size="11" fill="#5c5e62">欧拉角 pitch/yaw/roll</text>
+    <rect x="362" y="228" width="176" height="50" rx="4" fill="#f4f4f4" stroke="#d0d1d2"/>
+    <text x="450" y="249" text-anchor="middle" font-size="12" font-weight="600" fill="#171a20">语义通道</text>
+    <text x="450" y="266" text-anchor="middle" font-size="11" fill="#5c5e62">eyeBlink 系数 · jawOpen</text>
+    <text x="450" y="295" text-anchor="middle" font-size="11" fill="#5c5e62">短窗中值滤波抗关键点抖动</text>
+    <text x="450" y="313" text-anchor="middle" font-size="11" fill="#5c5e62">pitch 角速度差分（点头判据）</text>
+  </g>
+
+  <!-- ===== 指标层 ===== -->
+  <g>
+    <rect x="585" y="120" width="210" height="230" rx="4" fill="#ffffff" stroke="#d0d1d2"/>
+    <rect x="585" y="120" width="210" height="26" rx="4" fill="#171a20"/>
+    <text x="690" y="138" text-anchor="middle" font-size="13" font-weight="600" fill="#ffffff">指标层 indicators.js</text>
+    <text x="690" y="162" text-anchor="middle" font-size="11" fill="#393c41">· PERCLOS（P80 · 30s 时间加权窗）</text>
+    <text x="690" y="182" text-anchor="middle" font-size="11" fill="#393c41">· 最长持续闭眼（微睡眠证据）</text>
+    <text x="690" y="202" text-anchor="middle" font-size="11" fill="#393c41">· 眨眼频率 / 平均眨眼时长</text>
+    <text x="690" y="222" text-anchor="middle" font-size="11" fill="#393c41">· 哈欠（MAR+jawOpen ≥1.2s）</text>
+    <text x="690" y="242" text-anchor="middle" font-size="11" fill="#393c41">· 点头（|pitchVel| ≥55°/s）</text>
+    <text x="690" y="262" text-anchor="middle" font-size="11" fill="#393c41">· 头部偏离占比（≥25° · 1.5s）</text>
+    <text x="690" y="290" text-anchor="middle" font-size="11" fill="#5c5e62">眼睛状态机 0.8/0.6 滞回</text>
+    <text x="690" y="307" text-anchor="middle" font-size="11" fill="#5c5e62">语义否决 &lt;0.40 提前结束闭眼</text>
+    <text x="690" y="324" text-anchor="middle" font-size="11" fill="#5c5e62">长闭眼不计入眨眼统计</text>
+  </g>
+
+  <!-- ===== 融合层 ===== -->
+  <g>
+    <rect x="830" y="120" width="200" height="230" rx="4" fill="#ffffff" stroke="#3e6ae1" stroke-width="1.5"/>
+    <rect x="830" y="120" width="200" height="26" rx="4" fill="#3e6ae1"/>
+    <text x="930" y="138" text-anchor="middle" font-size="13" font-weight="600" fill="#ffffff">融合层 fusion.js</text>
+    <text x="930" y="160" text-anchor="middle" font-size="11" fill="#393c41">① 隶属函数 μ(x)∈[0,1] 模糊化</text>
+    <text x="930" y="180" text-anchor="middle" font-size="11" fill="#393c41">② 七项加权 0.30/0.20/0.14/…</text>
+    <text x="930" y="200" text-anchor="middle" font-size="11" fill="#393c41">③ EMA 平滑 α=0.12</text>
+    <text x="930" y="220" text-anchor="middle" font-size="11" fill="#393c41">④ 四重防抖（滞回6分·驻留1.2s</text>
+    <text x="930" y="237" text-anchor="middle" font-size="11" fill="#393c41">　 逐级下降·最短保持2/4/8s）</text>
+    <rect x="848" y="252" width="74" height="22" rx="4" fill="#e8f0fd" stroke="#3e6ae1"/>
+    <text x="885" y="267" text-anchor="middle" font-size="11" fill="#2f55bd">清醒 &lt;30</text>
+    <rect x="928" y="252" width="74" height="22" rx="4" fill="#fdf6e3" stroke="#7a5a00"/>
+    <text x="965" y="267" text-anchor="middle" font-size="11" fill="#7a5a00">轻度 30–52</text>
+    <rect x="848" y="280" width="74" height="22" rx="4" fill="#fdece0" stroke="#b34e00"/>
+    <text x="885" y="295" text-anchor="middle" font-size="11" fill="#b34e00">中度 52–74</text>
+    <rect x="928" y="280" width="74" height="22" rx="4" fill="#fbe6e5" stroke="#c11f1a"/>
+    <text x="965" y="295" text-anchor="middle" font-size="11" fill="#c11f1a">重度 ≥74</text>
+    <text x="930" y="325" text-anchor="middle" font-size="11" fill="#c11f1a">安全兜底：闭眼≥1.08s→68 分</text>
+    <text x="930" y="342" text-anchor="middle" font-size="11" fill="#c11f1a">闭眼≥1.8s→92 分（绕过平滑）</text>
+  </g>
+
+  <!-- ===== 输出层 ===== -->
+  <g>
+    <rect x="1075" y="120" width="100" height="72" rx="4" fill="#f4f4f4" stroke="#d0d1d2"/>
+    <text x="1125" y="148" text-anchor="middle" font-size="12" font-weight="600" fill="#171a20">分级报警</text>
+    <text x="1125" y="166" text-anchor="middle" font-size="10" fill="#5c5e62">三声蜂鸣+闪烁</text>
+    <text x="1125" y="181" text-anchor="middle" font-size="10" fill="#5c5e62">alarm.js</text>
+    <rect x="1075" y="205" width="100" height="60" rx="4" fill="#f4f4f4" stroke="#d0d1d2"/>
+    <text x="1125" y="229" text-anchor="middle" font-size="12" font-weight="600" fill="#171a20">实时展示</text>
+    <text x="1125" y="247" text-anchor="middle" font-size="10" fill="#5c5e62">仪表/趋势图</text>
+    <rect x="1075" y="278" width="100" height="72" rx="4" fill="#f4f4f4" stroke="#d0d1d2"/>
+    <text x="1125" y="303" text-anchor="middle" font-size="12" font-weight="600" fill="#171a20">会话记录</text>
+    <text x="1125" y="321" text-anchor="middle" font-size="10" fill="#5c5e62">报告/JSON/CSV</text>
+    <text x="1125" y="336" text-anchor="middle" font-size="10" fill="#5c5e62">recorder.js</text>
+  </g>
+
+  <!-- ===== 侧挂：校准与质量门控 ===== -->
+  <g>
+    <rect x="350" y="395" width="200" height="86" rx="4" fill="#ffffff" stroke="#d0d1d2" stroke-dasharray="5 3"/>
+    <text x="450" y="418" text-anchor="middle" font-size="12" font-weight="600" fill="#171a20">个性化校准 calibration.js</text>
+    <text x="450" y="438" text-anchor="middle" font-size="11" fill="#5c5e62">8s 睁眼基线（中位数）</text>
+    <text x="450" y="455" text-anchor="middle" font-size="11" fill="#5c5e62">EAR 闭眼线 = 基线×0.72</text>
+    <text x="450" y="472" text-anchor="middle" font-size="11" fill="#5c5e62">姿态零点 · MAR 基线</text>
+    <rect x="585" y="395" width="210" height="86" rx="4" fill="#ffffff" stroke="#d0d1d2" stroke-dasharray="5 3"/>
+    <text x="690" y="418" text-anchor="middle" font-size="12" font-weight="600" fill="#171a20">数据质量门控 quality.js</text>
+    <text x="690" y="438" text-anchor="middle" font-size="11" fill="#5c5e62">侧转&gt;38° / 侧倾&gt;28° 暂停判定</text>
+    <text x="690" y="455" text-anchor="middle" font-size="11" fill="#5c5e62">光照过暗 / 人脸过小 → 无效</text>
+    <text x="690" y="472" text-anchor="middle" font-size="11" fill="#5c5e62">unreliable 期间冻结累计</text>
+  </g>
+
+  <!-- ===== 离线工具链 ===== -->
+  <g>
+    <rect x="830" y="395" width="345" height="86" rx="4" fill="#ffffff" stroke="#d0d1d2" stroke-dasharray="5 3"/>
+    <text x="1002" y="418" text-anchor="middle" font-size="12" font-weight="600" fill="#171a20">离线工具链（同一套算法，论文实验数据来源）</text>
+    <text x="1002" y="438" text-anchor="middle" font-size="11" fill="#5c5e62">敏感性分析 · 权重消融 · CSV 导入复现 ·</text>
+    <text x="1002" y="455" text-anchor="middle" font-size="11" fill="#5c5e62">视频离线评测（固定步长 100ms，混淆矩阵/灵敏度/</text>
+    <text x="1002" y="472" text-anchor="middle" font-size="11" fill="#5c5e62">特异度/响应延迟）</text>
+  </g>
+
+  <!-- ===== 主数据流箭头 ===== -->
+  <g stroke="#3e6ae1" stroke-width="2" fill="none">
+    <line x1="150" y1="186" x2="181" y2="200" marker-end="url(#arr)"/>
+    <line x1="150" y1="275" x2="181" y2="255" marker-end="url(#arr)"/>
+    <line x1="315" y1="230" x2="346" y2="230" marker-end="url(#arr)"/>
+    <line x1="550" y1="235" x2="581" y2="235" marker-end="url(#arr)"/>
+    <line x1="795" y1="235" x2="826" y2="235" marker-end="url(#arr)"/>
+    <line x1="1030" y1="156" x2="1071" y2="156" marker-end="url(#arr)"/>
+    <line x1="1030" y1="200" x2="1071" y2="230" marker-end="url(#arr)"/>
+    <line x1="1030" y1="300" x2="1071" y2="305" marker-end="url(#arr)"/>
+  </g>
+  <!-- 侧挂虚线箭头 -->
+  <g stroke="#767a82" stroke-width="1.5" fill="none" stroke-dasharray="4 3">
+    <line x1="450" y1="393" x2="450" y2="354" marker-end="url(#arrg)"/>
+    <line x1="690" y1="393" x2="690" y2="354" marker-end="url(#arrg)"/>
+    <line x1="930" y1="393" x2="930" y2="354" marker-end="url(#arrg)"/>
+  </g>
+
+  <!-- ===== 图例 ===== -->
+  <g>
+    <line x1="350" y1="530" x2="400" y2="530" stroke="#3e6ae1" stroke-width="2"/>
+    <text x="410" y="534" font-size="12" fill="#393c41">主数据流</text>
+    <line x1="500" y1="530" x2="550" y2="530" stroke="#767a82" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <text x="560" y="534" font-size="12" fill="#393c41">参数 / 门控注入</text>
+    <rect x="680" y="520" width="14" height="14" rx="2" fill="#ffffff" stroke="#3e6ae1" stroke-width="1.5"/>
+    <text x="702" y="534" font-size="12" fill="#393c41">核心管线（蓝框）</text>
+    <rect x="820" y="520" width="14" height="14" rx="2" fill="#ffffff" stroke="#d0d1d2" stroke-dasharray="4 3"/>
+    <text x="842" y="534" font-size="12" fill="#393c41">支撑模块</text>
+  </g>
+
+  <text x="600" y="580" text-anchor="middle" font-size="12" fill="#767a82">双通道互补：几何通道可解释、可写公式；语义通道抗遮挡与极端角度 —— 交叉验证 + 单向否决消除姿态假阳性（实测 11s 姿态压 EAR 场景 0 误报）</text>
+  <text x="600" y="602" text-anchor="middle" font-size="12" fill="#767a82">安全设计取向：危险状态立即升级（override 绕过平滑），恢复必须逐级证明（四重防抖 + 最短保持）</text>
+</svg>

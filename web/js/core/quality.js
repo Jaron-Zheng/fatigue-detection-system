@@ -40,7 +40,6 @@ export function evaluateFaceQuality(lm, aspect, feat, calib) {
     if (p.y > maxY) maxY = p.y;
   }
   const faceW = maxX - minX;
-  const faceH = maxY - minY;
   const cx = (minX + maxX) / 2;
   const cy = (minY + maxY) / 2;
 

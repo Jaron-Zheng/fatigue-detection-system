@@ -112,10 +112,16 @@ console.log('\n[4] Range 请求（大文件稳定加载前提）');
 console.log('\n[5] 首页关键元素');
 {
   const html = await (await req('/')).text();
-  for (const id of ['viewHome', 'viewWork', 'viewReport', 'sheet', 'alarmBanner', 'video', 'chartScore']) {
+  // alarmBanner 已随 UI 改版移除，声光报警改为 alarmVeil 视觉蒙层 + toast 家族
+  for (const id of ['viewHome', 'viewWork', 'viewReport', 'sheet', 'alarmVeil', 'video', 'chartScore']) {
     assert(html.includes(`id="${id}"`), `包含 #${id}`);
   }
-  assert(!/https?:\/\/(?!127\.0\.0\.1|localhost)[a-z0-9.-]+\.[a-z]{2}/i.test(html.replace(/<!--[\s\S]*?-->/g, '')), '首页无外部域名请求（离线可用）');
+  // <a href> 超链接仅在被用户点击时才导航，不构成页面加载期的自动资源请求，
+  // 剔除后再检测；face-engine.js 的 CDN 镜像链由 isLocalEnv() 保证本地形态同源。
+  const htmlNoReq = html
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<a\s[^>]*href\s*=\s*(?:"[^"]*"|'[^']*')/gi, '<a');
+  assert(!/https?:\/\/(?!127\.0\.0\.1|localhost)[a-z0-9.-]+\.[a-z]{2}/i.test(htmlNoReq), '首页无外部域名请求（离线可用）');
 }
 
 console.log(`\n=== 结果: ${pass} 通过, ${fail} 失败 ===\n`);

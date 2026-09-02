@@ -19,9 +19,18 @@ await sleep(800);
 
 // ---------- 1. Tab 全遍历：收集可达的交互元素 ----------
 {
+  // 可见性判断按浏览器 Tab 语义：visibility:hidden 的元素（如关闭态设置抽屉
+  // .sheet，为滑出动画保留布局）不参与 Tab 遍历，但 offsetParent 仍非 null，
+  // 故用 checkVisibility({checkVisibilityCSS}) 而非 offsetParent。
   const focusables = await page.evaluate(() =>
     [...document.querySelectorAll('a[href], button:not([disabled]), input, select, [tabindex="0"]')]
-      .filter((el) => el.offsetParent !== null || el === document.activeElement)
+      .filter((el) => {
+        if (el === document.activeElement) return true;
+        if (typeof el.checkVisibility === 'function') {
+          return el.checkVisibility({ checkVisibilityCSS: true });
+        }
+        return el.offsetParent !== null;
+      })
   );
   const seen = new Set();
   let guard = 0, loopedEarly = false;

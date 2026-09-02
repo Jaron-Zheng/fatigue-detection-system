@@ -17,7 +17,6 @@ export default [
     ignores: [
       'node_modules/**',
       'web/vendor/**',
-      'system-delivery/**',
       'docs-evidence/**',
       '*.bat',
     ],
@@ -53,6 +52,36 @@ export default [
       // debugger/console 在本地工具型项目中是合理手段，不报错
       'no-console': 'off',
       'no-debugger': 'warn',
+    },
+  },
+  // CommonJS 工具脚本（install-inno / download-tools 等打包辅助）：
+  // script 模式 + node 全局集，__dirname/process/console/Buffer 合法
+  {
+    files: ['tools/**/*.cjs'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'script',
+      globals: {
+        ...globals.node,
+      },
+    },
+    rules: {
+      // 下载/安装脚本用空 catch 表达"尽力而为，失败继续"，属合理模式
+      'no-empty': ['error', { allowEmptyCatch: true }],
+    },
+  },
+  // packager/ 打包辅助（sea-launcher 等 CommonJS 脚本）：同 tools/*.cjs 口径
+  {
+    files: ['packager/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: 'script',
+      globals: {
+        ...globals.node,
+      },
+    },
+    rules: {
+      'no-empty': ['error', { allowEmptyCatch: true }],
     },
   },
   // Service Worker 运行在 worker 作用域，用专属全局集（第三轮角色十二）
