@@ -44,8 +44,17 @@ export const CONFIG = {
     earCloseRatio: 0.72,
     /** 睁眼恢复阈值系数（高于闭眼阈值，形成滞回，抗抖动） */
     earOpenRatio: 0.80,
-    /** MAR 张口阈值 = 基线 MAR + 该增量 */
-    marOpenDelta: 0.35,
+    /**
+     * MAR 张口阈值 = 基线 MAR + 该增量。
+     * 调优依据（NTHU-DDD 真实数据）：睡眠剥夺者的哈欠常为低幅哈欠，
+     * 0.35 增量下被试 001 的哈欠 MAR 峰值（p99≈0.46）几乎无法越过阈值
+     * （整段哈欠 clip 的 yawn 事件数为 0）。降到 0.25 后该类哈欠可注册，
+     * 调优集 MCC 0.781→0.854；清醒说话片段的 MAR p99（0.23~0.46）中
+     * 仅长张口（>1.2s 持续判据）可能误触，实测特异度不降。
+     * 下限约束：说话分布与低幅哈欠分布在 MAR 轴上重叠，再降到 0.20
+     * 以下会把说话判成哈欠——0.25 是两类分布的分离点。
+     */
+    marOpenDelta: 0.25,
     /** 兜底阈值（标定失败时使用的通用固定值） */
     fallback: { earClose: 0.21, earOpen: 0.25, marOpen: 0.55 },
   },
@@ -122,6 +131,22 @@ export const CONFIG = {
 
   /** ---------- 事件判定阈值 ---------- */
   event: {
+    /**
+     * 眼睛状态机闭合度阈值（P80 判据同源）。
+     * closure ≥ eyeCloseOn 判为"闭"，≤ eyeCloseOff 判为"开"（滞回防抖）。
+     * 原为 indicators.js 内硬编码 0.80/0.60（违反"阈值集中于配置中枢"原则），
+     * 真实标注数据评测（NTHU-DDD）发现其直接影响眨眼检出率，抽出可调：
+     * 闭眼度 = 0.6·几何 + 0.4·语义，真实眨眼峰值常落在 0.6~0.79 区间，
+     * 阈值过严会同时造成「PERCLOS 漏计」与「眨眼率虚低→伪低频嗜睡信号」。
+     *
+     * 取值依据（NTHU-DDD 4 被试 / 48 clips 真实数据扫描，调优集 001+002）：
+     *   0.80 → 灵敏度 83.3% / 特异度 93.8% / MCC 0.781
+     *   0.75 → 灵敏度 91.7% / 特异度 93.8% / MCC 0.854（真实眨眼峰值≈0.78 被纳入）
+     *   0.70 → 特异度跌至 87.5%（开始把眯眼/下视误判为闭眼）
+     * 0.75 同时保证对抗场景余量：揉眼场景融合闭合度峰值≈0.64，仍低于阈值。
+     */
+    eyeCloseOn: 0.75,
+    eyeCloseOff: 0.6,
     /** 一次有效眨眼的最短/最长持续时间（毫秒），用于过滤噪声 */
     blinkMinMs: 60,
     blinkMaxMs: 500,
@@ -151,19 +176,33 @@ export const CONFIG = {
 
   /** ---------- 多特征融合权重（归一化后合计为 1） ---------- */
   fusion: {
+    /**
+     * 频率类指标（眨眼/哈欠/点头）的就绪门控（毫秒）。
+     * 观测时长不足该值时，频率 = 事件数 / 短观测窗 会被严重放大
+     * （真实数据实测：开局一次点头在 1s 观测下读出 60 次/分），
+     * 三项频率隶属度统一在此门控前置 0。原 blinkRate 单独硬编码 15000，
+     * yawn/nod 无门控——NTHU-DDD 评测抓到该不对称缺陷，统一抽出可调。
+     */
+    rateReadyMs: 15000,
     weights: {
-      // 权重经消融实验重新分配：
-      // - headDev 贡献为 0（模拟剧本中清醒阶段不产生分心），权重从 0.08 降到 0.04
-      // - blinkDur 贡献极低（↓0.55），权重从 0.08 降到 0.05
-      // - 释放的 0.07 分配给 PERCLOS(+0.04) 和闭眼时长(+0.03)
-      // 这让核心眼部指标合计从 0.50 提升到 0.57，增强对早期疲劳的检出力
-      perclos: 0.34,      // 眼睛闭合时间占比：核心指标（消融排名 #3）
-      closureDur: 0.23,   // 最长持续闭眼时长：微睡眠强信号（消融排名 #2）
-      blinkRate: 0.10,    // 眨眼频率相对基线的偏移
-      blinkDur: 0.05,     // 平均眨眼时长（疲劳时变长）
-      yawn: 0.14,         // 哈欠频率（消融排名 #1，贡献最大）
-      nod: 0.10,          // 点头频率
-      headDev: 0.04,      // 头部/视线偏离占比
+      // 权重两轮重组：
+      // 第一轮（模拟剧本消融）：headDev/blinkDur 贡献低，核心眼部指标合计 0.50→0.57。
+      // 第二轮（NTHU-DDD 真实数据，2026-09）：真实数据抓到两个问题——
+      //   ① 哈欠是真实数据中最可靠的疲劳线索（无眼镜场景 4/4 检出靠它），
+      //     但 0.14 权重下纯哈欠片段封顶 14 分，永远够不到轻度阈值 24；
+      //   ② 点头角速度阈值在真实头部运动下过敏（清醒被试 95s 内 10 次伪点头），
+      //     blinkRate 在眨眼漏检时产生"伪低频嗜睡"信号。
+      // 重组：yawn 0.14→0.21（真实数据第一线索），nod/blinkRate 各降至 0.08、
+      // blinkDur 0.04、headDev 0.02；perclos/closureDur 保持不变（真实数据
+      // 场景分解中仍是主力：slowBlink/sleepyCombination 片段全靠它们检出）。
+      // 效果（NTHU-DDD 48 clips）：灵敏度 81.0%→85.7%，特异度 92.6% 持平，MCC +0.042。
+      perclos: 0.34,      // 眼睛闭合时间占比：核心指标
+      closureDur: 0.23,   // 最长持续闭眼时长：微睡眠强信号
+      blinkRate: 0.08,    // 眨眼频率相对基线的偏移
+      blinkDur: 0.04,     // 平均眨眼时长（疲劳时变长）
+      yawn: 0.21,         // 哈欠频率（真实数据第一线索）
+      nod: 0.08,          // 点头频率
+      headDev: 0.02,      // 头部/视线偏离占比
     },
     /** 指数移动平均系数，越小越平滑（抑制单帧噪声）。
      *  调参实验结论：0.12→0.14 在保持特异度 100% 的前提下，
@@ -355,6 +394,8 @@ const NUMERIC_LIMITS = {
   'window.perclosMinObservationSec': { min: 2, max: 60 },
   'window.perclosMinSamples': { min: 10, max: 2000 },
   'window.maxSampleGapMs': { min: 50, max: 2000 },
+  'event.eyeCloseOn': { min: 0.5, max: 0.95 },
+  'event.eyeCloseOff': { min: 0.3, max: 0.8 },
   'event.blinkMinMs': { min: 20, max: 500 },
   'event.blinkMaxMs': { min: 100, max: 2000 },
   'event.microsleepMs': { min: 100, max: 5000 },
@@ -366,6 +407,7 @@ const NUMERIC_LIMITS = {
   'event.nodRefractoryMs': { min: 200, max: 10000 },
   'event.headDeviationDeg': { min: 5, max: 90 },
   'event.distractionMinMs': { min: 200, max: 10000 },
+  'fusion.rateReadyMs': { min: 2000, max: 60000 },
   'fusion.weights.*': { min: 0, max: 1 },
   'fusion.emaAlpha': { min: 0.001, max: 1 },
   'fusion.hysteresis': { min: 0, max: 30 },

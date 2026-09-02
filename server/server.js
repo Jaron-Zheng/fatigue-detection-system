@@ -25,6 +25,21 @@ const DEFAULT_PORT = resolvePort();
 const MAX_PORT_TRY = 20;
 const NO_OPEN = process.argv.includes('--no-open') || process.env.NO_OPEN === '1';
 
+/**
+ * --dataset-dir <path>：评测工具专用开关（默认关闭）。
+ * realdata-collect.mjs 需要把本地标注数据集的图片喂给页面内推理，
+ * 但 CSP connect-src 'self' 禁止跨源 fetch。把数据集以同源路径
+ * /dataset/<相对路径> 暴露给本机，是唯一不放松安全头的方式。
+ * 只读、仅白名单扩展名（jpg/json）、路径越界一律 403。
+ */
+const DATASET_DIR = (() => {
+  const i = process.argv.indexOf('--dataset-dir');
+  if (i < 0 || i + 1 >= process.argv.length) return null;
+  const p = path.resolve(process.argv[i + 1]);
+  return fs.existsSync(p) && fs.statSync(p).isDirectory() ? p : null;
+})();
+const DATASET_EXT = new Set(['.jpg', '.jpeg', '.png', '.json']);
+
 const SECURITY_HEADERS = {
   'Content-Security-Policy': [
     "default-src 'self'",
@@ -124,6 +139,11 @@ const server = http.createServer((req, res) => {
     return send(res, 400, { 'Content-Type': 'text/plain; charset=utf-8' }, '400 Bad Request');
   }
 
+  /* 评测数据集同源路由（仅 --dataset-dir 启用时生效） */
+  if (DATASET_DIR && (pathname === '/dataset' || pathname.startsWith('/dataset/'))) {
+    return serveDataset(pathname, req, res);
+  }
+
   const filePath = resolveSafe(pathname === '/' ? '/index.html' : pathname);
   if (!filePath) {
     return send(res, 403, { 'Content-Type': 'text/plain; charset=utf-8' }, '403 Forbidden');
@@ -196,6 +216,38 @@ code{background:#e8e8ed;padding:2px 8px;border-radius:6px}
 a{color:#0066cc;text-decoration:none}</style>
 <div class="box"><h1>404</h1><p>找不到 <code>${String(p).replace(/[<>&"]/g, '')}</code></p>
 <p><a href="/">返回首页</a></p></div></html>`;
+}
+
+/**
+ * /dataset/<相对路径> → DATASET_DIR 下的同名文件。
+ * 与 resolveSafe 同样的越界防护；扩展名白名单外的请求一律 403。
+ */
+function serveDataset(pathname, req, res) {
+  const deny = (code, msg) =>
+    send(res, code, { 'Content-Type': 'text/plain; charset=utf-8' }, msg);
+  const rel = pathname.slice('/dataset/'.length);
+  if (!rel || rel.includes('\0') || rel.includes('\\') || rel.includes('..')) {
+    return deny(403, '403 Forbidden');
+  }
+  const abs = path.resolve(DATASET_DIR, '.' + path.posix.normalize('/' + rel));
+  if (abs !== DATASET_DIR && !abs.startsWith(DATASET_DIR + path.sep)) {
+    return deny(403, '403 Forbidden');
+  }
+  if (!DATASET_EXT.has(path.extname(abs).toLowerCase())) {
+    return deny(403, '403 Forbidden');
+  }
+  fs.stat(abs, (err, stat) => {
+    if (err || !stat.isFile()) return deny(404, '404 Not Found');
+    res.writeHead(200, {
+      'Content-Type': contentType(abs),
+      'Content-Length': stat.size,
+      'Cache-Control': 'no-store, must-revalidate',
+      'X-Content-Type-Options': 'nosniff',
+      ...SECURITY_HEADERS,
+    });
+    if (req.method === 'HEAD') return res.end();
+    fs.createReadStream(abs).pipe(res);
+  });
 }
 
 function openBrowser(target) {

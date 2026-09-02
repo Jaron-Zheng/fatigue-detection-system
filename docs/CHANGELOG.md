@@ -4,6 +4,49 @@
 每一项均可在 `system-delivery/comparison/文件变更清单.md` 中找到对应文件，
 在 `docs/代码审计报告.md` 中找到问题编号。
 
+## [3.4.0] — 真实标注数据评测与 R5 参数调优
+
+### 真实数据评测工具链（tools/，新增）
+
+- **realdata-collect.mjs**：无头 Edge 驱动生产同源推理链路
+  （FaceEngine → FeatureExtractor），把公开标注数据集（NTHU-DDD /
+  UTA-RLDD）逐帧特征缓存为 JSON——推理一次、回放多次。
+- **realdata-eval.mjs**：Node 回放完整 Calibrator → IndicatorEngine →
+  FusionEngine 管线，输出 clip 级二分类指标（三种判定规则）、场景分解、
+  逐被试/逐 clip 明细、UTA 帧级三通道 AUC、单参数扫描。
+- **realdata-diagnose.mjs**：单 clip 逐秒隶属度诊断（误差归因工具）。
+- **server.js 新增 `--dataset-dir` 开关**（默认关闭）：数据集以同源
+  `/dataset/` 路径供页面推理（CSP connect-src 'self' 不放松，扩展名
+  白名单 + 路径越界防护）。
+
+### 算法修复（web/js/，两处硬编码魔法数参数化 + 一处门控对称性缺陷）
+
+- **indicators.js**：眼睛状态机闭合度阈值 0.80/0.60 硬编码抽出为
+  `CONFIG.event.eyeCloseOn / eyeCloseOff`（补齐 NUMERIC_LIMITS 钳制）。
+- **fusion.js**：yawn/nod 频率隶属度补就绪门控（原来只有 blinkRate 有
+  15s 门控；实测开局 1 次点头 ÷ 1s 观测 = 60 次/分的荒谬频率），
+  统一为 `CONFIG.fusion.rateReadyMs`。
+
+### 默认参数调优（config.js，R5 轮，NTHU-DDD 真实数据驱动）
+
+- `event.eyeCloseOn` 0.80 → **0.75**（真实眨眼峰值闭合度≈0.78，
+  0.8 时差 0.02 漏检 → 眨眼率虚低 → 伪"低频嗜睡"信号）
+- `calibration.marOpenDelta` 0.35 → **0.25**（低幅压抑型哈欠可注册，
+  与说话分布的分离点）
+- `fusion.weights`：yawn 0.14→**0.21**、nod 0.10→0.08、
+  blinkRate 0.10→0.08、blinkDur 0.05→0.04、headDev 0.04→0.02
+
+### 效果（数字与 tools/ 脚本输出强绑定，复现命令见实验报告 8.5 节）
+
+- 真实数据（NTHU-DDD 48 clips）：灵敏度 81.0%→**85.7%**，
+  特异度 92.6% 持平，MCC 0.746→0.788；无眼镜场景灵敏度 100%。
+- 模拟数据（10 种子）：灵敏度 86.4%→**92.6%**，特异度 100% 持平，
+  平均延迟 15.3s→**8.7s**。
+- UTA-RLDD 帧级 AUC：双通道融合 0.7178 > 几何 0.7151 > 语义 0.7030
+  （双通道设计价值实证）。
+- 全量回归：静态检查 / 138 回归 / 41 集成 / 20 混沌 / typecheck / lint
+  全绿；对抗场景 6/6 零误报保持。
+
 ## [3.3.0] — 需求变更：HTML 报告统一导出专业版
 
 ### 行为变更（export-report.js）

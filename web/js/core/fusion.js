@@ -105,19 +105,22 @@ export class FusionEngine {
     const mClosure = membership(ind.maxClosureMs, 300, 1500);
 
     // 眨眼频率：正常 12~22 次/分。过高（早期疲劳代偿）或过低（深度嗜睡）都异常。
-    // 观测不足 15s 时该指标不可靠，置 0 以免开局虚警。
-    const mBlinkRate = ind.observedMs > 15000
+    // 观测不足 rateReadyMs 时该指标不可靠，置 0 以免开局虚警
+    // （真实数据实测：开局 1 次事件 / 1s 观测 = 60 次/分的荒谬读数）。
+    const rateReady = ind.observedMs > (CONFIG.fusion.rateReadyMs ?? 15000);
+    const mBlinkRate = rateReady
       ? membershipTwoSided(ind.blinkRate, 12, 22, 4, 45)
       : 0;
 
     // 平均眨眼时长：清醒约 100~200ms；疲劳时眼睑运动变慢，>400ms 显著异常
     const mBlinkDur = Number.isFinite(ind.avgBlinkMs) ? membership(ind.avgBlinkMs, 200, 450) : 0;
 
-    // 哈欠频率：0.5 次/分开始计入，2 次/分为强信号
-    const mYawn = membership(ind.yawnRate, 0.4, 2.2);
+    // 哈欠频率：0.5 次/分开始计入，2 次/分为强信号。
+    // 与眨眼频率同口径的就绪门控——短观测窗内的事件数被窗口归一化后同样会虚高。
+    const mYawn = rateReady ? membership(ind.yawnRate, 0.4, 2.2) : 0;
 
-    // 点头频率：1 次/分开始计入，5 次/分为强信号
-    const mNod = membership(ind.nodRate, 0.8, 5.0);
+    // 点头频率：1 次/分开始计入，5 次/分为强信号。就绪门控同理。
+    const mNod = rateReady ? membership(ind.nodRate, 0.8, 5.0) : 0;
 
     // 视线偏离占比：10% 以内正常（正常观察后视镜），>45% 明显分心
     const mHeadDev = membership(ind.headDevRatio, 0.10, 0.45);

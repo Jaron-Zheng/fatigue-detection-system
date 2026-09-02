@@ -215,15 +215,16 @@ export class IndicatorEngine {
     /* ---------- 眼睛闭合度（几何 + 语义双通道融合） ---------- */
     const closure = this._closureDegree(feat, calib);
     this.closureWin.push(ts, closure);
-    // 按真实时间加权累计闭眼占比（P80 判据）
-    this.perclosWin.push(ts, closure >= 0.8);
+    // 按真实时间加权累计闭眼占比（P80 判据：closure ≥ eyeCloseOn 即为"闭合"）
+    this.perclosWin.push(ts, closure >= CONFIG.event.eyeCloseOn);
     this.earWin.push(ts, Number.isFinite(feat.ear) ? feat.ear : 0);
     this.marWin.push(ts, Number.isFinite(feat.mar) ? feat.mar : 0);
 
     /* ---------- 眼睛状态机（带滞回 + 语义否决） ---------- */
-    // 闭合度 > 0.8 视为"闭"（对应 PERCLOS 的 P80 定义）；< 0.6 视为"开"。
-    const CLOSE_ON = 0.80;
-    const CLOSE_OFF = 0.60;
+    // 闭合度 ≥ eyeCloseOn 视为"闭"（对应 PERCLOS 的 P80 定义）；
+    // ≤ eyeCloseOff 视为"开"（滞回带防抖）。
+    const CLOSE_ON = CONFIG.event.eyeCloseOn;
+    const CLOSE_OFF = CONFIG.event.eyeCloseOff;
 
     /**
      * 【语义否决：为什么必须有这一条】

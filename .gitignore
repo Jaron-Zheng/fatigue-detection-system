@@ -43,3 +43,6 @@ _tpl/
 
 # 临时截图验证产物
 %TEMP%/
+
+# 本地评测数据集（tools/realdata-collect.mjs 按需下载，体积大不入库）
+_dataset/
