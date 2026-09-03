@@ -210,7 +210,7 @@ export class Dashboard {
     setText(q.vBlink, ind.blinkRate.toFixed(1));
     let blinkSub;
     if (ind.observedMs < 15000) blinkSub = '统计中…';
-    else if (ind.blinkRate < BLINK_RATE_LOW) blinkSub = '低于正常区间 ↑ 危险';
+    else if (ind.blinkRate < BLINK_RATE_LOW) blinkSub = '低于正常区间，危险升高';
     else if (ind.blinkRate > BLINK_RATE_HIGH) blinkSub = '高于正常区间（疲劳早期代偿）';
     else blinkSub = `正常区间 ${BLINK_RATE_LOW}–${BLINK_RATE_HIGH}`;
     setText(q.sBlink, blinkSub);
@@ -221,7 +221,7 @@ export class Dashboard {
     setText(
       q.sBlinkDur,
       Number.isFinite(ind.avgBlinkMs) && ind.avgBlinkMs > BLINK_DUR_MAX_MS
-        ? '偏长 ↑ 危险'
+        ? '偏长，危险升高'
         : `清醒约 100–${BLINK_DUR_MAX_MS}`
     );
     this._spark(q.kBlinkDur, mu.blinkDur, this._stateByMu(q.mBlinkDur, mu.blinkDur));

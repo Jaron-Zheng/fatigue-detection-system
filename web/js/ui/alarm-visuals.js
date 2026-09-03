@@ -65,6 +65,6 @@ export class AlarmVisuals {
    * 走 ok 语义的常规 toast（非报警家族，绿色对勾章），与报警形成
    * "发生→持续→恢复"的完整叙事。 */
   notifyRecovery(ev) {
-    toastOk('状态已恢复清醒', `本次疲劳段持续约 ${(ev.durationMs / 1000).toFixed(1)} 秒，检测继续进行`, 4200);
+    toastOk('已恢复清醒', `本次疲劳段持续约 ${(ev.durationMs / 1000).toFixed(1)} 秒，检测继续进行`, 4200);
   }
 }

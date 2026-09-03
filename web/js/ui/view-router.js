@@ -71,7 +71,7 @@ export class ViewRouter {
       } else if (!document.hidden && app._autoPaused && app.state === SessionState.PAUSED) {
         app._autoPaused = false;
         app.togglePause();
-        toast('已自动继续检测', '刚才页面在后台被暂停，现在已恢复；如需暂停请点暂停按钮', 'info', 3200);
+        toast('已自动继续检测', '刚才页面在后台被暂停，现在已恢复；如需暂停请点「暂停」', 'info', 3200);
       }
     });
 
@@ -162,6 +162,16 @@ export class ViewRouter {
     if (id === 'viewReport' && active.includes(app.state)) {
       toast('检测进行中', '本次检测结束后会自动生成报告，已回到工作台', 'info', 3200);
       id = 'viewWork';
+    }
+
+    /* 会话已结束（报告态）不放行工作台：摄像头已停止、工作台的视频区
+     * 是黑的，暂停/结束按钮指向的会话也不存在了——用户从报告页点
+     * 「开始检测」导航落进去，就是黑屏加一排点了没反应的按钮
+     * （真实用户报告的"卡死"）。与上面的锁对称处理：提示后带回
+     * 报告页，新一轮检测从报告页的「再次检测」开始。 */
+    if (id === 'viewWork' && app.state === SessionState.REPORT) {
+      toast('本次检测已结束', '报告已生成，可在此查看或导出；要开始新一轮，请点「再次检测」', 'info', 3600);
+      id = 'viewReport';
     }
 
     this.switchView(id);

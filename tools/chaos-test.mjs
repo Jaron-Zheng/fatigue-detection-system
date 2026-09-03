@@ -48,7 +48,9 @@ const responsive = async () => {
 async function freshStart() {
   consoleErrs = [];
   await page.evaluate(() => localStorage.clear()).catch(() => {});
-  await page.reload({ waitUntil: 'load' }).catch(() => {});
+  // 回到无参数基准 URL：S18 会把地址栏改成 ?demo=1，reload 会带着参数
+  // 重放"自动进演示"逻辑（app.js 尾部），后续场景就不再是空态——S23 误报根因
+  await page.goto(URL, { waitUntil: 'load' }).catch(() => {});
   // 必须等测试钩子挂载完成，否则后续 startSimulation 全是空操作
   await page.waitForFunction(() => !!window.__fatigue, null, { timeout: 20000 }).catch(() => {});
   await sleep(700);
@@ -305,19 +307,38 @@ await scenario('S14 模拟剧本快进1小时(数值溢出保护)', async () => 
   if (score === null || Number.isNaN(score)) throw new Error('快进后分数非法: ' + score);
 });
 
-/* ============ S15 报警浮层连点关闭 x5 ============ */
-await scenario('S15 重度报警连点关闭x5(浮层不残留)', async () => {
+/* ============ S15 报警通知连点关闭 x5 ============ */
+await scenario('S15 重度报警连点关闭x5(视觉不残留、会话不断)', async () => {
   await startDemo();
   await sleep(5000);
-  await page.evaluate(() => window.__fatigue?.fastForward(150000));
-  await sleep(4000);
+  // 剧本周期 147s（重度段 102–147s，之后循环回清醒）。5s 运行时刻
+  // 快进 105s → 落在 110s（重度段中），给 PERCLOS 20s 窗口留足填充时间；
+  // 原先的 150000 会落到 155s≡循环回清醒段，报警永不触发（旧用例
+  // 点击的是已删除按钮，从未真正验证过这一点）
+  await page.evaluate(() => window.__fatigue?.fastForward(105000));
+  // 等报警真正触发（alarmFireCount 持久计数；横幅+关闭按钮已在报警
+  // 改造中移除，现行视觉通道为 toast 通知卡片 + 红闪幕布 #alarmVeil）
+  let fired = false;
+  for (let i = 0; i < 48 && !fired; i++) {
+    fired = (await page.evaluate(() => window.__fatigue?.alarmFireCount ?? 0)) > 0;
+    if (!fired) await sleep(250);
+  }
+  if (!fired) throw new Error('前置失败:快进后未触发报警');
+  // 连点通知卡片 5 次（点击即提前关闭，等价于旧的"关闭报警"按钮）
   for (let i = 0; i < 5; i++) {
-    await page.click('#btnDismissAlarm').catch(() => {});
+    await page.click('.toast[data-kind="alarm"]').catch(() => {});
     await sleep(120);
   }
-  await sleep(800);
-  const veilGone = await page.evaluate(() => !document.querySelector('.alarm-veil.is-on, .alarm-veil[style*="opacity: 1"]'));
-  if (!veilGone) throw new Error('连点后报警遮罩残留');
+  // 红闪幕布为定时自动隐没（重度 3.4s），等它走完再验不残留
+  let veilGone = false;
+  for (let i = 0; i < 20 && !veilGone; i++) {
+    veilGone = !(await page.evaluate(() => document.querySelector('#alarmVeil.on')));
+    if (!veilGone) await sleep(250);
+  }
+  if (!veilGone) throw new Error('红闪幕布超时未自动隐没');
+  const alarmToasts = await page.evaluate(
+    () => document.querySelectorAll('.toast[data-kind="alarm"]:not(.leaving)').length);
+  if (alarmToasts > 0) throw new Error(`连点后报警通知残留x${alarmToasts}`);
   if ((await state()) !== 'running') throw new Error('连点关闭打断了会话');
 });
 
@@ -386,6 +407,61 @@ await scenario('S20 无会话首页乱点全部按钮(不崩)', async () => {
     await sleep(100);
   }
   await sleep(600);
+});
+
+/* ============ S21 报告态点「开始检测」导航（黑屏工作台根修） ============
+ * 用户实测报告的"卡死"路径：结束生成报告 → 顶栏点「开始检测」→
+ * 工作台黑屏（摄像头已停）+ 暂停/结束按钮无响应。
+ * 契约：与「检测中锁报告页」对称——toast 提示 + 带回报告页。 */
+await scenario('S21 报告态点开始检测导航(锁回报告页+toast)', async () => {
+  await startDemo();
+  await page.waitForFunction(() => window.__fatigue?.state === 'running', null, { timeout: 15000 });
+  await page.click('#btnStop');
+  await page.waitForFunction(() => window.__fatigue?.state === 'report', null, { timeout: 10000 });
+  await page.click('a[data-goto="viewWork"]');
+  await sleep(400);
+  const view = await page.evaluate(() => document.querySelector('.view.active')?.id);
+  if (view !== 'viewReport') throw new Error(`报告态导航未锁回报告页，落到了 ${view}`);
+  const toasts = await page.evaluate(() =>
+    [...document.querySelectorAll('.toast-host .toast, .toast-host > *')].map((t) => t.textContent.trim())
+  );
+  if (!toasts.some((t) => t.includes('已结束'))) throw new Error('未出现"本次检测已结束"提示');
+});
+
+/* ============ S22 报告态从首页 CTA 进入工作台（同 S21 的首页路径） ============ */
+await scenario('S22 报告态首页CTA点开始检测(同样锁回)', async () => {
+  await page.evaluate(() => window.__fatigue.startSimulation());
+  await page.waitForFunction(() => window.__fatigue?.state === 'running', null, { timeout: 15000 });
+  await page.click('#btnStop');
+  await page.waitForFunction(() => window.__fatigue?.state === 'report', null, { timeout: 10000 });
+  await page.click('a[data-goto="viewHome"]');
+  await sleep(300);
+  await page.click('a[data-goto="viewWork"]');
+  await sleep(400);
+  const view = await page.evaluate(() => document.querySelector('.view.active')?.id);
+  if (view !== 'viewReport') throw new Error(`首页 CTA 路径未锁回报告页，落到了 ${view}`);
+});
+
+/* ============ S23 非运行态死点击反馈（暂停/结束/重校准不再静默） ============
+ * 状态机拒绝的点击必须给 toast 反馈，否则"按钮能点但没反应"= 假死。 */
+await scenario('S23 空态死点击暂停/结束/重校准(均有反馈)', async () => {
+  // 空态工作台：三个按钮的非法迁移都应弹 toast 而非静默
+  await page.click('a[data-goto="viewWork"]');
+  await sleep(400);
+  for (const sel of ['#btnPause', '#btnStop', '#btnRecalib']) {
+    await page.click(sel, { force: true }).catch(() => {});
+    await sleep(250);
+  }
+  const toasts = await page.evaluate(() =>
+    [...document.querySelectorAll('.toast-host .toast, .toast-host > *')].map((t) => t.textContent.trim())
+  );
+  const need = ['当前没有进行中的检测', '当前没有可结束的检测', '当前无法重新校准'];
+  for (const msg of need) {
+    if (!toasts.some((t) => t.includes(msg))) {
+      console.log('  [S23 调试] 实际 toasts:', JSON.stringify(toasts));
+      throw new Error(`死点击缺少反馈：${msg}`);
+    }
+  }
 });
 
 await browser.close();

@@ -130,7 +130,7 @@ export class SessionStage {
   showPaused() {
     this._frame(
       '检测已暂停',
-      '按空格键或点击「继续」按钮恢复检测。暂停期间不计入统计。'
+      '按空格键或点「继续」恢复检测。暂停期间不计入统计。'
     );
   }
 

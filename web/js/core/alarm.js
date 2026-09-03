@@ -208,7 +208,7 @@ export class AlarmSystem {
       level: 'ok',
       ts,
       durationMs,
-      message: `状态已恢复清醒，本次疲劳段持续 ${Math.round(durationMs / 100) / 10} 秒`,
+      message: `已恢复清醒，本次疲劳段持续 ${Math.round(durationMs / 100) / 10} 秒`,
     };
     if (typeof this.onRecovery === 'function') this.onRecovery(ev);
     return ev;

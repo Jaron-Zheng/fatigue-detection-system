@@ -127,14 +127,21 @@ await click('#btnPause', 'ctrl', '恢复');
 await click('#btnFilterEvents', 'ctrl', '仅看异常过滤');
 await click('#btnFilterEvents', 'ctrl', '仅看异常(还原)');
 
-/* 快进到重度，等报警层 */
+/* 快进到重度，等报警层：先等触发（alarmFireCount 持久计数），再等视觉层。
+ * 报警横幅 + 关闭按钮已在报警改造中移除，现行视觉通道为统一 toast
+ * 通知卡片（.toast[data-kind="alarm"]）与红闪幕布（#alarmVeil.on），
+ * 二者出现任一即算通过；点击通知卡片可提前关闭（dismiss 按等价路径）。 */
 await page.evaluate(() => window.__fatigue?.fastForward(110000));
-await sleep(6000);
-const alarmVisible = await page.locator('#btnDismissAlarm').isVisible().catch(() => false);
-await check(alarmVisible, 'alarm', '重度阶段报警浮层出现');
-if (alarmVisible) {
+const alarmFired = await waitUntil(
+  () => page.evaluate(() => (window.__fatigue?.alarmFireCount ?? 0) > 0), 12000, 300);
+await check(alarmFired, 'alarm', '重度阶段报警触发(alarmFireCount>0)');
+const alarmVisual = await waitUntil(
+  () => page.locator('.toast[data-kind="alarm"], #alarmVeil.on').count().then((n) => n > 0), 5000, 150);
+await check(alarmVisual, 'alarm', '报警视觉层出现(通知卡片或红闪幕布)');
+if (alarmVisual) {
   await shot('06-alarm');
-  await click('#btnDismissAlarm', 'alarm', '关闭报警');
+  await page.locator('.toast[data-kind="alarm"]').first().click({ timeout: 2000 }).catch(() => {});
+  note('alarm', '点击报警通知提前关闭', true);
 }
 
 /* ---------- 4. 结束会话 → 报告 ---------- */

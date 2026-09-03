@@ -403,7 +403,7 @@ export class EvaluationPanel {
     if (!res.metrics) {
       host.appendChild(
         el('div.advice-item', {
-          text: '未提供"正常/疲劳"标注，因此只输出算法指标而无准确率评估。请在时间轴上标注后重跑。',
+          text: '未提供「正常/疲劳」标注，因此只输出算法指标而无准确率评估。请在时间轴上标注后重跑。',
         })
       );
       this._renderExportButtons(host, res);

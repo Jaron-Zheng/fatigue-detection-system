@@ -276,7 +276,7 @@ class App {
     }
     if (this.sm.is(State.PAUSED)) {
       this.router.gotoView('viewWork');
-      toast('检测处于暂停状态', '已回到工作台；点"继续"恢复检测，或先结束再重新开始', 'info', 3600);
+      toast('检测处于暂停状态', '已回到工作台；点「继续」恢复检测，或先结束再重新开始', 'info', 3600);
       return;
     }
 
@@ -367,7 +367,12 @@ class App {
       toastWarn('演示模式无需校准');
       return;
     }
-    if (!this.sm.send(SessionEvent.RECALIBRATE)) return;
+    if (!this.sm.send(SessionEvent.RECALIBRATE)) {
+      /* 只在检测进行中/暂停时可重校准；其他状态下静默拒绝
+       * 同样是"能点没反应"的假死体验，给出明确反馈。 */
+      toast('当前无法重新校准', '重新校准只在检测进行中或暂停时可用', 'info', 3200);
+      return;
+    }
     this.indicators.reset();
     this.fusion.reset();
     this.alarm.reset();
@@ -411,6 +416,10 @@ class App {
       this._setPauseButton(true);
       this.dash.setStatus(this.simulate ? '演示中' : '检测中', 'var(--ok)', true);
       this.loop.start();
+    } else {
+      /* 两条迁移都被状态机拒绝（会话未开始或已结束时的陈旧/抢先点击）：
+       * 静默吞掉会呈现"按钮能点但没反应"的假死状态，必须给反馈。 */
+      toast('当前没有进行中的检测', '会话未开始或已结束，无法暂停或继续', 'info', 3200);
     }
   }
 
@@ -508,9 +517,9 @@ class App {
     const r = this.calibrator.result;
     this.calib = r;
     if (this.calibrator.state === CalibState.FAILED) {
-      toastWarn('校准没成功', `${r.reason}，已改用通用标准。建议把光线调亮一点再重新校准。`);
+      toastWarn('校准未成功', `${r.reason}，已改用通用标准。建议把光线调亮一点再重新校准。`);
     } else {
-      toastOk('校准完成', `已记住你睁眼的样子，判定标准按你本人调好了 · 质量${r.qualityLabel}`);
+      toastOk('校准完成', `已记住你睁眼的样子，判定标准已按你的面部特征调整 · 质量${r.qualityLabel}`);
     }
     if (!this.sm.send(SessionEvent.CALIBRATION_DONE, { calibration: r })) return;
     // 校准完成瞬间在遮罩上短暂反馈 800ms（session-stage.showCalibrated 自己收尾）

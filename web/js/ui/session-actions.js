@@ -151,7 +151,12 @@ export function stopSession(app) {
     toast('已取消启动', '当前初始化/校准流程已停止', 'info', 2200);
     return;
   }
-  if (!app.sm.send(SessionEvent.FINISH)) return;
+  if (!app.sm.send(SessionEvent.FINISH)) {
+    /* 会话未开始或已结束时点「结束并生成报告」：静默返回会让用户以为
+     * 按钮坏了（报告页连点「再次检测」前误触的常见路径）。给出反馈。 */
+    toast('当前没有可结束的检测', '会话未开始或已结束', 'info', 3000);
+    return;
+  }
   app.loop.stop();
   app.recorder.end();
   if (app.camera) app.camera.stop();
