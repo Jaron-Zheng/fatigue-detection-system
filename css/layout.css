@@ -1,0 +1,1596 @@
+/** layout.css — 页面布局（Apple 设计语言）：单层导航、全幅段落、仪表台、视频舞台、报警层、报告 */
+
+/* ============ 单层导航（Apple 结构） ============
+ * 一条 56px 导航：左品牌（logo + 加宽字距 wordmark）、中视图入口、
+ * 右状态与工具。默认实底；在首页 hero 之上且
+ * 未滚动时透明悬浮、白字——Apple 顶栏压在摄影 hero 上的模式。
+ * .is-scrolled 由 motion.js 在滚动后加回。 */
+.global-nav {
+  position: sticky;
+  top: 0;
+  z-index: 320;
+  height: var(--nav-h);
+  background: var(--bg);
+  transition: background-color var(--dur-base) var(--ease),
+    color var(--dur-base) var(--ease),
+    backdrop-filter var(--dur-base) var(--ease),
+    -webkit-backdrop-filter var(--dur-base) var(--ease),
+    box-shadow var(--dur-base) var(--ease);
+}
+.global-nav-inner {
+  max-width: var(--content-max);
+  height: 100%;
+  margin: 0 auto;
+  padding: 0 var(--sp-6);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-6);
+}
+.gn-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: inherit;
+  flex: none;
+}
+.gn-brand:hover {
+  text-decoration: none;
+}
+.gn-logo {
+  width: 22px;
+  height: 22px;
+}
+/* 品牌字标：Apple wordmark 的加宽字距手法，颜色跟导航整体走 */
+.gn-wordmark {
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.18em;
+  white-space: nowrap;
+}
+
+/* 中间入口：14px/500，Apple 导航按钮规格
+ * hover 时文字色变蓝 + 底线展开（三层联动） */
+.gn-links {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  list-style: none;
+  margin: 0 auto;
+  padding: 0;
+}
+.gn-links a {
+  display: inline-block;
+  min-height: 32px;
+  line-height: 32px;
+  padding: 0 var(--sp-4);
+  border-radius: var(--r-sm);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
+  color: inherit;
+  opacity: 0.88;
+  white-space: nowrap;
+  transition: color var(--dur-base) var(--ease),
+    opacity var(--dur-base) var(--ease);
+}
+/* hover：文字色切蓝 + 底线展开（三层联动） */
+.gn-links a:hover {
+  opacity: 1;
+  color: var(--accent-text);
+  text-decoration: none;
+}
+.gn-links a:hover::after {
+  transform: scaleX(1);
+}
+/* 当前页高亮：Apple 风格底横线指示器 + Action Blue 文字。
+ * 每个链接下方有一条底线（::after 伪元素），
+ * 用 transform: scaleX 控制展开/收起（GPU 合成层，不走 layout/paint）。
+ *
+ * 方向感知动画（完美复刻 apple.com 导航）：
+ * · 当前页底线 scaleX(1)，非当前页 scaleX(0)
+ * · 切换时旧链接底线朝切换方向收缩、新链接从同方向展开
+ * · JS 在 switchView 时给 .gn-links 加 dir-prev/dir-next 类，
+ *   CSS 递归设置 transform-origin：
+ *   - 向右切换：旧 origin-right（从右收起）、新 origin-left（从左展开）
+ *   - 向左切换：旧 origin-left（从左收起）、新 origin-right（从右展开）
+ * 这就是 Apple 官网导航底线滑动指示器的完整效果。 */
+.gn-links {
+  position: relative;
+}
+.gn-links a {
+  position: relative;
+}
+.gn-links a::after {
+  content: '';
+  position: absolute;
+  left: var(--sp-4);
+  right: var(--sp-4);
+  bottom: 2px;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 1px;
+  /* transform: scaleX 走合成层，比 width 过渡更丝滑（Apple 官网同方案） */
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform var(--dur-base) var(--ease);
+}
+.gn-links a[aria-current='page'] {
+  opacity: 1;
+  color: var(--accent-text);
+}
+.gn-links a[aria-current='page']::after {
+  transform: scaleX(1);
+}
+
+/* ---- 方向感知底线动画（完美复刻 apple.com 导航切换） ----
+ * .gn-links 上由 JS 设置 dir-prev / dir-next：
+ *   dir-next = 向右切换（概览→工作台→报告）
+ *   dir-prev = 向左切换
+ * 旧链接（aria-current 已被移除）底线朝切换方向收缩；
+ * 新链接（aria-current 新加上）底线从同方向展开。
+ * hover 时底线用 center origin（不是切换，是停留）。 */
+.gn-links.dir-next a:not([aria-current='page']):not(:hover)::after { transform-origin: right; }
+.gn-links.dir-next a[aria-current='page']:not(:hover)::after { transform-origin: left; }
+.gn-links.dir-prev a:not([aria-current='page']):not(:hover)::after { transform-origin: left; }
+.gn-links.dir-prev a[aria-current='page']:not(:hover)::after { transform-origin: right; }
+/* hover 覆盖方向类：底线从 center 展开 */
+.gn-links a:hover::after { transform-origin: center; }
+body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-links a[aria-current='page'] {
+  color: var(--hero-accent);
+}
+body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-links a[aria-current='page']::after {
+  background: var(--hero-accent);
+}
+.gn-spacer {
+  flex: 1;
+}
+.gn-tail {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: none;
+}
+.gn-status {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-caption);
+  opacity: 0.78;
+  white-space: nowrap;
+}
+.gn-toggle {
+  min-height: 30px;
+  padding: 4px 12px;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium);
+  color: inherit;
+  white-space: nowrap;
+  transition: background-color var(--dur-base) var(--ease),
+    color var(--dur-base) var(--ease);
+}
+.gn-toggle:hover {
+  background: var(--fill-quaternary);
+}
+.gn-toggle.is-on {
+  background: var(--btn-bg);
+  color: #fff; /* lit-ok: 主按钮实心底上的白字，主题无关 */
+}
+.gn-toggle.is-on:hover {
+  background: var(--btn-bg-hover);
+}
+.gn-icon {
+  /* A9：点击热区从 32px 扩到 36px（触屏/指针最低易点尺寸），
+   * 内部 svg 仍为 17px，视觉图标尺寸不变 */
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-sm);
+  background: none;
+  border: 0;
+  color: inherit;
+  opacity: 0.78;
+  cursor: pointer;
+  transition: background-color var(--dur-base) var(--ease),
+    color var(--dur-base) var(--ease), opacity var(--dur-base) var(--ease);
+}
+.gn-icon:hover {
+  opacity: 1;
+  background: var(--fill-quaternary);
+}
+.gn-icon svg {
+  width: 17px;
+  height: 17px;
+}
+
+/* 首页 hero 之上的融合态：导航底色与 hero 段同色（跟随主题），
+ * 视觉上与透明无异；滚动后切回画布实底。 */
+body:has(#viewHome.active) .global-nav:not(.is-scrolled) {
+  background: var(--hero-bg);
+  color: var(--hero-text);
+}
+body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-links a:hover,
+body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-icon:hover,
+body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
+  background: var(--fill-quaternary);
+}
+
+@media (max-width: 900px) {
+  .gn-wordmark {
+    display: none;
+  }
+  .gn-status {
+    display: none;
+  }
+}
+@media (max-width: 640px) {
+  .global-nav-inner {
+    gap: var(--sp-2);
+  }
+  .gn-links {
+    gap: 0;
+    margin: 0;
+  }
+  .gn-links a {
+    padding: 0 var(--sp-2);
+    font-size: 13px;
+  }
+  /* 专业模式按钮：手机端不隐藏，改为超紧凑胶囊。
+   * 原始文字"专业模式"用 font-size:0 隐藏（文本节点无法用子选择器选中），
+   * ::before 伪元素显示"专"一个字，宽度与图标按钮相当。
+   * is-on 激活态仍由 components.css #btnProMode.is-on 控制。 */
+  .gn-toggle {
+    flex: none;
+    min-height: 28px;
+    padding: 2px 7px;
+    font-size: 0;
+    line-height: 1;
+  }
+  .gn-toggle::before {
+    content: '专';
+    font-size: 12px;
+    letter-spacing: 0.02em;
+  }
+  /* 图标按钮不被压缩：保持 36px 方形热区 */
+  .gn-icon {
+    flex: none;
+  }
+  /* 小屏右侧工具组：收窄间距，推到右端 */
+  .gn-tail {
+    gap: 2px;
+    flex: 1 1 auto;
+    justify-content: flex-end;
+    min-width: 0;
+  }
+  .gn-tail .icon-btn {
+    padding-inline: 6px;
+  }
+}
+/* 超小屏（≤360px）：导航链接再缩一档，防止 320px 设备溢出 */
+@media (max-width: 360px) {
+  .gn-links a {
+    padding: 0 6px;
+    font-size: 12px;
+  }
+}
+
+/* ============ 页面容器 ============ */
+.page {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 0 var(--sp-6) var(--sp-16);
+}
+
+/* ============ 首页：Apple 全幅段落 ============
+ * 一屏一讯息。hero 是深色画幅（对应 Apple 的全屏摄影段），
+ * 其余段落白底、收尾段浅灰 #f4f4f4。段落之间不画线不加影，
+ * 只靠底色与大片留白分隔。 */
+
+/* ---- hero 段（跟随主题：默认亮色白底，暗色模式才变深色） ----
+ * Apple 风格增强：添加微妙的径向渐变光源，营造空间深度感。
+ * 浅色模式下光源在上方中央，模拟自然光从顶部洒落；
+ * 暗色模式下光源更内敛，仅微亮一档面板色。 */
+.ts-hero {
+  min-height: calc(100vh - var(--nav-h));
+  display: grid;
+  align-content: center;
+  padding: var(--sp-16) var(--sp-6) var(--sp-20);
+  background: var(--hero-bg);
+  color: var(--hero-text);
+  transition: background-color var(--dur-base) var(--ease), color var(--dur-base) var(--ease);
+  /* Apple 风格径向光源：从顶部中央向下渐变 */
+  background-image: radial-gradient(
+    ellipse 80% 50% at 50% 0%,
+    rgba(var(--accent-rgb), 0.04) 0%,
+    transparent 70%
+  );
+}
+.ts-hero-inner {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  width: 100%;
+  text-align: center;
+}
+/* 顶部 promo 行：浅色用深蓝保证对比，暗色用亮蓝 */
+.ts-promo {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--hero-accent);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-regular);
+  margin-bottom: var(--sp-4);
+}
+.ts-promo svg {
+  flex: none;
+}
+/* hero 标题：40px/500 封顶（Apple 的 hero 上限） */
+.ts-hero-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-hero);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-tight);
+  letter-spacing: 0;
+  margin-bottom: var(--sp-4);
+  text-wrap: balance;
+  color: inherit;
+  /* Apple 风格：标题微微提亮，增加视觉重量 */
+  text-shadow: 0 0 40px rgba(var(--accent-rgb), 0.05);
+}
+.ts-hero-sub {
+  font-size: var(--fs-subhead);
+  color: var(--hero-muted);
+  line-height: 1.6;
+  max-width: 640px;
+  margin: 0 auto var(--sp-3);
+  text-wrap: pretty;
+}
+.ts-hero-note {
+  font-size: var(--fs-caption);
+  color: var(--hero-faint);
+  max-width: 640px;
+  margin: 0 auto;
+}
+/* Apple CTA 对：主 Action Blue 胶囊 + 次级透明框 */
+.ts-hero-cta {
+  display: flex;
+  gap: var(--sp-4);
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: var(--sp-8) 0 var(--sp-10);
+}
+.ts-hero-cta .btn-primary {
+  width: 200px;
+}
+.btn-hero-ghost {
+  width: 176px;
+  background: var(--fill-quaternary);
+  color: var(--hero-text);
+}
+.btn-hero-ghost:hover {
+  background: var(--fill-tertiary);
+}
+
+/* ---- hero 内的视觉主图（HUD 风格，配色全部跟随 --hero-* 令牌） ---- */
+.vision-product {
+  width: min(100%, 820px);
+  margin: 0 auto;
+}
+/* ---- 概览页"数据流向"四步卡（tsPrivacy 段落）：复用 .feat 卡体系，
+ * 01–04 小序号承担"流向"语义（Apple 规格表的编号风格：等宽数字、
+ * 第四档蓝调灰，只报顺序不抢注意力），配色走全局令牌 ---- */
+.feat-step {
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.08em;
+  color: var(--text-quaternary);
+  margin-bottom: var(--sp-3);
+}
+.ts-flow-note {
+  margin-top: var(--sp-6);
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: var(--fs-caption);
+  letter-spacing: var(--ls-caption);
+}
+.vision-product-frame {
+  width: 100%;
+}
+.vision-product svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+/* 面板：浅色浅灰 / 暗色微亮，发丝描线 */
+.hud-panel {
+  fill: var(--hero-panel);
+  stroke: var(--hero-line);
+  stroke-width: 1;
+}
+.hud-horizon {
+  stroke: var(--hero-line);
+  stroke-width: 1;
+}
+/* 透视路面汇聚线 */
+.hud-road {
+  stroke: var(--hero-line);
+  stroke-width: 1.5;
+  fill: none;
+  stroke-linecap: round;
+}
+/* 中央车道线：唯一一支 Action Blue */
+.hud-lane {
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 10 14;
+  fill: none;
+  stroke-linecap: round;
+  opacity: 0.9;
+}
+.hud-scan {
+  stroke: var(--hero-line);
+  stroke-width: 1;
+  stroke-dasharray: 5 8;
+  opacity: 0.7;
+}
+/* 状态芯片 */
+.hud-chip {
+  fill: var(--hero-chip-bg);
+  stroke: var(--hero-line);
+  stroke-width: 1;
+}
+.hud-dot-ok {
+  fill: var(--ok);
+}
+.hud-chip-text {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  fill: var(--hero-muted);
+}
+/* 疲劳仪表弧 */
+.hud-gauge-track {
+  fill: none;
+  stroke: var(--hero-line);
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+.hud-gauge-bar {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+.hud-gauge-num {
+  font-family: var(--font-display);
+  /* A1：主数字档收敛——44px 并入 40px 档（与 .gauge-num 车速表同档），
+   * 全站"大数字"只保留 40(主)/32(概要) 两档 */
+  font-size: 40px;
+  font-weight: var(--fw-medium);
+  fill: var(--hero-text);
+  text-anchor: middle;
+}
+.hud-gauge-label {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  fill: var(--hero-faint);
+  text-anchor: middle;
+}
+.vision-product figcaption {
+  margin-top: var(--sp-3);
+  /* 用 --hero-muted（浅色白底 6.3:1 / 深色固定灰，两主题均达标） */
+  color: var(--hero-muted);
+  /* A8：图注从 12px 升到 13px——图注是插图语义的一部分，
+   * 12px 在 820px 宽插图下存在感不足；13px 介于 caption 与 body 之间的说明档 */
+  font-size: 13px;
+  text-align: center;
+}
+
+/* ---- 白底通用段落 ---- */
+/* A4：段落垂直节奏统一 48px（原 80px 与 tight 档 64px 混排造成断拍），
+ * 水平 padding 维持各断点原值（桌面 24px / 窄屏 20px）不动 */
+.ts-section {
+  padding: var(--sp-12) var(--sp-6);
+  background: var(--tile-canvas);
+  /* Apple 风格：段落顶部微妙的渐变线，模拟光影分界 */
+  position: relative;
+}
+.ts-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(100%, 1200px);
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--separator) 20%,
+    var(--separator) 80%,
+    transparent 100%
+  );
+  opacity: 0.6;
+}
+/* tight 档同步对齐 48px——统计条区段不再出现 40/48 的上下断拍 */
+.ts-section-tight {
+  padding-top: var(--sp-12);
+}
+.ts-section-ash {
+  background: var(--tile-parchment);
+}
+.ts-section-inner {
+  max-width: var(--content-max);
+  margin: 0 auto;
+}
+.ts-section-title {
+  font-family: var(--font-display);
+  font-size: var(--fs-display);
+  font-weight: var(--fw-medium);
+  line-height: var(--lh-display);
+  letter-spacing: 0;
+  margin-bottom: var(--sp-3);
+  text-wrap: balance;
+}
+.ts-section-sub {
+  font-size: var(--fs-subhead);
+  color: var(--text-secondary);
+  line-height: 1.6;
+  max-width: var(--content-narrow);
+  margin-bottom: var(--sp-12);
+  text-wrap: pretty;
+}
+.ts-center .ts-section-sub {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* 概览页面所有段落的标题与副标题统一居中，保持视觉一致性 */
+#tsFeatures .ts-section-inner,
+#tsPrivacy .ts-section-inner,
+#tsVerify .ts-section-inner {
+  text-align: center;
+}
+#tsFeatures .ts-section-sub,
+#tsPrivacy .ts-section-sub,
+#tsVerify .ts-section-sub {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ---- 能力卡（浅灰底、12px 圆角、无描边无投影） ----
+ * 列数固定：4 / 2 / 1 三档。auto-fit 在中等宽度会排出 3+1 的孤儿行，
+ * 视觉上比挤一点更糟糕。 */
+.hero-features {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--sp-4);
+  text-align: center;
+}
+@media (max-width: 1100px) {
+  .hero-features {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  .hero-features {
+    grid-template-columns: 1fr;
+  }
+}
+.feat {
+  background: var(--feat-bg);
+  border-radius: var(--r-lg);
+  padding: var(--sp-6);
+  transition: background-color var(--dur-hover) var(--ease),
+    transform var(--dur-hover) var(--ease),
+    box-shadow var(--dur-hover) var(--ease);
+  /* Apple 风格：卡片内嵌微光，hover 时发光 */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+.feat:hover {
+  background: var(--feat-bg-hover);
+  /* Apple 风格：hover 时柔和上浮 + 发光阴影 */
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+/* 图标：无底色容器，Action Blue 线稿直接置顶（Apple 的裸线稿语法） */
+.feat-icon {
+  color: var(--accent);
+  margin-bottom: var(--sp-4);
+  display: flex;
+  justify-content: center;
+}
+.feat-icon svg {
+  width: 24px;
+  height: 24px;
+}
+.feat h3 {
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0;
+  margin-bottom: 6px;
+}
+.feat p {
+  font-size: var(--fs-body);
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* ---- 数字段落：40px 数字 + 灰色小字 + 大留白 ----
+ * 列数必须固定为 4：auto-fit 会在中等宽度塌成 3 列，
+ * 把末位数字挤到第二行（真人实测报告的缺陷）。列间用竖向发丝线
+ * 分隔——Apple 规格表的排法，比分隔空隙更有秩序。 */
+.tile-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  margin-top: var(--sp-12);
+}
+.tile-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-4);
+}
+.tile-stat + .tile-stat {
+  border-left: 1px solid var(--separator);
+}
+.tile-stat-num {
+  font-family: var(--font-display);
+  font-size: clamp(40px, 4.6vw, 52px);
+  font-weight: var(--fw-medium);
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  /* Apple 风格：大数字微光发光，制造高级感 */
+  text-shadow: 0 0 30px rgba(var(--accent-rgb), 0.06);
+}
+.tile-stat-label {
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+/* A3：统计 tile 说明文字拆成两行（unit 主体 / mod 补充）。
+ * unit 承载主要语义，提为次级文字档；mod 是补充修饰，降为弱档 + 12px，
+ * 两行紧凑（1.3 行高）保持 tile 原有居中对齐。 */
+.tile-stat-unit {
+  display: block;
+  color: var(--text-secondary);
+  line-height: 1.3;
+}
+.tile-stat-mod {
+  display: block;
+  color: var(--text-tertiary);
+  font-size: var(--fs-caption);
+  line-height: 1.3;
+  margin-top: 1px;
+}
+
+@media (max-width: 640px) {
+  .tile-stats {
+    grid-template-columns: repeat(2, 1fr);
+    row-gap: var(--sp-2);
+  }
+  /* 2×2：每行首列不画左线，第二行加顶线 */
+  .tile-stat:nth-child(odd) {
+    border-left: none;
+  }
+  .tile-stat:nth-child(n + 3) {
+    border-top: 1px solid var(--separator);
+    padding-top: var(--sp-6);
+  }
+}
+
+/* ---- 收尾 CTA 段 ---- */
+.ts-final .ts-section-sub {
+  margin-bottom: var(--sp-6);
+}
+.ts-final-cta {
+  display: flex;
+  justify-content: center;
+}
+.ts-final-cta .btn-primary {
+  min-width: 200px;
+}
+
+/* 眉标：小号灰色说明行（Apple 不用大写与底色） */
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-tertiary);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0;
+  margin-bottom: var(--sp-3);
+}
+
+/* 加载进度（模型初始化） */
+.boot {
+  max-width: 420px;
+  margin: var(--sp-8) auto 0;
+  text-align: left;
+}
+.boot-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+  font-size: var(--fs-caption);
+  color: var(--hero-muted);
+}
+.boot .progress {
+  background: var(--fill-tertiary);
+}
+
+@media (max-width: 734px) {
+  .ts-hero {
+    padding: var(--sp-12) var(--sp-5);
+    min-height: auto;
+  }
+  .ts-section {
+    padding: var(--sp-12) var(--sp-5);
+  }
+  /* A4：tight 档顶部原 40px 与段落底部 48px 断拍，统一 48px；
+   * 水平 20px 维持不变 */
+  .ts-section-tight {
+    padding-top: var(--sp-12);
+  }
+  .ts-hero-cta {
+    margin: var(--sp-6) 0 var(--sp-8);
+  }
+  .ts-hero-cta .btn,
+  .btn-hero-ghost {
+    width: 100%;
+    max-width: 320px;
+  }
+  .tile-stats {
+    margin-top: var(--sp-8);
+  }
+}
+
+/* ============ 工作台 ============ */
+/* ---- 顶部仪表条：仪表台模式 ----
+ * 左：当前等级与原因；中：疲劳指数环 + 大数字（车速表）；
+ * 右：时长/峰值/均值。三段在宽屏上等权重排布。 */
+.cluster {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: var(--sp-6);
+  align-items: center;
+  background: var(--bg-elevated);
+  border-radius: var(--r-lg);
+  padding: var(--sp-5) var(--sp-6);
+  margin: var(--sp-6) 0 var(--sp-5);
+}
+@media (max-width: 960px) {
+  .cluster {
+    grid-template-columns: auto minmax(0, 1fr);
+    text-align: left;
+  }
+  .cluster .score-meta {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 640px) {
+  .cluster {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+}
+.cluster-level {
+  min-width: 0;
+}
+.score-reason {
+  font-size: var(--fs-body);
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-top: var(--sp-3);
+  min-height: 42px;
+}
+.score-meta {
+  display: flex;
+  gap: var(--sp-6);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.score-meta > div {
+  min-width: 0;
+}
+.score-meta .k {
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium);
+  color: var(--text-tertiary);
+}
+.score-meta .v {
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-medium);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 640px) {
+  .score-meta {
+    justify-content: center;
+  }
+}
+
+/* 环形仪表：细环（Apple 仪表语言），stroke 由 JS 按等级换色 */
+.gauge {
+  width: 128px;
+  height: 128px;
+  position: relative;
+  flex: none;
+}
+.gauge svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.gauge circle {
+  fill: none;
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+.gauge .track {
+  stroke: var(--fill-tertiary);
+}
+.gauge .bar {
+  stroke: var(--lv-awake);
+  transition: stroke-dashoffset 0.33s var(--ease), stroke var(--dur-base) var(--ease);
+}
+.gauge-center {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0;
+}
+.gauge-num {
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: var(--fw-medium);
+  line-height: 1;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+  /* Apple 风格：仪表数字微光 */
+  text-shadow: 0 0 20px rgba(var(--accent-rgb), 0.08);
+}
+.gauge-cap {
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-medium);
+  color: var(--text-tertiary);
+  margin-top: 3px;
+}
+
+/* 等级芯片：4px 矩形，软底色 + 等级色文字 */
+.level-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 14px;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-medium);
+  background: var(--ok-soft);
+  color: var(--ok);
+  transition: background-color var(--dur-base) var(--ease), color var(--dur-base) var(--ease);
+}
+.level-chip[data-level='mild'] {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.level-chip[data-level='moderate'] {
+  background: var(--caution-soft);
+  color: var(--caution);
+}
+.level-chip[data-level='severe'] {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+/** 无法评估（人脸丢失 / 画面不合格）：中性灰，避免被误读成"安全" */
+.level-chip[data-level='unknown'] {
+  background: var(--fill-tertiary);
+  color: var(--text-secondary);
+}
+
+/* ---- 工作区两栏 ---- */
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.32fr) minmax(340px, 0.68fr);
+  gap: var(--sp-5);
+  align-items: start;
+}
+/**
+ * 窄屏（单列）时重排阅读顺序。
+ * 仪表条已在工作区之外、天然排最前；这里让两个容器"透明化"，
+ * 用 order 指定单列阅读顺序：
+ *   视频 → 指标面板 → 趋势图 → 波形图 → 融合明细 → 事件 → 标定
+ */
+@media (max-width: 1100px) {
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+  .ws-main,
+  .ws-side {
+    display: contents;
+  }
+  .stage {
+    order: 1;
+  }
+  .metrics-panel {
+    order: 2;
+  }
+  .ord-chart1 {
+    order: 3;
+  }
+  .ord-chart2 {
+    order: 4;
+  }
+  .ord-fusion {
+    order: 5;
+  }
+  .ord-timeline {
+    order: 6;
+  }
+  .ord-calib {
+    order: 7;
+  }
+}
+
+.ws-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  min-width: 0;
+}
+.ws-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  min-width: 0;
+  position: sticky;
+  top: calc(var(--nav-total) + var(--sp-5));
+}
+@media (max-width: 1100px) {
+  .ws-side {
+    position: static;
+  }
+}
+
+/* ---- 视频舞台 ----
+ * Apple 画面容器：靠底色差与 12px 圆角成型。 */
+.stage {
+  position: relative;
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: #0a0a0b; /* lit-ok: 视频舞台两主题都保持近黑（视频容器） */
+  aspect-ratio: 4 / 3;
+  /* 等级描边（frame-presenter 按疲劳等级切换类）：
+   * 中度起视频边框持续描边，开车余光也能察觉（第四轮真人走查）。
+   * 用 outline 而不是 box-shadow——Apple 的纪律是 UI 组件不加投影
+   * （design-audit R2 会拦截任何 box-shadow），outline 内嵌同样成环 */
+}
+.stage.level-warn {
+  outline: 3px solid var(--lv-moderate);
+  outline-offset: -3px;
+}
+.stage.level-danger {
+  outline: 4px solid var(--lv-severe);
+  outline-offset: -4px;
+}
+.stage video,
+.stage canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.stage video {
+  z-index: 1;
+}
+.stage video.mirrored {
+  transform: scaleX(-1);
+}
+.stage canvas {
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* 视频上方左上角 HUD：半透明近黑面板，4px 圆角 */
+.hud {
+  position: absolute;
+  z-index: 3;
+  top: var(--sp-4);
+  left: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 14px;
+  border-radius: var(--r-sm);
+  /* A7：叠字底改为纯黑半透明 + 背景模糊——画面遇亮背景（逆光/白天）时
+   * 白字仍可读（最坏纯白背景下混色后约 #737373，白字对比 4.7:1）；
+   * rgba(0,0,0,α) 属主题无关中性色，浅深主题同样适用 */
+  background: rgba(0, 0, 0, 0.55);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: #fff; /* lit-ok: 视频画面上暗底的白字，主题无关 */
+  font-size: var(--fs-caption);
+  font-variant-numeric: tabular-nums;
+  /* A10：1.45 归入 1.5 主旋律（12px 小字行间呼吸更匀） */
+  line-height: 1.5;
+  pointer-events: none;
+  transition: opacity var(--dur-base) var(--ease);
+}
+.hud-row {
+  display: flex;
+  gap: var(--sp-3);
+  justify-content: space-between;
+  min-width: 148px;
+}
+.hud-row span:first-child {
+  opacity: 0.68;
+}
+.hud-row b {
+  font-weight: var(--fw-medium);
+}
+
+/* 右上角状态标签：矩形、半透明近黑 */
+.stage-badges {
+  position: absolute;
+  z-index: 3;
+  top: var(--sp-4);
+  right: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--sp-2);
+}
+.stage-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--r-sm);
+  /* A7：与 .hud 同款墨底 + 模糊，亮画面下白字不失效 */
+  background: rgba(0, 0, 0, 0.55);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  color: #fff; /* lit-ok: 视频画面上暗底的白字（状态标签） */
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+}
+.stage-pill .dot {
+  background: var(--lv-awake);
+}
+
+/* A5：控件条按钮字号统一——components.css 里主 .pill 14px 与 .pill-sm 12px 混排，
+ * 此处按第四轮审计统一为 13px、行高 1.2（原 line-height:1 过紧，
+ * 中文两字按钮的上下留白几乎为零）。
+ * 本文件在 components.css 之后加载，同组合选择器直接生效。 */
+.controls .pill {
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+/* 舞台遮罩（未开始 / 标定中 / 出错） */
+.stage-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: var(--sp-6);
+  background: rgba(10, 10, 11, 0.9); /* lit-ok: 近黑遮罩，固定色 */
+  color: #fff; /* lit-ok: 近黑遮罩上的白字（舞台遮罩） */
+  transition: opacity var(--dur-base) var(--ease);
+}
+.stage-overlay[hidden] {
+  display: none;
+}
+.stage-overlay h3 {
+  font-size: var(--fs-headline);
+  margin-bottom: var(--sp-2);
+}
+.stage-overlay p {
+  font-size: var(--fs-body);
+  color: rgba(255, 255, 255, 0.72); /* lit-ok: 近黑遮罩上的辅助文字 */
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+/* E7：舞台遮罩内操作按钮行（#overlayActions 原内联样式收进类）。
+ * 出错/暂停等场景由 JS 注入 1~2 个按钮，居中排布、窄屏换行。 */
+.overlay-actions {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* 标定环形进度：Action Blue 细环 */
+.calib-ring {
+  width: 132px;
+  height: 132px;
+  margin: 0 auto var(--sp-5);
+  position: relative;
+}
+.calib-ring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.calib-ring circle {
+  fill: none;
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+.calib-ring .track {
+  stroke: rgba(255, 255, 255, 0.16); /* lit-ok: 暗色遮罩内的轨道 */
+}
+.calib-ring .bar {
+  stroke: var(--accent);
+  transition: stroke-dashoffset 0.12s linear;
+}
+.calib-ring .num {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  /* A1：概要数字档收敛——34px 并入 32px（与报告概要 .stat-item .n 同档） */
+  font-size: 32px;
+  font-weight: var(--fw-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- 指标面板：整块白面板内的 2 列紧凑行 ---- */
+.metrics-panel {
+  padding-bottom: var(--sp-4);
+}
+.metric-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 0;
+  padding: 0 var(--sp-4);
+}
+.metric-grid .metric:nth-child(odd) {
+  border-right: 1px solid var(--separator);
+  padding-right: var(--sp-4);
+}
+.metric-grid .metric:nth-child(even) {
+  padding-left: var(--sp-4);
+}
+.metric-grid .metric:nth-last-child(-n + 2) {
+  border-bottom: none;
+}
+@media (max-width: 560px) {
+  .metric-grid {
+    grid-template-columns: 1fr;
+  }
+  .metric-grid .metric:nth-child(odd) {
+    border-right: none;
+    padding-right: var(--sp-2);
+  }
+  .metric-grid .metric:nth-child(even) {
+    padding-left: var(--sp-2);
+  }
+  .metric-grid .metric:nth-last-child(-n + 2) {
+    border-bottom: 1px solid var(--separator);
+  }
+  .metric-grid .metric:last-child {
+    border-bottom: none;
+  }
+}
+
+/* ============ 图表 ============ */
+.chart-box {
+  position: relative;
+  width: 100%;
+  height: 172px;
+}
+.chart-box canvas {
+  width: 100%;
+  height: 100%;
+}
+.legend {
+  display: flex;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+}
+.legend i {
+  display: inline-block;
+  width: 10px;
+  height: 3px;
+  border-radius: 1px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+/* ---- 事件时间线图标（SVG 化后遗留清理）----
+ * 旧文本字符时代的字号补丁已随 SVG 图标方案移除；
+ * 图标尺寸由 components.css 的 .tl-icon svg 接管。 */
+
+/* ============ 报警视觉层 ============ */
+.alarm-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 450;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--dur-fast) linear;
+}
+.alarm-veil.on {
+  visibility: visible;
+}
+.alarm-veil.on {
+  animation: veilPulse 0.85s var(--ease) infinite;
+}
+.alarm-veil[data-level='mild'] {
+  box-shadow: inset 0 0 0 5px var(--warn), inset 0 0 90px rgba(var(--glow-warn), 0.28);
+}
+.alarm-veil[data-level='moderate'] {
+  box-shadow: inset 0 0 0 6px var(--caution), inset 0 0 120px rgba(var(--glow-caution), 0.34);
+}
+.alarm-veil[data-level='severe'] {
+  box-shadow: inset 0 0 0 8px var(--danger), inset 0 0 160px rgba(var(--glow-danger), 0.44);
+}
+@keyframes veilPulse {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+/* 报警文字通知已统一并入 toast 家族（见 components.css 的
+ * .toast[data-kind='alarm']），旧版顶部暗色横幅（.alarm-banner）随之移除。 */
+
+/* ============ 报告页 ============
+ * Apple 订单页头部模式：标题摘要靠左，动作按钮组靠右。 */
+.report-head {
+  padding: var(--sp-12) 0 var(--sp-8);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--sp-5);
+  align-items: end;
+  margin-bottom: var(--sp-5);
+}
+@media (max-width: 900px) {
+  .report-head {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+  .report-head-actions {
+    justify-content: flex-start;
+  }
+}
+
+/* ---- 报告标题与副标题 ---- */
+.report-title {
+  font-size: var(--fs-display);
+  letter-spacing: 0;
+  line-height: var(--lh-display);
+  margin-top: var(--sp-3);
+}
+.report-subtitle {
+  font-size: var(--fs-body);
+  color: var(--text-tertiary);
+  line-height: 1.6;
+  margin-top: var(--sp-2);
+}
+.report-head-actions {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  padding-bottom: 4px;
+}
+
+/* ---- 标题区关键指标标签条 ---- */
+.report-meta-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-top: var(--sp-4);
+  margin-bottom: 0;
+}
+.report-meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: var(--r-sm);
+  background: var(--fill-quaternary);
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+  font-weight: var(--fw-regular);
+  letter-spacing: 0;
+}
+.report-meta-pill strong {
+  font-weight: var(--fw-medium);
+  color: var(--text);
+}
+
+/* ---- E7：报告空态引导卡（#rpEmpty）----
+ * 原先的 4 处内联样式（卡片留白、标题字号与下距、说明下距、按钮行
+ * 排布）收进类里，index.html 侧由 HTML 维护者替换为这些类名。
+ * 卡片底色与圆角仍由 .card 提供，此处只补空态专属的留白与排布。 */
+.report-empty {
+  margin-top: var(--sp-5);
+  padding: 56px 24px;
+  text-align: center;
+}
+/* 空态标题：t-title 同款 24px/500，补标题到说明的下距 */
+.report-empty-title {
+  font-size: var(--fs-title);
+  margin: 0 0 8px;
+}
+/* 空态说明文字：颜色由 .t-secondary 提供，此处只管下距 */
+.report-empty-sub {
+  margin: 0 0 24px;
+}
+/* 空态按钮行：主/次按钮居中排布，窄屏自动换行 */
+.report-empty-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ---- 报告主网格 ---- */
+.report-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--sp-5);
+  align-items: stretch;
+}
+/* E7：跨整行卡片改用语义类 .span-full 承接（原先嗅探内联
+ * [style*="grid-column"] 的写法脆弱——内联样式一改版式就静默失效）。
+ * index.html 里 6 处 style="grid-column:1/-1" 由 HTML 侧统一替换为该类。 */
+.span-full {
+  grid-column: 1 / -1;
+}
+/* 全宽卡片恢复自动高度 */
+.report-grid > .card.span-full {
+  align-self: start;
+}
+/* 顶部三卡：内部 flex 列布局，让内容可以纵向填满 */
+.report-grid > .card:nth-child(-n+3) {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- 检测概要卡：明确的 2×2 数字网格 ---- */
+.report-stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-3);
+  flex: 1;
+  align-content: center;
+  margin-top: var(--sp-1);
+}
+
+/* 兼容旧 .stat-big（评测面板等地方仍在用） */
+.stat-big {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: var(--sp-3);
+}
+
+/* ---- 行为表格卡内部可滚动 ---- */
+.report-event-table-wrap {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+/* 行为表头固定，滚动时始终可见 */
+.report-event-table-wrap .tbl thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-elevated);
+  z-index: 1;
+}
+/* 表格"平均每分钟"列不折行 */
+.report-event-table-wrap .tbl td:last-child,
+.report-event-table-wrap .tbl th:last-child {
+  white-space: nowrap;
+}
+
+/* ---- 窄屏响应 ---- */
+@media (max-width: 960px) {
+  .report-grid {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+  .report-grid > .card:nth-child(-n+3) {
+    align-self: auto;
+  }
+  /* 行为表格卡在中宽屏独占整行 */
+  .report-grid > .card:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 600px) {
+  .report-grid {
+    grid-template-columns: 1fr;
+  }
+  .report-grid > .card:nth-child(3) {
+    grid-column: auto;
+  }
+}
+.stat-item {
+  padding: var(--sp-4) var(--sp-3);
+  border-radius: var(--r-sm);
+  background: var(--bg-inset);
+  text-align: center;
+  transition: background-color var(--dur-base) var(--ease);
+}
+.stat-item .n {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: var(--fw-medium);
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.stat-item .l {
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+  margin-top: 3px;
+  /* A10：1.4 归入 1.5 主旋律 */
+  line-height: 1.5;
+}
+
+/* 分布色带 */
+.dist-bar {
+  display: flex;
+  height: 36px;
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  background: var(--fill-quaternary);
+}
+.dist-seg {
+  display: grid;
+  place-items: center;
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-medium);
+  /* 文字色走 --on-lv 令牌：四档等级色为单一配色（两主题同值、中等明度），
+   * 实心底统一白字（见 tokens.css --on-lv 注释） */
+  color: var(--on-lv);
+  transition: flex-basis var(--dur-base) var(--ease);
+  overflow: hidden;
+  white-space: nowrap;
+}
+.dist-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  margin-top: var(--sp-3);
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+}
+.dist-legend i {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  margin-right: 6px;
+}
+
+.advice-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.advice-item {
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  padding: var(--sp-3) var(--sp-4) var(--sp-3) calc(var(--sp-4) + 12px);
+  background: var(--bg-inset);
+  border-radius: var(--r-sm);
+  position: relative;
+}
+/* 左侧 Action Blue 竖线 */
+.advice-item::before {
+  content: '';
+  position: absolute;
+  left: var(--sp-4);
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  min-height: 16px;
+  background: var(--accent);
+  border-radius: 1px;
+  opacity: 0.85;
+}
+
+/* 数据表：Apple 表格语法——灰色小字表头（不用大写）、发丝线分行 */
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-caption);
+}
+.tbl th,
+.tbl td {
+  text-align: left;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--separator);
+}
+.tbl th {
+  font-size: var(--fs-micro);
+  letter-spacing: 0;
+  color: var(--text-tertiary);
+  font-weight: var(--fw-medium);
+}
+.tbl td {
+  font-variant-numeric: tabular-nums;
+}
+.tbl tr:last-child td {
+  border-bottom: none;
+}
+
+/* ============ 页脚 ============ */
+.foot {
+  padding: var(--sp-8) var(--sp-6);
+  text-align: center;
+  font-size: var(--fs-caption);
+  color: var(--text-tertiary);
+  line-height: 1.8;
+}
+.foot a {
+  color: var(--text-secondary);
+}
+
+/* ============ 打印（导出 PDF 报告） ============ */
+@page {
+  /* 去掉浏览器自动加的日期、标题、页码等页眉页脚 */
+  size: A4;
+  margin: 12mm 10mm;
+}
+@media print {
+  .global-nav,
+  .controls,
+  .alarm-veil,
+  .toast-host,
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff; /* lit-ok: 打印固定白纸底 */
+  }
+  .card {
+    box-shadow: none;
+    border: none;
+    break-inside: avoid;
+  }
+  .page {
+    padding: 0;
+  }
+  .ts-hero,
+  .ts-section {
+    padding: 0;
+    background: #fff; /* lit-ok: 打印固定白底 */
+    color: #000; /* lit-ok: 同上 */
+  }
+}
+
+@media (max-width: 640px) {
+  .global-nav-inner,
+  .page {
+    padding-left: var(--sp-4);
+    padding-right: var(--sp-4);
+  }
+}

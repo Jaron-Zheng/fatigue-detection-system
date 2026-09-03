@@ -1,0 +1,792 @@
+/**
+ * motion.css — 动效系统（Apple 设计语言）
+ *
+ * Apple 的动效规则：
+ *   1. 滚动进场：元素从下方 30px 浮入 + 淡入，错峰延迟 60ms
+ *   2. 卡片悬浮：hover 时 translateY(-4px) + scale(1.02) + 阴影加深
+ *   3. 按压反馈：active 时 scale(0.97)，触感回弹
+ *   4. 导航毛玻璃：backdrop-filter saturate(180%) blur(20px)
+ *   5. 数字滚动：从 0 递增到实际值，缓动曲线减速
+ *   6. 视差效果：元素随滚动轻微位移
+ *
+ * 无障碍：进场动效包在 prefers-reduced-motion: no-preference 里，
+ * 用户在系统里关掉动效时元素直接以终态渲染。
+ */
+
+/* ============================================================
+   1. 滚动进场（位移 + 淡入）
+   ------------------------------------------------------------
+   Apple 的标志效果：元素从下方滑入并淡入。
+   起始态只在支持动效且 JS 已接管时才施加。
+   motion.js 会在 <html> 上加 .has-motion 作为接管信号。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  /* 起始态：透明 + 向下偏移。只在 JS 接管后生效 */
+  .has-motion [data-reveal] {
+    opacity: 0;
+    transform: translateY(var(--reveal-shift, 30px));
+    transition: opacity var(--dur-reveal) var(--ease-reveal),
+      transform var(--dur-reveal) var(--ease-reveal);
+    /* 错峰：--i 由 motion.js 按组内序号写入，同组元素依次亮起 */
+    transition-delay: calc(var(--i, 0) * var(--reveal-stagger));
+    will-change: opacity, transform;
+  }
+
+  /* 终态：由 motion.js 加 .is-inview 触发 */
+  .has-motion [data-reveal].is-inview {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* 大幅位移变体：用于全宽 hero 段落 */
+  .has-motion [data-reveal="large"] {
+    transform: translateY(var(--reveal-shift-lg, 60px));
+  }
+
+  /* 左滑入变体 */
+  .has-motion [data-reveal="left"] {
+    transform: translateX(calc(var(--reveal-shift, 30px) * -1));
+  }
+  .has-motion [data-reveal="left"].is-inview {
+    transform: translateX(0);
+  }
+
+  /* 右滑入变体 */
+  .has-motion [data-reveal="right"] {
+    transform: translateX(var(--reveal-shift, 30px));
+  }
+  .has-motion [data-reveal="right"].is-inview {
+    transform: translateX(0);
+  }
+
+  /* 缩放淡入变体：用于卡片和图片 */
+  .has-motion [data-reveal="scale"] {
+    transform: scale(0.95);
+  }
+  .has-motion [data-reveal="scale"].is-inview {
+    transform: scale(1);
+  }
+
+  /* 无位移纯淡入（兼容旧标记） */
+  .has-motion [data-reveal="fade"] {
+    transform: none;
+  }
+}
+
+/* ============================================================
+   2. 视图切换 — 即时切换（无转场动画）
+   ------------------------------------------------------------
+   概览 → 工作台 → 报告 三个视图：display 直接切换。
+   转场动效已按需求移除；导航底线的方向感知收缩/展开
+   （见 layout.css .gn-link 相关规则）是切换时唯一的动效。
+   ============================================================ */
+
+.view {
+  display: none;
+}
+.view.active {
+  display: block;
+}
+
+/* ============================================================
+   3. 数字滚动
+   ------------------------------------------------------------
+   报告页的大数字入场时从 0 递增到实际值（motion.js 驱动）。
+   等宽数字是前提，否则位数变化时整块会左右抖。
+   ============================================================ */
+
+[data-countup] {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* ============================================================
+   4. 导航毛玻璃 + 滚动态切换
+   ------------------------------------------------------------
+   导航在首页 hero 之上透明悬浮；滚动后（motion.js 加 .is-scrolled）
+   切回毛玻璃实底。Apple 导航栏的标志性效果。
+   ============================================================ */
+
+.global-nav {
+  transition: background-color var(--dur-base) var(--ease),
+    color var(--dur-base) var(--ease),
+    backdrop-filter var(--dur-base) var(--ease),
+    box-shadow var(--dur-base) var(--ease);
+}
+
+/* 滚动前：全透明 */
+.global-nav:not(.is-scrolled) {
+  background-color: transparent;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+/* 滚动后：毛玻璃 + 分隔线 */
+.global-nav.is-scrolled {
+  background-color: var(--surface-glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: var(--sh-nav);
+}
+
+/* ============================================================
+   5. 卡片悬浮效果
+   ------------------------------------------------------------
+   Apple 只在功能卡片(.feat)上加微缩放悬浮，
+   普通信息卡片(.card)不加悬浮——Apple 不给卡片/按钮/文字加阴影。
+   只有可交互的卡片才有 hover 效果。 */
+
+.card {
+  /* Apple：卡片不加阴影和悬浮——层次靠底色差 */
+}
+
+@media (prefers-reduced-motion: no-preference) and (hover: hover) {
+  /* 只有明确标记为可交互的卡片才有悬浮效果 */
+  .card.interactive:not(.no-hover):hover {
+    transform: translateY(var(--card-hover-lift, -4px));
+    box-shadow: var(--sh-card-hover);
+  }
+}
+
+/* ============================================================
+   6. 按钮按压回弹
+   ------------------------------------------------------------
+   Apple 的按钮在 active 时轻微缩小，松手后弹簧回弹。
+   ============================================================ */
+
+.pill, .btn, button[class*="pill"] {
+  transition: transform var(--dur-fast) var(--ease-spring),
+    background-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease);
+}
+
+@media (prefers-reduced-motion: no-preference) and (hover: hover) {
+  .pill:hover, .btn:hover, button[class*="pill"]:hover {
+    transform: translateY(-1px);
+  }
+}
+
+.pill:active, .btn:active, button[class*="pill"]:active {
+  transform: scale(var(--press-scale, 0.97));
+  /* WWDC Response 原则：按下的瞬间就要有视觉反馈（<120ms），
+   * 覆盖上面的 --dur-fast（0.24s 太慢，按压会有"迟半拍"感）。
+   * 松手回弹自动回到上面定义的弹簧曲线（0.32s + 过冲），一快一慢才有物理感。 */
+  transition-duration: var(--dur-press);
+}
+
+/* ============================================================
+   7. 链接箭头滑入（Apple 标志效果）
+   ------------------------------------------------------------
+   "Learn more →" 链接在 hover 时箭头从左滑入。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) and (hover: hover) {
+  .link-arrow {
+    transition: color var(--dur-fast) var(--ease);
+  }
+  .link-arrow::after {
+    content: ' \203a';
+    display: inline-block;
+    transition: transform var(--dur-fast) var(--ease);
+  }
+  .link-arrow:hover::after {
+    transform: translateX(3px);
+  }
+}
+
+/* ============================================================
+   8. 视差效果
+   ------------------------------------------------------------
+   元素随滚动产生轻微位移，制造深度感。
+   motion.js 按滚动位置写入 --scroll-y 变量。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-parallax] {
+    will-change: transform;
+    transform: translateY(calc(var(--scroll-y, 0) * var(--parallax-speed, 0.1)));
+    transition: none;
+  }
+}
+
+/* ============================================================
+   9. 功能卡片网格进场（Apple 首页风格）
+   ------------------------------------------------------------
+   网格中的卡片按行错峰浮入，每行内再按列错峰。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  .has-motion .feat-grid [data-reveal] {
+    transition-delay: calc(var(--row, 0) * 100ms + var(--i, 0) * 60ms);
+  }
+}
+
+/* ============================================================
+   10. Toast 浮入/浮出
+   ------------------------------------------------------------
+   通知从顶部滑入，带轻微弹簧效果。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  .toast-item {
+    animation: toastIn var(--dur-slow) var(--ease-spring) both;
+  }
+  @keyframes toastIn {
+    from {
+      opacity: 0;
+      transform: translateY(-20px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .toast-item.toast-out {
+    animation: toastOut var(--dur-base) var(--ease) both;
+  }
+  @keyframes toastOut {
+    from {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: translateY(-10px) scale(0.95);
+    }
+  }
+}
+
+/* ============================================================
+   11. 报警闪烁（脉冲发光）
+   ------------------------------------------------------------
+   重度报警时的红色脉冲发光，Apple 风格的柔和发光环。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  /* 报警脉冲发光：用伪元素的 transform: scale + opacity 做扩散环，
+     不走 box-shadow 动画（后者触发重绘，不走合成层） */
+  .alarm-pulse {
+    position: relative;
+  }
+  .alarm-pulse::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 2px solid rgba(var(--glow-danger), 0.4);
+    animation: alarmPulse 2s var(--ease) infinite;
+    pointer-events: none;
+  }
+  @keyframes alarmPulse {
+    0% {
+      transform: scale(1);
+      opacity: 0.8;
+    }
+    100% {
+      transform: scale(1.15);
+      opacity: 0;
+    }
+  }
+}
+
+/* ============================================================
+   12. Spinner 加载
+   ------------------------------------------------------------
+   Apple 风格的渐变环旋转加载。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  .spinner {
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+}
+
+/* ============================================================
+   13. 兼容旧的 .visible 类
+   ------------------------------------------------------------
+   已废弃，保留过渡以防旧代码引用。
+   ============================================================ */
+
+/* ============================================================
+   13a. Apple Headline Blur-In — 标题模糊浮现
+   ------------------------------------------------------------
+   apple.com / apple.com.cn 首屏大标题的标志性进场：
+   opacity 0 → 1 + blur(12px) → 0 + translateY(24px) → 0。
+   模糊消散让标题"从景深里走到焦点平面"，比纯位移更有
+   光学质感。只给 hero 大标题用（一次性 0.8s，GPU 合成）。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  .has-motion [data-reveal='blur'] {
+    opacity: 0;
+    transform: translateY(24px);
+    filter: blur(12px);
+    transition: opacity 0.8s var(--ease-reveal),
+      transform 0.8s var(--ease-reveal),
+      filter 0.8s var(--ease-reveal);
+    will-change: opacity, transform, filter;
+  }
+  .has-motion [data-reveal='blur'].is-inview {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+/* ============================================================
+   13b. Hero HUD 插画微动效 — 首页插画的连续生命感
+   ------------------------------------------------------------
+   Apple 官网 hero 插画的纪律：静态构图 + 极少量元素连续微动。
+   四处微动全部对应检测语义，不做装饰性动画：
+     · hud-lane  车道虚线流动 —— 车辆在行驶
+     · hud-scan  扫描线虚线流动 —— 逐帧扫描进行中
+     · hud-gauge 弧线进场（一次性）—— 与工作台仪表同语言
+     · hud-dot   状态点呼吸 —— 系统在线
+   全部只动 stroke-dashoffset / opacity，SVG 可合成，零重排。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  /* 车道线流动：dashoffset 递减 = 虚线向远处（上方）流动 */
+  .vision-product .hud-lane {
+    animation: hudLaneFlow 1.4s linear infinite;
+  }
+  @keyframes hudLaneFlow {
+    to {
+      stroke-dashoffset: -24;
+    }
+  }
+
+  /* 扫描线流动：与车道线反向，制造对向交错 */
+  .vision-product .hud-scan {
+    animation: hudScanFlow 2s linear infinite;
+  }
+  @keyframes hudScanFlow {
+    to {
+      stroke-dashoffset: -26;
+    }
+  }
+
+  /* 仪表弧线进场：从空弧画到 8% 刻度（一次性，delay 等标题进场完） */
+  .vision-product .hud-gauge-bar {
+    animation: hudGaugeDraw 1.2s var(--ease-reveal) 0.3s both;
+  }
+  @keyframes hudGaugeDraw {
+    from {
+      stroke-dashoffset: 276;
+    }
+    to {
+      stroke-dashoffset: 254;
+    }
+  }
+
+  /* 状态点呼吸：系统在线的心跳 */
+  .vision-product .hud-dot-ok {
+    animation: hudDotBreath 2.4s var(--ease) infinite;
+  }
+  @keyframes hudDotBreath {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.45;
+    }
+  }
+}
+
+/* ============================================================
+   14. Apple StaggeredFadeIn — 错峰淡入浮起
+   ------------------------------------------------------------
+   从 Apple 官网产品页参考的 StaggeredFadeIn 机制：
+   元素从 translateY(30px) + opacity:0 依次淡入，
+   组内每个元素延迟 0.15s，过渡时长 0.9s。
+   --i 由 motion.js 按组内序号写入。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  .has-motion [data-staggered] {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.9s var(--ease-reveal),
+      transform 0.7s var(--ease-reveal);
+    transition-delay: calc(var(--i, 0) * 0.15s);
+    will-change: opacity, transform;
+  }
+  .has-motion [data-staggered].is-inview {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  /* 无位移变体：纯淡入 */
+  .has-motion [data-staggered="fade-only"] {
+    transform: none;
+  }
+}
+
+/* ============================================================
+   15. Apple 导航毛玻璃增强
+   ------------------------------------------------------------
+   Apple 使用 saturate(1.8) blur(20px) 双层毛玻璃。
+   滚动后导航栏从透明切为高饱和毛玻璃 + 底部分隔线。
+   ============================================================ */
+
+.global-nav.is-scrolled {
+  -webkit-backdrop-filter: saturate(1.8) blur(20px);
+  backdrop-filter: saturate(1.8) blur(20px);
+}
+
+/* 导航栏滚动态过渡
+ * Apple 官网的导航在滚动时不做位移，只做背景色与毛玻璃的过渡。
+ * 之前的 navSlideIn 从上方滑入会在来回滚动时重复播放，不符合 Apple 行为。
+ * 去掉位移动画，只保留在 motion.css 第 4 节中定义的颜色/毛玻璃过渡。 */
+
+/* ============================================================
+   16. Apple Tile Hover — 微缩放悬浮
+   ------------------------------------------------------------
+   Apple 产品卡在 hover 时 scale(1.0161)，极其微妙。
+   我们的能力卡(.feat)和报告卡(.card)用这个更克制的缩放。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) and (hover: hover) {
+  .feat {
+    transition: transform var(--dur-hover) var(--ease),
+      background-color var(--dur-hover) var(--ease),
+      box-shadow var(--dur-hover) var(--ease);
+  }
+  .feat:hover {
+    transform: scale(1.0161);
+    background: var(--feat-bg-hover);
+  }
+}
+
+/* ============================================================
+   17. Apple Ribbon Drop — 顶部通知条带滑入
+   ------------------------------------------------------------
+   从 Apple 官网参考的 ribbon-drop 动画：
+   从 translateY(-100%) 滑入 + 背景色从初始色过渡到目标色。
+   用于 hero 区域的 promo 标签。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  .ts-promo {
+    animation: ribbonDrop var(--dur-slow) var(--ease) 0.2s both;
+  }
+  @keyframes ribbonDrop {
+    from {
+      opacity: 0;
+      transform: translateY(-100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* ============================================================
+   18. Apple Glow Shadow — 已废弃
+   ------------------------------------------------------------
+   Apple 只在产品图片上加阴影，不给按钮/卡片加。
+   原先的发光效果已移除，保留空壳以防引用。 */
+
+/* ============================================================
+   19. Apple Scroll-Driven Reveal — 滚动进度驱动
+   ------------------------------------------------------------
+   Apple 在产品页使用 scroll-driven animation 让元素随
+   滚动位置渐进揭示。这里用 IntersectionObserver + CSS 变量
+   实现类似效果：元素进入视口时从下方浮入 + 淡入 + 轻微缩放。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  /* 带有 data-reveal="scroll" 的元素使用更长的进场动画 */
+  .has-motion [data-reveal="scroll"] {
+    opacity: 0;
+    transform: translateY(40px) scale(0.96);
+    transition: opacity 0.8s var(--ease-reveal),
+      transform 0.8s var(--ease-reveal);
+    transition-delay: calc(var(--i, 0) * 0.08s);
+    will-change: opacity, transform;
+  }
+  .has-motion [data-reveal="scroll"].is-inview {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ============================================================
+   20. Apple Icon Hover — 图标悬浮微动效
+   ------------------------------------------------------------
+   Apple 导航图标在 hover 时有轻微的缩放和颜色过渡。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) and (hover: hover) {
+  .gn-icon,
+  .btn-icon {
+    transition: background-color var(--dur-base) var(--ease),
+      color var(--dur-base) var(--ease),
+      opacity var(--dur-base) var(--ease),
+      transform var(--dur-fast) var(--ease-spring);
+  }
+  .gn-icon:hover,
+  .btn-icon:hover {
+    transform: scale(1.08);
+  }
+  .gn-icon:active,
+  .btn-icon:active {
+    transform: scale(0.95);
+  }
+}
+
+/* ============================================================
+   21. Apple Link Arrow Slide — 链接箭头滑入
+   ------------------------------------------------------------
+   Apple "Learn more →" 链接在 hover 时箭头从左滑入。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) and (hover: hover) {
+  .btn-hero-ghost svg,
+  .link-arrow svg {
+    transition: transform var(--dur-base) var(--ease);
+  }
+  .btn-hero-ghost:hover svg,
+  .link-arrow:hover svg {
+    animation: arrowSlide 0.4s var(--ease) forwards;
+  }
+  @keyframes arrowSlide {
+    0% {
+      transform: translateX(0);
+      opacity: 0.7;
+    }
+    50% {
+      transform: translateX(4px);
+      opacity: 1;
+    }
+    100% {
+      transform: translateX(3px);
+      opacity: 1;
+    }
+  }
+}
+
+/* ============================================================
+   22. Apple Hero Parallax — 首页 Hero 视差
+   ------------------------------------------------------------
+   首页 hero 的内容随滚动产生轻微视差位移，制造深度感。
+   .vision-product 在滚动时比文字移动得稍慢，形成层次。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  .has-motion .ts-hero-title,
+  .has-motion .ts-hero-sub,
+  .has-motion .ts-hero-cta {
+    will-change: transform, opacity;
+    transition: transform 0.1s linear, opacity 0.1s linear;
+  }
+}
+
+/* ============================================================
+   23. Apple Sheet Slide — 设置抽屉滑入与退场
+   ------------------------------------------------------------
+   曲线：--ease-drawer（iOS 侧拉抽屉官方曲线，Ionic 实测采样）。
+   抽屉与浮层不同——不该有过冲（spring 的回弹会让面板"撞过"
+   边界再弹回，实体抽屉不会这样），Apple 的抽屉落定是干净利落的。
+   退场序列：sheet 先滑走，backdrop 延迟 0.1s 后淡出——制造层次感。
+   注意：关闭动画只在 .was-open（曾经打开过）时才匹配，
+   避免页面加载时 .sheet 没有 .open 就误播关闭动画造成闪现。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  .sheet.open {
+    animation: sheetSlideIn var(--dur-slow) var(--ease-drawer) both;
+  }
+  @keyframes sheetSlideIn {
+    from {
+      transform: translateX(100%);
+      visibility: visible;
+    }
+    to {
+      transform: translateX(0);
+      visibility: visible;
+    }
+  }
+  .sheet.was-open:not(.open) {
+    animation: sheetSlideOut var(--dur-base) var(--ease) both;
+  }
+  @keyframes sheetSlideOut {
+    from {
+      transform: translateX(0);
+      visibility: visible;
+    }
+    to {
+      transform: translateX(100%);
+      visibility: hidden;
+    }
+  }
+
+  /* 退场层次感：backdrop 延迟 0.1s 淡出，让 sheet 先滑走再收遮罩 */
+  .sheet-backdrop.open {
+    transition: opacity var(--dur-base) var(--ease);
+  }
+  .sheet-backdrop.was-open:not(.open) {
+    opacity: 0;
+    transition: opacity var(--dur-base) var(--ease) 0.1s;
+  }
+}
+
+/* reduced-motion fallback：不用动画，直接用 transition 控制 */
+@media (prefers-reduced-motion: reduce) {
+  .sheet {
+    transform: translateX(100%);
+    transition: transform var(--dur-base) linear,
+      visibility 0s linear var(--dur-base);
+  }
+  .sheet.open {
+    transform: none;
+    animation: none;
+    visibility: visible;
+    transition: transform var(--dur-base) linear, visibility 0s;
+  }
+  .sheet.was-open:not(.open) {
+    animation: none;
+  }
+  .sheet-backdrop {
+    transition: opacity var(--dur-base) linear;
+  }
+}
+
+/* ============================================================
+   24. Apple Metric Bar Fill — 指标条填充动画
+   ------------------------------------------------------------
+   指标条的 spark 条在数据更新时从 0 填充到目标宽度，
+   带弹簧缓动效果。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  .metric-spark > i {
+    transition: width 0.4s var(--ease-spring),
+      background-color var(--dur-base) var(--ease);
+  }
+}
+
+/* ============================================================
+   25. Apple Level Chip Transition — 等级芯片过渡
+   ------------------------------------------------------------
+   疲劳等级切换时芯片有平滑的颜色和缩放过渡。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  .level-chip {
+    transition: background-color var(--dur-base) var(--ease),
+      color var(--dur-base) var(--ease),
+      transform var(--dur-fast) var(--ease-spring);
+  }
+  .level-chip[data-level] {
+    animation: chipPop var(--dur-base) var(--ease-spring);
+  }
+  @keyframes chipPop {
+    0% {
+      transform: scale(0.92);
+    }
+    60% {
+      transform: scale(1.04);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+}
+
+/* ============================================================
+   26. Apple Gauge Animation — 仪表盘弧线动画
+   ------------------------------------------------------------
+   疲劳指数仪表的弧线从 0 渐进到目标值，带减速缓动。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  .gauge .bar {
+    transition: stroke-dashoffset 0.5s var(--ease-reveal),
+      stroke var(--dur-base) var(--ease);
+  }
+  .gauge-num {
+    transition: color var(--dur-base) var(--ease);
+  }
+}
+
+/* ============================================================
+   27. Apple Dist Bar — 分布条段过渡
+   ------------------------------------------------------------
+   报告页的分布条在数据更新时宽度平滑过渡。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  .dist-seg {
+    transition: flex-basis var(--dur-slow) var(--ease-reveal),
+      background-color var(--dur-base) var(--ease);
+  }
+}
+
+/* ============================================================
+   28. Apple Progress Bar Shine — 进度条光泽
+   ------------------------------------------------------------
+   Apple 风格的进度条在填充时有光泽扫过效果。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  .progress-bar {
+    position: relative;
+    overflow: hidden;
+  }
+  .progress-bar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.3) 50%,
+      transparent 100%
+    );
+    transform: translateX(-100%);
+    animation: progressShine 1.6s var(--ease) infinite;
+  }
+  @keyframes progressShine {
+    to {
+      transform: translateX(100%);
+    }
+  }
+}
+
+/* ============================================================
+   29. Apple Fade Out on Scroll — 滚动淡出
+   ------------------------------------------------------------
+   首页 hero 内容在向下滚动时逐渐淡出，为下一段落让路。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  .has-motion .ts-hero-inner {
+    transition: opacity 0.15s linear, transform 0.15s linear;
+  }
+}
+
+/* ============================================================
+   30. Apple Boot Ring Pulse — 启动环脉冲
+   ------------------------------------------------------------
+   模型加载时的启动环有柔和的脉冲发光。
+   ============================================================ */
+
+@media (prefers-reduced-motion: no-preference) {
+  .calib-ring .bar {
+    animation: calibPulse 2s var(--ease) infinite;
+  }
+  @keyframes calibPulse {
+    0%, 100% {
+      filter: drop-shadow(0 0 4px rgba(var(--accent-rgb), 0.3));
+    }
+    50% {
+      filter: drop-shadow(0 0 12px rgba(var(--accent-rgb), 0.6));
+    }
+  }
+}

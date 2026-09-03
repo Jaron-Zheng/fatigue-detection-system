@@ -1,0 +1,1148 @@
+/** components.css — 通用组件（Apple 设计语言）
+ *
+ * 设计规则（基于 Apple 官网参考数据）：
+ *   · 按钮一律 4px 圆角、40px 高度档位
+ *   · 字重只有 400/500
+ *   · 缓动曲线 cubic-bezier(0.4, 0, 0.6, 1)，时长 0.32s
+ *   · box-shadow 柔和层阴影制造悬浮感
+ *   · hover 微微上浮 + 缩放 + 阴影加深
+ *   · active 按压缩放回弹
+ *   · 分层靠底色差 + 柔和阴影
+ */
+
+/* ============ 按钮 ============ */
+/**
+ * Apple 主 CTA 规格（从 apple.com 参考验证）：
+ *   background: #0071e3  (Action Blue Focus)
+ *   color: #ffffff
+ *   border-radius: 980px (胶囊形)
+ *   padding: 11px 21px
+ *   font-size: 17px / font-weight: 400 / letter-spacing: -0.374px
+ *   border: 0.8px solid transparent (占位，给 focus 态留位置)
+ *   box-shadow: none (Apple 不给按钮加阴影)
+ * 按压态 scale(0.95)——Apple 全站统一的微交互。
+ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-height: 44px;
+  padding: 11px 21px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-regular);
+  letter-spacing: var(--ls-body);
+  line-height: 1.24;
+  white-space: nowrap;
+  border: 0.8px solid transparent;
+  transition: transform var(--dur-fast) var(--ease-spring),
+    background-color var(--dur-base) var(--ease),
+    color var(--dur-base) var(--ease);
+  user-select: none;
+  -webkit-user-select: none;
+}
+@media (hover: hover) {
+  .btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+}
+.btn:active:not(:disabled) {
+  transform: scale(var(--press-scale, 0.95));
+}
+.btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--btn-bg);
+  color: var(--text-on-accent);
+  /* Apple：按钮不加阴影，颜色本身即是行动信号 */
+}
+/* Apple hover：微微变深的蓝（不是提亮） */
+.btn-primary:hover:not(:disabled) {
+  background: var(--btn-bg-hover);
+}
+
+/* Apple 次 CTA：透明底 + 蓝字 + 蓝框，胶囊形（Apple "Learn more" 按钮风格） */
+.btn-secondary {
+  background: transparent;
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--link);
+  padding: 11px 18px;
+  border: none;
+}
+.btn-ghost:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: #fff; /* lit-ok: 语义色实心底上的白字，主题无关 */
+}
+.btn-danger:hover:not(:disabled) {
+  background: var(--danger);
+  filter: brightness(0.92);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--separator);
+  border-radius: var(--r-pill);
+}
+.btn-outline:hover:not(:disabled) {
+  background: var(--fill-quaternary);
+}
+
+.btn-lg {
+  min-height: 48px;
+  padding: 14px 28px;
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-light);
+  letter-spacing: var(--ls-body);
+}
+.btn-sm {
+  min-height: 32px;
+  padding: 6px 14px;
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-regular);
+  letter-spacing: var(--ls-caption);
+}
+
+/* 图标按钮：Apple 导航右侧的工具按钮——透明底、胶囊圆角、颜色过渡 */
+.btn-icon {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--text);
+  transition: background-color var(--dur-base) var(--ease),
+    color var(--dur-base) var(--ease);
+}
+.btn-icon:hover:not(:disabled) {
+  background: var(--fill-quaternary);
+}
+.btn-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.btn-icon.is-on {
+  background: var(--btn-bg);
+  color: #fff; /* lit-ok: 强调色实心底上的白字，主题无关 */
+}
+
+/* ============ 卡片 ============ */
+/**
+ * Apple 卡片：白面板、12px 圆角、不加阴影。
+ * Apple 不给卡片加阴影——层次靠底色差和间距。
+ * 只在明确标记为 .interactive 的可交互卡片上加悬浮效果。
+ */
+.card {
+  background: var(--bg-elevated);
+  border-radius: var(--r-lg);
+  padding: var(--sp-6);
+  transition: transform var(--dur-hover) var(--ease-spring),
+    background-color var(--dur-base) var(--ease);
+}
+@media (hover: hover) {
+  .card.interactive:not(.no-hover):hover {
+    transform: translateY(var(--card-hover-lift, -4px));
+  }
+}
+/* （.card-hover 已删：可交互卡片场景不存在，全站 HTML/JS 零引用；
+ *  hover 态由 .feat 等结构类自带。 */
+.card-compact {
+  padding: var(--sp-5);
+}
+.card-flush {
+  padding: 0;
+  overflow: hidden;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+.card-title {
+  font-size: var(--fs-subhead);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.card-title svg {
+  color: var(--text-tertiary);
+  flex: none;
+}
+
+/* ============ 徽章标签 ============ */
+/* Apple 徽章：小号胶囊形圆角 */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-micro);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0;
+  background: var(--fill-quaternary);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.badge-ok {
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+.badge-warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.badge-caution {
+  background: var(--caution-soft);
+  color: var(--caution);
+}
+.badge-danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.badge-info {
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+.dot-pulse {
+  animation: dotPulse 1.6s var(--ease) infinite;
+}
+@keyframes dotPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* ============ 开关 ============ */
+/* Apple 开关轨道用全圆胶囊，滑块是圆形钮。
+   这里只把轨道端部改为 4px，滑钮保持圆形） */
+.switch {
+  /* Apple iOS Switch: 51×31pt 胶囊形，轨道全圆角 */
+  position: relative;
+  display: inline-block;
+  width: 51px;
+  height: 31px;
+  flex: none;
+}
+.switch input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+}
+.switch-track {
+  position: absolute;
+  inset: 0;
+  background: var(--fill-tertiary);
+  border-radius: var(--r-pill); /* 胶囊全圆角——Apple Switch 标志 */
+  transition: background-color var(--dur-fast) var(--ease);
+  pointer-events: none;
+}
+.switch-thumb {
+  /* Apple Switch 滑块：27pt 白色圆形，居中在轨道内 */
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  background: #fff; /* lit-ok: 开关滑块永远白色（Apple Switch 标准），主题无关 */
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2), 0 0 1px rgba(0, 0, 0, 0.1); /* Apple Switch 滑块阴影 */
+  transition: transform var(--dur-fast) var(--ease-spring);
+  pointer-events: none;
+}
+.switch input:checked ~ .switch-track {
+  /* Apple iOS 标准开关开启色：系统绿 #34C759 */
+  background: #34c759; /* lit-ok: Apple Switch 开启态系统绿，主题无关 */
+}
+.switch input:checked ~ .switch-thumb {
+  transform: translateX(20px); /* 51 - 27 - 2 - 2 = 20 */
+}
+.switch input:focus-visible ~ .switch-track {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ============ 滑块 ============ */
+.slider-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--sp-2) var(--sp-3);
+  align-items: center;
+}
+/* 相邻滑块之间留出间距，否则滑块会紧贴下一行标签，看不出归属 */
+.slider-row + .slider-row {
+  margin-top: var(--sp-4);
+}
+.slider-row .slider-label {
+  font-size: var(--fs-body);
+  color: var(--text);
+}
+.slider-row .slider-value {
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  min-width: 56px;
+  text-align: right;
+}
+/**
+ * 滑块轨道用线性填充把「已填充」部分染成 Action Blue（--pct 由 JS 同步）。
+ * 原生 range 在深色模式下轨道与背景几乎同色，加上填充色后位置一目了然。
+ */
+.slider {
+  grid-column: 1 / -1;
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: var(--r-pill); /* Apple Slider 轨道全圆角 */
+  background: linear-gradient(
+    to right,
+    var(--accent) 0%,
+    var(--accent) var(--pct, 50%),
+    var(--separator) var(--pct, 50%),
+    var(--separator) 100%
+  );
+  outline: none;
+  cursor: pointer;
+}
+.slider::-webkit-slider-thumb {
+  /* Apple Slider 把手：30pt 圆球，白色底 + 蓝色描边 */
+  -webkit-appearance: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #fff; /* lit-ok: Apple Slider 把手永远白色（Apple 标准控件），主题无关 */
+  border: 2px solid var(--accent); /* Apple 把手描边蓝色 */
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15); /* Apple 把手软阴影 */
+  cursor: grab;
+  transition: transform var(--dur-fast) var(--ease-spring);
+}
+.slider::-webkit-slider-thumb:active {
+  cursor: grabbing;
+  transform: scale(1.1); /* Apple 把手拖拽时放大 */
+}
+.slider::-moz-range-thumb {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #fff; /* lit-ok: 同 webkit 把手，永远白色（Apple 标准控件） */
+  border: 2px solid var(--accent);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  cursor: grab;
+}
+
+/* ============ 分段控件 ============ */
+/* Apple Segmented Control：胶囊圆角，选中项白色背景 + 轻阴影 */
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  background: var(--fill-tertiary);
+  border-radius: var(--r-pill);
+  gap: 0;
+}
+.segmented button {
+  padding: 6px 16px;
+  border-radius: var(--r-pill); /* 胶囊圆角 */
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-regular);
+  color: var(--text-secondary);
+  letter-spacing: var(--ls-caption);
+  transition: background-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease);
+  position: relative;
+}
+.segmented button[aria-selected='true'] {
+  /* Apple 选中项：白色背景 + 轻阴影“浮出”效果 */
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-weight: var(--fw-medium);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+/* ============ 进度条 ============ */
+.progress {
+  height: 4px;
+  border-radius: var(--r-xs);
+  background: var(--fill-tertiary);
+  overflow: hidden;
+}
+.progress-bar {
+  height: 100%;
+  border-radius: var(--r-xs);
+  background: var(--accent);
+  transition: width 0.2s linear, background-color var(--dur-base) var(--ease);
+}
+
+/* ============ 指标卡（仪表盘核心） ============ */
+/**
+ * Apple 指标行：无边框、无投影，整块面板内以发丝线分行。
+ * 左侧 3px 状态色条是功能信息（该指标是否进入预警区间），不属于装饰。
+ */
+.metric {
+  background: transparent;
+  border-radius: 0;
+  padding: var(--sp-3) var(--sp-2) calc(var(--sp-3) + 2px);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  position: relative;
+  overflow: hidden;
+  border-bottom: 1px solid var(--separator);
+}
+/* 面板末行不画底线。注意：末两枚指标是 pro-only，普通模式下它们隐藏后，
+ * 可见的末行变成第 5/6 枚——两条规则各对应一种模式，避免悬空发丝线 */
+body:not(.pro-mode) .metric-grid .metric:nth-child(n + 5) {
+  border-bottom: none;
+}
+body.pro-mode .metric-grid .metric:nth-last-child(-n + 2) {
+  border-bottom: none;
+}
+.metric::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: var(--sp-2);
+  bottom: var(--sp-2);
+  width: 3px;
+  background: transparent;
+  transition: background-color var(--dur-base) var(--ease);
+}
+.metric[data-state='warn']::after {
+  background: var(--warn);
+}
+.metric[data-state='caution']::after {
+  background: var(--caution);
+}
+.metric[data-state='danger']::after {
+  background: var(--danger);
+}
+/* Apple 不用大写：指标名 12px/500/灰字 */
+.metric-label {
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.metric-value {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: var(--fw-medium);
+  letter-spacing: 0;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.metric-unit {
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-regular);
+  color: var(--text-tertiary);
+  letter-spacing: 0;
+}
+.metric-sub {
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+  min-height: 18px;
+}
+.metric-spark {
+  height: 2px;
+  border-radius: var(--r-xs);
+  background: var(--fill-tertiary);
+  overflow: hidden;
+  margin-top: 2px;
+}
+.metric-spark > i {
+  display: block;
+  height: 100%;
+  border-radius: var(--r-xs);
+  background: var(--accent);
+  transition: width 0.25s var(--ease), background-color var(--dur-base) var(--ease);
+}
+
+/* ============ 贡献度条（融合明细） ============ */
+.contrib {
+  display: grid;
+  grid-template-columns: 92px 1fr 62px;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 7px 0;
+}
+.contrib-name {
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.contrib-track {
+  height: 6px;
+  border-radius: var(--r-xs);
+  background: var(--fill-quaternary);
+  overflow: hidden;
+  position: relative;
+}
+/* 单一 Action Blue 填充：长度是唯一的信息维度，不用渐变 */
+.contrib-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: var(--r-xs);
+  background: var(--accent);
+  transition: width var(--dur-base) var(--ease);
+}
+.contrib-val {
+  font-size: var(--fs-caption);
+  color: var(--text);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============ 事件时间轴 ============ */
+.timeline {
+  max-height: 320px;
+  overflow-y: auto;
+  margin: calc(var(--sp-2) * -1) calc(var(--sp-2) * -1) 0;
+  padding: var(--sp-2);
+}
+.tl-item {
+  display: grid;
+  grid-template-columns: 56px 22px 1fr;
+  gap: var(--sp-3);
+  align-items: start;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--separator);
+  animation: tlIn var(--dur-slow) var(--ease-reveal);
+}
+.tl-item:last-child {
+  border-bottom: none;
+}
+@keyframes tlIn {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.tl-time {
+  font-size: var(--fs-caption);
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+  padding-top: 1px;
+}
+.tl-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-xs);
+  display: grid;
+  place-items: center;
+  background: var(--fill-quaternary);
+  color: var(--text-secondary);
+  flex: none;
+}
+/* SVG 事件图标：引用 sprite symbol，currentColor 随 data-level 变色 */
+.tl-icon svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+.tl-item[data-level='warn'] .tl-icon {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.tl-item[data-level='caution'] .tl-icon {
+  background: var(--caution-soft);
+  color: var(--caution);
+}
+.tl-item[data-level='danger'] .tl-icon {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.tl-item[data-level='info'] .tl-icon {
+  background: var(--info-soft);
+  color: var(--info);
+}
+.tl-text {
+  font-size: var(--fs-body);
+  min-width: 0;
+}
+.tl-text b {
+  font-weight: var(--fw-medium);
+}
+.tl-detail {
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+}
+
+/* ============ Toast 通知 ============ */
+/* Apple 的浮层语言：不透明面板 + 极细描线 */
+.toast-host {
+  position: fixed;
+  top: calc(var(--nav-total) + var(--sp-4));
+  transition: top var(--dur-base) var(--ease);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 400;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  pointer-events: none;
+  width: min(560px, calc(100vw - 32px));
+}
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: 12px 18px;
+  border-radius: var(--r-sm);
+  background: var(--surface-glass-strong);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--sh-md);
+  font-size: var(--fs-body);
+  pointer-events: auto;
+  animation: toastIn var(--dur-slow) var(--ease-spring);
+}
+.toast.leaving {
+  animation: toastOut var(--dur-fast) var(--ease) forwards;
+}
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes toastOut {
+  to {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+}
+.toast-icon {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-xs);
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  color: #fff; /* lit-ok: 语义色实心方底上的白字（吐司图标） */
+  background: var(--info);
+}
+.toast[data-kind='ok'] .toast-icon {
+  background: var(--ok);
+}
+.toast[data-kind='warn'] .toast-icon {
+  background: var(--caution);
+}
+.toast[data-kind='error'] .toast-icon {
+  background: var(--danger);
+}
+/* 疲劳报警通知：与常规 toast 同一家族（毛玻璃卡片 + 图标章 + 标题/说明），
+ * 等级用与时间轴同源的语义色编码——轻度 warn 黄 / 中度 caution 橙 /
+ * 重度 danger 红：图标章底色 + 卡片左缘 3px 色条，由 data-level 切换。 */
+.toast[data-kind='alarm'] {
+  box-shadow: var(--sh-md), inset 3px 0 0 0 var(--toast-lv);
+}
+.toast[data-kind='alarm'][data-level='mild'] {
+  --toast-lv: var(--warn);
+}
+.toast[data-kind='alarm'][data-level='moderate'] {
+  --toast-lv: var(--caution);
+}
+.toast[data-kind='alarm'][data-level='severe'] {
+  --toast-lv: var(--danger);
+}
+.toast[data-kind='alarm'] .toast-icon {
+  background: var(--toast-lv);
+}
+.toast[data-kind='alarm'] .toast-icon svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
+.toast-body {
+  flex: 1;
+  min-width: 0;
+}
+.toast-title {
+  font-weight: var(--fw-medium);
+}
+.toast-msg {
+  font-size: var(--fs-caption);
+  color: var(--text-secondary);
+}
+
+/* ============ 模态 / 抽屉 ============ */
+/* Apple 风格 sheet：右侧滑出，顶部圆角，轻柔阴影。
+ * 滑入/滑出动画在 motion.css 中用 @keyframes 实现（弹簧缓动），
+ * 这里只管静态外观 + 隐藏态定位。 */
+.sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: rgba(0, 0, 0, 0.3); /* Apple 柔和遮罩 */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-base) var(--ease);
+}
+.sheet-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.sheet {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(420px, 100%);
+  z-index: 501;
+  background: var(--bg-elevated);
+  /* 隐藏态：在屏幕右侧外。关闭时不渲染阴影，否则 box-shadow 会从
+     视口右边缘泄漏进来，形成"翻书页"般的灰色残影。
+     visibility:hidden 确保即使 transform 有亚像素偏差，
+     面板内容与背景也完全不可见，不会产生残影。 */
+  box-shadow: none;
+  transform: translateX(100%);
+  visibility: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.sheet.open {
+  /* 打开态：transform 由 animation 的终态 translateX(0) 控制，
+     同时恢复阴影与可见性——此时面板已进入视口，阴影不会再泄漏。 */
+  transform: none;
+  box-shadow: var(--sh-xl);
+  visibility: visible;
+}
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--sp-5) var(--sp-6);
+  border-bottom: 1px solid var(--separator);
+  flex: none;
+}
+.sheet-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--sp-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+}
+.sheet-foot {
+  flex: none;
+  padding: var(--sp-4) var(--sp-6);
+  border-top: 1px solid var(--separator);
+  display: flex;
+  gap: var(--sp-3);
+  justify-content: flex-end;
+  align-items: center;
+}
+/* E7：设置抽屉底部那行即时生效提示（原内联样式收进类）。
+ * .sheet-foot 是右对齐 flex，说明文字需要垂直居中并压回次级灰。 */
+.sheet-foot-note {
+  align-self: center;
+  color: var(--text-tertiary);
+  margin-right: auto;
+}
+
+.field-group {
+  /* Apple 设置分组：圆角卡片底 + 间距 */
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+.field-group > .group-title {
+  /* Apple 分组标题：次级灰、小号字、正常字距 */
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--ls-caption);
+  color: var(--text-tertiary);
+  text-transform: none;
+  padding-left: 4px;
+}
+.field-row {
+  /* Apple 设置行：左右对齐，行间距宽枚 */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+}
+.field-row .field-label {
+  font-size: var(--fs-body);
+  letter-spacing: var(--ls-body);
+}
+.field-row .field-desc {
+  font-size: var(--fs-caption);
+  color: var(--text-tertiary);
+  margin-top: 2px;
+  letter-spacing: var(--ls-caption);
+}
+
+/* E3 启动自检清单：每项一行（标签 + 状态点 + 说明），状态色走语义令牌 */
+.preflight-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.preflight-item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+  font-size: var(--fs-caption);
+}
+.preflight-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  align-self: center;
+  background: var(--fill-quaternary);
+}
+.preflight-item[data-status='ok'] .preflight-dot { background: var(--ok); }
+.preflight-item[data-status='warn'] .preflight-dot { background: var(--warn); }
+.preflight-item[data-status='fail'] .preflight-dot { background: var(--danger); }
+.preflight-item .preflight-label {
+  flex: none;
+  font-size: var(--fs-body);
+  color: var(--text);
+}
+.preflight-item .preflight-status { flex: none; }
+.preflight-item[data-status='ok'] .preflight-status { color: var(--ok); }
+.preflight-item[data-status='warn'] .preflight-status { color: var(--warn); }
+.preflight-item[data-status='fail'] .preflight-status { color: var(--danger); }
+.preflight-item .preflight-detail {
+  color: var(--text-tertiary);
+  min-width: 0;
+}
+
+select.select {
+  /* Apple 风格 select：胶囊圆角，浅灰底无边框 */
+  padding: 7px 32px 7px 14px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--separator);
+  background: var(--bg-elevated);
+  font-size: var(--fs-caption);
+  letter-spacing: var(--ls-caption);
+  max-width: 200px;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23767a82' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  transition: border-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur-fast) var(--ease);
+}
+select.select:hover {
+  border-color: var(--text-quaternary);
+}
+select.select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* ============ 加载中 ============ */
+.spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--fill-tertiary);
+  border-top-color: var(--accent);
+  animation: spin 0.72s linear infinite;
+  flex: none;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ============ 空状态 ============ */
+.empty {
+  padding: var(--sp-8) var(--sp-4);
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: var(--fs-body);
+}
+
+/* ============ 提示气泡 ============ */
+.hint {
+  display: inline-grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--fill-tertiary);
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: var(--fw-medium);
+  cursor: help;
+  flex: none;
+}
+
+/* ============================================================
+   工具按钮（.pill —— Apple 胶囊形工具按钮）
+   ------------------------------------------------------------
+   Apple 按钮语法：胶囊形圆角(pill)、34px 高度、14px/500、
+   透明底 → hover 换底色。按压缩放 scale(0.95)。
+   ============================================================ */
+
+:root {
+  --pill-fill: transparent;
+  --pill-fill-hover: var(--fill-quaternary);
+  --pill-ease: transform var(--dur-fast) var(--ease-spring),
+    background-color var(--dur-base) var(--ease),
+    color var(--dur-base) var(--ease);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 8px 18px;
+  border-radius: var(--r-pill);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-regular);
+  line-height: 1.24;
+  letter-spacing: var(--ls-body);
+  white-space: nowrap;
+  background: var(--pill-fill);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--separator);
+  border: 0.8px solid transparent;
+  transition: transform var(--dur-fast) var(--ease-spring),
+    background-color var(--dur-base) var(--ease),
+    color var(--dur-base) var(--ease);
+  user-select: none;
+  -webkit-user-select: none;
+}
+@media (hover: hover) {
+  .pill:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+}
+.pill:active:not(:disabled) {
+  transform: scale(var(--press-scale, 0.95));
+}
+.pill:hover:not(:disabled) {
+  background: var(--pill-fill-hover);
+}
+.pill:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+.pill svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+
+/** 开关型按钮的激活态：Action Blue 底白字（Apple 主操作的唯一表达）。
+ * 底色用 --btn-bg：深色下 --accent 提亮后白字只剩 3.3，会跌破 AA */
+.pill.is-on {
+  background: var(--btn-bg);
+  color: #fff; /* lit-ok: 主按钮实心底上的白字，主题无关 */
+  box-shadow: none;
+}
+.pill.is-on:hover {
+  background: var(--btn-bg-hover);
+}
+
+/** 主操作 */
+.pill-primary {
+  background: var(--btn-bg);
+  color: #fff; /* lit-ok: 主操作实心底上的白字，主题无关 */
+  box-shadow: none;
+}
+.pill-primary:hover:not(:disabled) {
+  background: var(--btn-bg-hover);
+}
+
+/** 强调实心（"暂停/继续"这类过程控制） */
+.pill-solid {
+  background: var(--btn-bg);
+  color: #fff; /* lit-ok: 主按钮实心底上的白字，主题无关 */
+  box-shadow: none;
+}
+.pill-solid:hover:not(:disabled) {
+  background: var(--btn-bg-hover);
+}
+
+/** 危险操作：淡红底红字，不用实心红以免过度抢注意力 */
+.pill-danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+  box-shadow: none;
+}
+.pill-danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+  filter: brightness(0.96);
+}
+
+.pill-sm {
+  min-height: 28px;
+  padding: 5px 12px;
+  font-size: var(--fs-caption);
+}
+
+/* ---- 控制条（视频下方） ---- */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--bg-elevated);
+  border-radius: var(--r-lg);
+}
+.controls-group {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.controls-label {
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0;
+  color: var(--text-tertiary);
+  margin-right: 2px;
+}
+.controls-sep {
+  width: 1px;
+  align-self: stretch;
+  min-height: 24px;
+  background: var(--separator);
+  margin: 0 var(--sp-2);
+}
+.controls-spacer {
+  flex: 1;
+  min-width: 0;
+}
+@media (max-width: 560px) {
+  .controls-sep {
+    display: none;
+  }
+  .controls-spacer {
+    flex-basis: 100%;
+    height: 0;
+  }
+}
+
+/* ============================================================
+   专业模式显隐
+   ------------------------------------------------------------
+   默认（普通用户）只呈现能直接看懂的内容；带 .pro-only 的元素
+   是技术指标与实验工具，仅在 body.pro-mode 下出现。
+   ============================================================ */
+.pro-only {
+  display: none !important;
+}
+
+/* 兜底：revert 会退回浏览器默认 display（div→block、span→inline、button→inline-block），
+   对大多数元素够用。下面几条按组件实际的 display 显式覆盖，
+   否则 flex/grid 布局的元素在专业模式下会塌成普通块。 */
+body.pro-mode .pro-only {
+  display: revert !important;
+}
+body.pro-mode div.pro-only,
+body.pro-mode p.pro-only,
+body.pro-mode .pro-only.card,
+body.pro-mode .pro-only.stat-item,
+body.pro-mode .pro-only.metrics-panel {
+  display: block !important;
+}
+body.pro-mode .pro-only.metric,
+body.pro-mode .pro-only.hud-row,
+body.pro-mode .pro-only.controls,
+body.pro-mode .pro-only.controls-group,
+body.pro-mode .pro-only.field-row,
+body.pro-mode .pro-only.field-group,
+body.pro-mode .pro-only.card-head {
+  display: flex !important;
+}
+body.pro-mode .pro-only.btn,
+body.pro-mode .pro-only.pill,
+body.pro-mode .pro-only.stage-pill,
+body.pro-mode .pro-only.badge {
+  display: inline-flex !important;
+}
+body.pro-mode .pro-only.metric-grid,
+body.pro-mode .pro-only.stat-big {
+  display: grid !important;
+}
+body.pro-mode tr.pro-only {
+  display: table-row !important;
+}
+
+/* 打印时不能让上面的规则复活控制条与仅屏幕元素。 */
+@media print {
+  body.pro-mode .pro-only.controls,
+  body.pro-mode .pro-only.no-print,
+  body.pro-mode .pro-only .no-print {
+    display: none !important;
+  }
+}
+
+/* 专业模式开关的激活态 */
+#btnProMode.is-on {
+  background: var(--btn-bg);
+  color: #fff; /* lit-ok: 主按钮实心底上的白字，主题无关 */
+}

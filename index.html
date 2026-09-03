@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="auto">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<!-- CSP meta：GitHub Pages 是纯静态托管，不带 server.js 的安全响应头；
+     本标签让线上版获得与本地版同源的 CSP 防护（外链脚本拦截、注入面收敛）。
+     规则与 server.js SECURITY_HEADERS 逐条对齐，另放行线上加载链的 CDN 域：
+     · registry.npmmirror.com（推理运行时 vision_bundle + wasm）
+     · gcore/fastly/cdn.jsdelivr.net（模型 3.7MB 镜像链）
+     两层 CSP 并存时浏览器取交集（更严者生效）：本地多出的 CDN 白名单被
+     响应头收紧回 'self'，本地行为不变；线上无响应头，仅本标签生效。
+     注：frame-ancestors 在 meta 中被规范忽略，防嵌点击劫持仅由本地响应头承担。 -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; script-src 'self' 'wasm-unsafe-eval' https://registry.npmmirror.com https://gcore.jsdelivr.net https://fastly.jsdelivr.net https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' blob: https://registry.npmmirror.com https://gcore.jsdelivr.net https://fastly.jsdelivr.net https://cdn.jsdelivr.net; worker-src 'self' blob: https://registry.npmmirror.com https://gcore.jsdelivr.net https://fastly.jsdelivr.net https://cdn.jsdelivr.net; form-action 'self'">
+<meta name="description" content="基于面部多特征融合的Web端驾驶员疲劳检测系统：浏览器端实时人脸关键点分析，融合PERCLOS、哈欠、点头、头部姿态等多维特征进行疲劳分级预警。">
+<title>驾驶员疲劳检测系统 · 基于面部多特征融合</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/layout.css">
+<!-- motion.css 必须排在 layout.css 之后：它有意重定义了 .view / @keyframes viewIn -->
+<link rel="stylesheet" href="css/motion.css">
+</head>
+<body>
+
+<noscript>
+  <div style="font:400 17px/1.5 -apple-system,sans-serif;display:grid;place-items:center;height:100vh;margin:0;background:#f5f5f7;color:#1d1d1f;text-align:center">
+    <div>
+      <h1 style="font-size:28px;font-weight:600;margin:0 0 12px">需要启用 JavaScript</h1>
+      <p>本系统需要 JavaScript 运行。请在浏览器设置中启用 JavaScript 后刷新页面。</p>
+      <p style="color:#86868b">建议使用最新版 Chrome 或 Edge 浏览器。</p>
+    </div>
+  </div>
+</noscript>
+
+<a class="skip-link" href="#main">跳到主内容</a>
+
+<!-- ============ SVG 图标库（Lucide，github.com/lucide-icons/lucide，MIT） ============
+     统一 24×24 视窗、2px 圆头描边、currentColor 取色。
+     symbol id 沿用旧的 #i-* 命名：JS 动态换图标（暂停/播放、静音、主题）
+     直接改 href，不需要跟着图标库改名。 -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+      <circle cx="12" cy="12" r="3"/>
+    </symbol>
+    <symbol id="i-brain" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/>
+      <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/>
+    </symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1 1 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>
+      <path d="m9 12 2 2 4-4"/>
+    </symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+    </symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 3v18h18"/>
+      <path d="m19 9-5 5-4-4-3 3"/>
+    </symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+      <circle cx="12" cy="12" r="3"/>
+    </symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>
+    </symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+    </symbol>
+    <symbol id="i-sound" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+      <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+    </symbol>
+    <symbol id="i-mute" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+      <line x1="22" x2="16" y1="9" y2="15"/>
+      <line x1="16" x2="22" y1="9" y2="15"/>
+    </symbol>
+    <symbol id="i-mesh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 7V5a2 2 0 0 1 2-2h2"/>
+      <path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+      <path d="M21 17v2a2 2 0 0 1-2 2h-2"/>
+      <path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+      <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+      <path d="M9 9h.01"/>
+      <path d="M15 9h.01"/>
+    </symbol>
+    <symbol id="i-mirror" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 8l4 4-4 4V8z"/>
+      <path d="M21 8l-4 4 4 4V8z"/>
+      <path d="M12 2v20" stroke-dasharray="3 3"/>
+    </symbol>
+    <symbol id="i-gauge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m12 14 4-4"/>
+      <path d="M3.34 19a10 10 0 1 1 17.32 0"/>
+    </symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="6" y="4" width="4" height="16" rx="1"/>
+      <rect x="14" y="4" width="4" height="16" rx="1"/>
+    </symbol>
+    <symbol id="i-play" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polygon points="6 3 20 12 6 21 6 3"/>
+    </symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect width="18" height="18" x="3" y="3" rx="2"/>
+    </symbol>
+    <symbol id="i-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="22" x2="18" y1="12" y2="12"/>
+      <line x1="6" x2="2" y1="12" y2="12"/>
+      <line x1="12" x2="12" y1="6" y2="2"/>
+      <line x1="12" x2="12" y1="22" y2="18"/>
+    </symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+      <path d="M12 9v4"/>
+      <path d="M12 17h.01"/>
+    </symbol>
+    <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="7 10 12 15 17 10"/>
+      <line x1="12" x2="12" y1="15" y2="3"/>
+    </symbol>
+    <symbol id="i-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M18 6 6 18"/>
+      <path d="m6 6 12 12"/>
+    </symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M8 3H5a2 2 0 0 0-2 2v3"/>
+      <path d="M21 8V5a2 2 0 0 0-2-2h-3"/>
+      <path d="M3 16v3a2 2 0 0 0 2 2h3"/>
+      <path d="M16 21h3a2 2 0 0 0 2-2v-3"/>
+    </symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+      <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+    </symbol>
+    <symbol id="i-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 12h14"/>
+      <path d="m12 5 7 7-7 7"/>
+    </symbol>
+    <symbol id="i-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </symbol>
+    <symbol id="i-file-text" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/>
+      <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
+      <path d="M10 9H8"/>
+      <path d="M16 13H8"/>
+      <path d="M16 17H8"/>
+    </symbol>
+    <symbol id="i-video" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m22 8-6 4 6 4V8Z"/>
+      <rect x="2" y="6" width="14" height="12" rx="2"/>
+    </symbol>
+    <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <polyline points="9 22 9 12 15 12 15 22"/>
+    </symbol>
+    <symbol id="i-rotate-ccw" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+      <path d="M3 3v5h5"/>
+    </symbol>
+    <symbol id="i-flask" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/>
+      <path d="M8.5 2h7"/>
+      <path d="M7 16h10"/>
+    </symbol>
+    <!-- 概览页「数据流向」四步卡：采集/计算/输出/丢弃 -->
+    <symbol id="i-cpu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="4" y="4" width="16" height="16" rx="2"/>
+      <rect x="9" y="9" width="6" height="6"/>
+      <path d="M15 2v2"/>
+      <path d="M15 20v2"/>
+      <path d="M2 15h2"/>
+      <path d="M2 9h2"/>
+      <path d="M20 15h2"/>
+      <path d="M20 9h2"/>
+      <path d="M9 2v2"/>
+      <path d="M9 20v2"/>
+    </symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 6h18"/>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+      <line x1="10" x2="10" y1="11" y2="17"/>
+      <line x1="14" x2="14" y1="11" y2="17"/>
+    </symbol>
+    <!-- ===== 检测记录时间轴事件图标（timeline.js 使用） ===== -->
+    <!-- 长闭眼/微睡眠：向下凸的闭合眼睑 + 三根紧贴眼睑的短睫毛
+         （睫毛起点落在弧线上，脱节会被读成"獠牙/触角"） -->
+    <symbol id="i-eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 9.5c2.8 3 6 4.5 9 4.5s6.2-1.5 9-4.5"/>
+      <path d="m7.4 12.9-1.2 2.3"/>
+      <path d="M12 14v2.4"/>
+      <path d="m16.6 12.9 1.2 2.3"/>
+    </symbol>
+    <!-- 打哈欠：两只困倦的闭合眼（加深弧度确保读作眼睑而非犄角）+ 张大的嘴 -->
+    <symbol id="i-yawn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 8q3.4 4 6.8 0"/>
+      <path d="M14.2 8q3.4 4 6.8 0"/>
+      <ellipse cx="12" cy="15.2" rx="3" ry="3.8"/>
+    </symbol>
+    <!-- 点头：头部 + 向下 chevron（头部下沉运动） -->
+    <symbol id="i-nod" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="6.5" r="3.8"/>
+      <path d="M6.8 15.5 12 20.7l5.2-5.2"/>
+    </symbol>
+    <!-- 分神：眼睛 + 瞳孔偏移到眼角（视线离开前方） -->
+    <symbol id="i-look-away" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2 12s3.5-5.5 10-5.5S22 12 22 12s-3.5 5.5-10 5.5S2 12 2 12Z"/>
+      <circle cx="16.6" cy="12" r="1.7"/>
+    </symbol>
+    <!-- 人脸丢失：头肩像 + 否定斜杠 -->
+    <symbol id="i-face-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="8" r="4"/>
+      <path d="M6 21v-1a6 6 0 0 1 12 0v1"/>
+      <path d="M4 4l16 16"/>
+    </symbol>
+    <!-- 人脸找回：头肩像 -->
+    <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="7.5" r="4"/>
+      <path d="M5.5 21v-1a6.5 6.5 0 0 1 13 0v1"/>
+    </symbol>
+    <!-- 质量/光照偏低：短射线太阳（弱光） -->
+    <symbol id="i-sun-low" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 4.5v1.6"/><path d="M12 17.9v1.6"/><path d="M4.5 12h1.6"/><path d="M17.9 12h1.6"/>
+      <path d="m6.6 6.6 1.1 1.1"/><path d="m16.3 16.3 1.1 1.1"/><path d="m17.4 6.6-1.1 1.1"/><path d="m7.7 16.3-1.1 1.1"/>
+    </symbol>
+    <!-- 确认/合格：勾 -->
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m5 12.5 4.5 4.5L19 7.5"/>
+    </symbol>
+    <!-- 疲劳报警：铃铛（铃锤下移缩小，与钟沿拉开间距，1x 下不粘连） -->
+    <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5.8 9a6.2 6.2 0 0 1 12.4 0c0 5.9 2.3 7.4 2.3 7.4H3.5S5.8 14.9 5.8 9"/>
+      <path d="M10 20.4a2 2 0 0 0 4 0"/>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- ============ 顶部导航（Apple 单层结构） ============
+     一条 56px 导航回答所有问题：左品牌、中视图入口、右工具与状态。
+     在首页 hero 之上时透明悬浮、白字；
+     滚动或进入其他视图后切换为实底（motion.js 控制 .is-scrolled）。 -->
+<header class="global-nav" id="globalNav">
+  <nav class="global-nav-inner" aria-label="主导航">
+    <a class="gn-brand" href="#" id="brandLink" aria-label="返回首页">
+      <svg class="gn-logo" aria-hidden="true"><use href="#i-gauge"></use></svg>
+      <span class="gn-wordmark">疲劳检测系统</span>
+    </a>
+    <ul class="gn-links">
+      <li><a href="#" data-goto="viewHome" title="回到产品概览：核心能力与测试历程">概览</a></li>
+      <li><a href="#" data-goto="viewWork" title="进入工作台：授权摄像头、8 秒校准后开始实时检测">实时检测</a></li>
+      <li><a href="#" data-goto="viewReport" title="查看最近一次会话的指标与图表，可导出 HTML / JSON / CSV">检测报告</a></li>
+    </ul>
+    <div class="gn-tail">
+      <div class="gn-status" id="navStatus" role="status" aria-live="polite">
+        <span class="dot" id="navDot" style="background:var(--text-quaternary)"></span>
+        <span id="navStatusText">未启动</span>
+      </div>
+      <!-- 专业模式：默认关闭，普通用户看到的是极简界面；
+           打开后展开全部技术指标与实验工具（写论文、答辩演示时用）。 -->
+      <button class="gn-toggle" id="btnProMode" type="button" aria-pressed="false"
+              title="展开全部技术指标与实验分析工具，报告页也会给出更详细的判定依据">专业模式</button>
+      <button class="gn-icon" id="btnMute" type="button" title="报警声音开关" aria-label="报警声音开关">
+        <svg aria-hidden="true"><use href="#i-sound" id="muteIcon"></use></svg>
+      </button>
+      <button class="gn-icon" id="btnTheme" type="button" title="切换深浅色" aria-label="切换深浅色">
+        <svg aria-hidden="true"><use href="#i-moon" id="themeIcon"></use></svg>
+      </button>
+      <button class="gn-icon" id="btnSettings" type="button" title="设置" aria-label="设置">
+        <svg aria-hidden="true"><use href="#i-gear"></use></svg>
+      </button>
+    </div>
+  </nav>
+</header>
+
+<main id="main">
+
+<!-- ============================================================ -->
+<!-- 视图一：首屏（Apple 全幅段落结构）                            -->
+<!-- ============================================================ -->
+<!-- Apple 的骨架：一屏一讯息。hero 是一块深色的"暗色画幅"
+（对应 Apple 的全屏摄影段），内容锚定在底部，主副 CTA 并排；
+     之后是白底段落与浅灰 #f4f4f4 收尾段，段落之间只靠留白分隔。 -->
+<section class="view active" id="viewHome">
+
+  <!-- ---------- 段落 1：hero（深色画幅，100vh） ---------- -->
+  <div class="ts-hero">
+    <div class="ts-hero-inner">
+      <p class="ts-promo" data-reveal="fade">
+        <svg width="14" height="14" aria-hidden="true"><use href="#i-lock"></use></svg>
+        全部计算在本机浏览器完成，视频不上传。
+      </p>
+      <h1 class="ts-hero-title t-balance" data-reveal="blur">犯困之前，<br>提前预警。</h1>
+      <!-- 注意：中文段落不要在源码里换行。HTML 会把换行折叠成一个空格，
+           而中文标点本身已含间距，叠加后会出现明显的空洞。 -->
+      <p class="ts-hero-sub" data-reveal>摄像头跟踪眼睛开合、嘴部张合与头部姿态，实时输出 0–100 疲劳指数，超标即分级报警。无需安装，打开页面即可运行，画面全程留在本机。</p>
+      <p class="ts-hero-note pro-only" data-reveal>技术实现：PERCLOS、闭眼时长、眨眼频率与时长、哈欠、点头、视线偏离七类特征，经隶属函数归一化后模糊加权，实时输出 0–100 疲劳指数与四级预警。</p>
+
+      <!-- Apple CTA 对：主 Action Blue 胶囊 + 次透明框 -->
+      <div class="ts-hero-cta" data-reveal>
+        <button class="btn btn-primary btn-lg" id="btnStart" type="button" title="会请求摄像头权限，随后进行 8 秒睁眼基线校准">
+          <svg width="18" height="18" aria-hidden="true"><use href="#i-play"></use></svg>
+          开始检测
+        </button>
+        <a class="btn btn-hero-ghost btn-lg" href="#tsFeatures" title="向下滚动，查看特征融合方式与测试数据">
+          查看工作原理
+          <svg width="18" height="18" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
+        </a>
+      </div>
+
+<!-- 原创视觉：HUD 风格的"驾驶舱预览"——透视路面 + 疲劳仪表，
+           不使用人脸素材，不使用第三方品牌资产；配色全部走 --hero-* 令牌，
+           浅色主题为白底细灰线，暗色主题为深色底亮线。 -->
+      <figure class="vision-product" data-reveal="fade" aria-label="疲劳检测仪表预览：透视路面示意与实时疲劳指数仪表">
+        <div class="vision-product-frame">
+          <svg viewBox="0 0 820 340" aria-hidden="true">
+            <!-- 面板 -->
+            <rect class="hud-panel" x="1.5" y="1.5" width="817" height="337" rx="12"></rect>
+            <!-- 地平线 -->
+            <line class="hud-horizon" x1="56" y1="158" x2="764" y2="158"></line>
+            <!-- 透视路面：两侧汇聚线 -->
+            <path class="hud-road" d="M168 318 396 162"></path>
+            <path class="hud-road" d="M288 318 406 162"></path>
+            <path class="hud-road" d="M652 318 424 162"></path>
+            <path class="hud-road" d="M532 318 414 162"></path>
+            <!-- 中央车道线（Action Blue，断续） -->
+            <path class="hud-lane" d="M410 318 410 162"></path>
+            <!-- 扫描线 -->
+            <path class="hud-scan" d="M120 98h580"></path>
+            <!-- 状态芯片 -->
+            <rect class="hud-chip" x="56" y="48" width="150" height="36" rx="4"></rect>
+            <circle class="hud-dot-ok" cx="76" cy="66" r="5"></circle>
+            <text class="hud-chip-text" x="92" y="71">本地分析中</text>
+            <!-- 右侧疲劳仪表：220° 弧 + 大数字 -->
+            <g class="hud-gauge" transform="translate(636,176)">
+              <path class="hud-gauge-track" d="M-64 34 A72 72 0 1 1 64 34"></path>
+              <path class="hud-gauge-bar" d="M-64 34 A72 72 0 1 1 64 34" stroke-dasharray="276" stroke-dashoffset="254"></path>
+              <text class="hud-gauge-num" y="8">8</text>
+              <text class="hud-gauge-label" y="34">疲劳指数</text>
+            </g>
+            <!-- 仪表右侧等级芯片 -->
+            <rect class="hud-chip" x="724" y="56" width="64" height="30" rx="4"></rect>
+            <circle class="hud-dot-ok" cx="740" cy="71" r="4"></circle>
+            <text class="hud-chip-text" x="752" y="75">清醒</text>
+          </svg>
+        </div>
+        <figcaption>你的画面，只留在你的设备上。</figcaption>
+      </figure>
+
+      <div class="boot" id="bootBox" hidden>
+        <div class="boot-row">
+          <span class="spinner" id="bootSpinner"></span>
+          <span id="bootMsg">正在准备…</span>
+        </div>
+        <div class="progress"><div class="progress-bar" id="bootBar" style="width:0%"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---------- 段落 2：四项能力（白底，2×2 大卡） ----------
+       Apple 的白底段落：卡片浅灰底、12px 圆角、无描边无阴影，
+       卡与卡之间靠 16px 间距和底色差分层。 -->
+  <div class="ts-section" id="tsFeatures">
+    <div class="ts-section-inner">
+      <h2 class="ts-section-title" data-reveal>七个信号，交叉印证。</h2>
+      <p class="ts-section-sub" data-reveal>单一特征容易误判。加权确认通过，系统才会报警。</p>
+
+      <div class="hero-features" data-staggered-group>
+        <div class="feat" data-staggered>
+          <div class="feat-icon"><svg aria-hidden="true"><use href="#i-eye"></use></svg></div>
+          <h3>478 点面部地标</h3>
+          <p>每帧定位眼睑、嘴部与头部的空间坐标，开合幅度、偏转角度全部量化，不依赖主观经验。</p>
+        </div>
+        <div class="feat" data-staggered>
+          <div class="feat-icon"><svg aria-hidden="true"><use href="#i-brain"></use></svg></div>
+          <h3>七类特征加权融合</h3>
+          <p>PERCLOS、眨眼频率、哈欠、点头等七类特征按隶属度加权，单一信号异常不会直接触发报警。</p>
+        </div>
+        <div class="feat" data-staggered>
+          <div class="feat-icon"><svg aria-hidden="true"><use href="#i-target"></use></svg></div>
+          <h3>8 秒基线校准</h3>
+          <p>检测开始前记录你正常状态下的睁眼幅度，后续判断以个人基线为参照——眼睛大小不同，阈值也不同。</p>
+        </div>
+        <div class="feat" data-staggered>
+          <div class="feat-icon"><svg aria-hidden="true"><use href="#i-shield"></use></svg></div>
+          <h3>全程本机计算</h3>
+          <p>检测、报警、报告全部在浏览器内完成。视频不上传、不落盘，关闭页面后不留任何数据。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---------- 段落 2.5：数据流向四步卡（隐私架构） ----------
+       原为单幅 SVG 流程图（四节点尺寸不等、与页面卡片体系脱节），
+       改为与段落 2/3.5 完全同规格的四张 .feat 卡：等宽等高、同一套
+       Lucide 图标语法；01–04 小序号承担"流向"语义，替代原图的箭头。 -->
+  <div class="ts-section" id="tsPrivacy">
+    <div class="ts-section-inner">
+      <h2 class="ts-section-title" data-reveal>数据流向，全程可见。</h2>
+      <p class="ts-section-sub" data-reveal>画面从摄像头直接进入浏览器内存，分析完成即丢弃。没有上传，没有存储。</p>
+
+      <div class="hero-features" data-staggered-group>
+        <div class="feat" data-staggered>
+          <div class="feat-step" aria-hidden="true">01</div>
+          <div class="feat-icon"><svg aria-hidden="true"><use href="#i-video"></use></svg></div>
+          <h3>摄像头采集</h3>
+          <p>画面从摄像头直达浏览器内存，中间不经过任何服务器。</p>
+        </div>
+        <div class="feat" data-staggered>
+          <div class="feat-step" aria-hidden="true">02</div>
+          <div class="feat-icon"><svg aria-hidden="true"><use href="#i-cpu"></use></svg></div>
+          <h3>内存分析</h3>
+          <p>478 点面部地标与七类特征逐帧计算，全程不出浏览器。</p>
+        </div>
+        <div class="feat" data-staggered>
+          <div class="feat-step" aria-hidden="true">03</div>
+          <div class="feat-icon"><svg aria-hidden="true"><use href="#i-gauge"></use></svg></div>
+          <h3>指数与提醒</h3>
+          <p>疲劳指数实时显示、分档提醒；导出的报告只含数字，不含画面。</p>
+        </div>
+        <div class="feat" data-staggered>
+          <div class="feat-step" aria-hidden="true">04</div>
+          <div class="feat-icon"><svg aria-hidden="true"><use href="#i-trash"></use></svg></div>
+          <h3>画面即弃</h3>
+          <p>每帧分析完成立即丢弃，关闭页面后本机不保留任何画面数据。</p>
+        </div>
+      </div>
+
+      <p class="ts-flow-note" data-reveal>不上传 · 无网络请求 · 不落盘</p>
+    </div>
+  </div>
+
+  <!-- ---------- 段落 3：关键数字（白底，大留白） ----------
+       数字 40px/500，说明 14px 灰色，数字用 data-countup 从 0 滚上来。 -->
+  <div class="ts-section ts-section-tight">
+    <div class="ts-section-inner ts-center">
+      <h2 class="ts-section-title" data-reveal>数字，一目了然。</h2>
+      <div class="tile-stats" data-staggered-group>
+        <div class="tile-stat" data-staggered>
+          <span class="tile-stat-num"><b data-countup>478</b></span>
+          <span class="tile-stat-label"><span class="tile-stat-unit">点面部地标</span><span class="tile-stat-mod">逐帧定位</span></span>
+        </div>
+        <div class="tile-stat" data-staggered>
+          <span class="tile-stat-num"><b data-countup>7</b></span>
+          <span class="tile-stat-label"><span class="tile-stat-unit">类疲劳特征</span><span class="tile-stat-mod">融合判断</span></span>
+        </div>
+        <div class="tile-stat" data-staggered>
+          <span class="tile-stat-num"><b data-countup>4</b></span>
+          <span class="tile-stat-label"><span class="tile-stat-unit">级预警</span><span class="tile-stat-mod">分档提醒</span></span>
+        </div>
+        <div class="tile-stat" data-staggered>
+          <span class="tile-stat-num"><b data-countup>0</b></span>
+          <span class="tile-stat-label"><span class="tile-stat-unit">字节上传</span><span class="tile-stat-mod">画面不出本机</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---------- 段落 3.5：测试历程（真实数字，与 docs/测试报告.md 一致，可复查） ----------
+       复用段落 2 的 feat 卡组件，不新增任何 CSS。 -->
+  <div class="ts-section" id="tsVerify">
+    <div class="ts-section-inner">
+      <h2 class="ts-section-title" data-reveal>先测试，再交付。</h2>
+      <p class="ts-section-sub" data-reveal>六轮迭代，每轮配独立测试工具。以下数字与 docs/测试报告.md 一致，均可复现。</p>
+
+      <div class="hero-features" data-staggered-group>
+        <div class="feat" data-staggered>
+          <div class="feat-icon"><svg aria-hidden="true"><use href="#i-check"></use></svg></div>
+          <h3>4000 轮模糊测试</h3>
+          <p>向融合算法持续注入随机输入，4000 轮零崩溃、零数值越界，每轮结果可用种子复现。</p>
+        </div>
+        <div class="feat" data-staggered>
+          <div class="feat-icon"><svg aria-hidden="true"><use href="#i-warn"></use></svg></div>
+          <h3>20 个对抗场景</h3>
+          <p>连续点击、检测中刷新、暂停时切页等破坏性操作全部实测，20 项场景均有明确反馈，无卡死、无数据丢失。</p>
+        </div>
+        <div class="feat" data-staggered>
+          <div class="feat-icon"><svg aria-hidden="true"><use href="#i-mesh"></use></svg></div>
+          <h3>双引擎内核验证</h3>
+          <p>Firefox 与 WebKit 各执行 12 项断言，24/24 通过；Chrome 与 Edge 为主要适配目标。</p>
+        </div>
+        <div class="feat" data-staggered>
+          <div class="feat-icon"><svg aria-hidden="true"><use href="#i-target"></use></svg></div>
+          <h3>无障碍与键盘</h3>
+          <p>axe 扫描 10 个场景 0 critical；键盘专项 9/9 通过，Tab 导航、空格暂停、Esc 关闭均实测。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---------- 段落 4：收尾 CTA（浅灰 #f4f4f4 底） ---------- -->
+  <div class="ts-section ts-section-ash ts-final">
+    <div class="ts-section-inner ts-center">
+      <h2 class="ts-section-title" data-reveal>开始检测，很简单。</h2>
+      <p class="ts-section-sub" data-reveal>一个摄像头，8 秒基线校准，无需安装任何软件。</p>
+      <div class="ts-final-cta" data-reveal>
+        <a class="btn btn-primary btn-lg" href="#" data-goto="viewWork" title="跳转到实时检测工作台，未启动时会先引导校准">
+          <svg width="18" height="18" aria-hidden="true"><use href="#i-video"></use></svg>
+          进入实时检测
+        </a>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ============================================================ -->
+<!-- 视图二：检测工作台（仪表组布局）                    -->
+<!-- ============================================================ -->
+<section class="view" id="viewWork">
+  <div class="page">
+
+    <!-- ---------- 顶部仪表条：横贯全宽的"仪表台" ----------
+         左=当前等级与原因，中=疲劳指数大数字（车速表式），
+         右=时长/峰值/均值。原先埋在右栏的总览卡上移到这里，
+         让最重要的数字永远在第一屏正中。 -->
+    <div class="cluster score-card">
+      <div class="cluster-level">
+        <div class="level-chip" id="levelChip" data-level="awake">
+          <span class="dot"></span><span id="levelText">清醒</span>
+        </div>
+        <div class="score-reason" id="scoreReason">等待检测数据…</div>
+      </div>
+      <div class="cluster-gauge">
+        <div class="gauge">
+          <svg viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="track" cx="60" cy="60" r="50"></circle>
+            <circle class="bar" cx="60" cy="60" r="50" id="gaugeBar"
+                    stroke-dasharray="314.16" stroke-dashoffset="314.16"></circle>
+          </svg>
+          <div class="gauge-center">
+            <div class="gauge-num tnum" id="gaugeNum">0</div>
+            <div class="gauge-cap">疲劳指数</div>
+          </div>
+        </div>
+      </div>
+      <div class="score-meta">
+        <div><div class="k">检测时长</div><div class="v tnum" id="metaDuration">00:00</div></div>
+        <div><div class="k">峰值</div><div class="v tnum" id="metaPeak">0</div></div>
+        <div><div class="k">均值</div><div class="v tnum" id="metaAvg">0</div></div>
+      </div>
+    </div>
+
+    <div class="workspace">
+
+      <!-- ---------- 左侧：视频 + 图表 ---------- -->
+      <div class="ws-main">
+
+        <div class="stage" id="stage">
+          <video id="video" playsinline muted autoplay class="mirrored"></video>
+          <canvas id="overlay" aria-hidden="true"></canvas>
+
+          <div class="hud" id="hud">
+            <div class="hud-row"><span>眼睛闭合</span><b class="tnum" id="hudClosure">--</b></div>
+            <div class="hud-row pro-only"><span>眼睛开合度（EAR 原始值）</span><b class="tnum" id="hudEar">--</b></div>
+            <div class="hud-row pro-only"><span>嘴巴张开度</span><b class="tnum" id="hudMar">--</b></div>
+            <div class="hud-row pro-only"><span>抬头低头</span><b class="tnum" id="hudPitch">--</b></div>
+            <div class="hud-row pro-only"><span>左右转头</span><b class="tnum" id="hudYaw">--</b></div>
+            <div class="hud-row pro-only"><span>头部倾斜</span><b class="tnum" id="hudRoll">--</b></div>
+          </div>
+
+          <div class="stage-badges">
+            <div class="stage-pill" id="stagePill">
+              <span class="dot dot-pulse" id="stageDot"></span>
+              <span id="stageLevel">清醒</span>
+            </div>
+            <div class="stage-pill pro-only">
+              <span class="tnum" id="stageFps">-- FPS</span>
+            </div>
+            <div class="stage-pill" id="stageFaceState">
+              <span id="stageFaceText">等待人脸</span>
+            </div>
+            <div class="stage-pill" id="stageQuality" hidden>
+              <span id="stageQualityText">数据质量</span>
+            </div>
+          </div>
+
+          <!-- 遮罩：待机 / 标定 / 错误 / 暂停 -->
+          <div class="stage-overlay" id="stageOverlay" hidden>
+            <div>
+              <div class="calib-ring" id="calibRing" hidden>
+                <svg viewBox="0 0 120 120">
+                  <circle class="track" cx="60" cy="60" r="52"></circle>
+                  <circle class="bar" cx="60" cy="60" r="52" id="calibBar"
+                          stroke-dasharray="326.7" stroke-dashoffset="326.7"></circle>
+                </svg>
+                <div class="num tnum" id="calibNum">8</div>
+              </div>
+              <h3 id="overlayTitle">正在认识你的眼睛</h3>
+              <p id="overlayText">请正视摄像头，自然睁眼、放松表情。</p>
+              <div id="overlayActions" class="overlay-actions"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== 控制条：文字按钮 + 4px 矩形 =====
+             从视频内部移出的理由：叠在画面上的图标按钮会遮挡面部区域，
+             而面部正是本系统最需要观察的地方；文字按钮便于口头指代。 -->
+        <div class="controls" role="toolbar" aria-label="检测控制">
+          <div class="controls-group">
+            <span class="controls-label" aria-hidden="true">画面</span>
+            <button class="pill is-on" id="btnMesh" type="button" aria-pressed="true">
+              <svg aria-hidden="true"><use href="#i-mesh"></use></svg>识别点
+            </button>
+            <button class="pill is-on" id="btnMirror" type="button" aria-pressed="true">
+              <svg aria-hidden="true"><use href="#i-mirror"></use></svg>镜像
+            </button>
+            <button class="pill is-on" id="btnHud" type="button" aria-pressed="true">
+              <svg aria-hidden="true"><use href="#i-gauge"></use></svg>实时数值
+            </button>
+          </div>
+
+          <span class="controls-sep" aria-hidden="true"></span>
+
+          <div class="controls-group">
+            <span class="controls-label" aria-hidden="true">检测</span>
+            <button class="pill" id="btnRecalib" type="button">
+              <svg aria-hidden="true"><use href="#i-rotate-ccw"></use></svg>重新校准
+            </button>
+            <button class="pill pill-solid" id="btnPause" type="button">
+              <svg aria-hidden="true"><use href="#i-pause" id="pauseIcon"></use></svg><span id="pauseLabel">暂停</span>
+            </button>
+            <button class="pill pill-danger" id="btnStop" type="button">
+              <svg aria-hidden="true"><use href="#i-stop"></use></svg>结束并生成报告
+            </button>
+          </div>
+
+          <span class="controls-spacer"></span>
+
+          <div class="controls-group">
+            <button class="pill pill-sm" id="btnFullscreen" type="button">
+              <svg aria-hidden="true"><use href="#i-expand"></use></svg>全屏
+            </button>
+          </div>
+        </div>
+
+        <!-- 疲劳趋势图 -->
+        <div class="card ord-chart1">
+          <div class="card-head">
+            <div class="card-title">
+              <svg width="16" height="16" aria-hidden="true"><use href="#i-chart"></use></svg>
+              疲劳指数趋势
+            </div>
+            <div class="legend">
+              <span><i style="background:var(--chart-score)"></i>疲劳指数</span>
+              <span class="pro-only"><i style="background:var(--text-quaternary)"></i>平滑前原始值</span>
+            </div>
+          </div>
+          <div class="chart-box"><canvas id="chartScore" role="img" aria-label="疲劳指数随时间变化曲线，纵轴 0 到 100，越高越疲劳"></canvas></div>
+        </div>
+
+        <!-- 眼/嘴波形图（专业模式） -->
+        <div class="card ord-chart2 pro-only">
+          <div class="card-head">
+            <div class="card-title">
+              <svg width="16" height="16" aria-hidden="true"><use href="#i-eye"></use></svg>
+              眼睑与嘴部特征波形
+            </div>
+            <div class="legend">
+              <span><i style="background:var(--chart-ear)"></i>EAR 眼纵横比</span>
+              <span><i style="background:var(--chart-mar)"></i>MAR 嘴纵横比</span>
+              <span><i style="background:var(--danger)"></i>闭眼阈值</span>
+            </div>
+          </div>
+          <div class="chart-box"><canvas id="chartEye" role="img" aria-label="眼纵横比 EAR 与嘴纵横比 MAR 的实时波形，用于观察眨眼与哈欠特征"></canvas></div>
+        </div>
+
+        <!-- 融合贡献度（专业模式） -->
+        <div class="card ord-fusion pro-only">
+          <div class="card-head">
+            <div class="card-title">
+              <svg width="16" height="16" aria-hidden="true"><use href="#i-brain"></use></svg>
+              疲劳分数是怎么算出来的
+            </div>
+            <span class="badge" id="fusionSum">合计 0.0 分</span>
+          </div>
+          <p class="t-caption" style="margin-bottom:12px">
+            每项指标经隶属函数归一化到 0–1，再乘以权重后累加。条形长度即该指标对当前疲劳指数的实际贡献分。
+          </p>
+          <div id="contribList"></div>
+        </div>
+      </div>
+
+      <!-- ---------- 右侧：指标面板 + 事件 ---------- -->
+      <div class="ws-side">
+
+        <!-- 8 项指标：整块白面板内的紧凑行，2 列网格，
+             行间发丝线，左侧 3px 状态色条是功能信息 -->
+        <div class="card metrics-panel">
+          <div class="card-head">
+            <div class="card-title">
+              <svg width="16" height="16" aria-hidden="true"><use href="#i-activity"></use></svg>
+              实时指标
+            </div>
+          </div>
+          <div class="metric-grid">
+            <div class="metric" id="mPerclos">
+              <div class="metric-label">闭眼时间占比<span class="hint" title="最近 30 秒里眼睛处于闭合状态的时间比例。这是判断疲劳最可靠的指标：越高说明越困。专业名称为 PERCLOS">?</span></div>
+              <div class="metric-value"><span class="tnum" id="vPerclos">0.0</span><span class="metric-unit">%</span></div>
+              <div class="metric-sub" id="sPerclos">最近 30 秒</div>
+              <div class="metric-spark"><i id="kPerclos" style="width:0%"></i></div>
+            </div>
+
+            <div class="metric pro-only" id="mClosure">
+              <div class="metric-label">当前闭眼时长</div>
+              <div class="metric-value"><span class="tnum" id="vClosure">0.00</span><span class="metric-unit">秒</span></div>
+              <div class="metric-sub" id="sClosure">睁眼</div>
+              <div class="metric-spark"><i id="kClosure" style="width:0%"></i></div>
+            </div>
+
+            <div class="metric" id="mYawn">
+              <div class="metric-label">打哈欠</div>
+              <div class="metric-value"><span class="tnum" id="vYawn">0</span><span class="metric-unit">次</span></div>
+              <div class="metric-sub" id="sYawn">0.0 次/分</div>
+              <div class="metric-spark"><i id="kYawn" style="width:0%"></i></div>
+            </div>
+
+            <div class="metric" id="mMicro">
+              <div class="metric-label">长时间闭眼<span class="hint" title="单次闭眼超过 0.5 秒。正常眨眼只有 0.1–0.4 秒，超过说明可能已经短暂睡着">?</span></div>
+              <div class="metric-value"><span class="tnum" id="vMicro">0</span><span class="metric-unit">次</span></div>
+              <div class="metric-sub" id="sMicro">超过 0.5 秒算一次</div>
+              <div class="metric-spark"><i id="kMicro" style="width:0%"></i></div>
+            </div>
+
+            <div class="metric" id="mNod">
+              <div class="metric-label">点头</div>
+              <div class="metric-value"><span class="tnum" id="vNod">0</span><span class="metric-unit">次</span></div>
+              <div class="metric-sub" id="sNod">0.0 次/分</div>
+              <div class="metric-spark"><i id="kNod" style="width:0%"></i></div>
+            </div>
+
+            <div class="metric" id="mHeadDev">
+              <div class="metric-label">注意力分散<span class="hint" title="头部偏离正前方的时间占比。偏离过久说明注意力不在路面上">?</span></div>
+              <div class="metric-value"><span class="tnum" id="vHeadDev">0.0</span><span class="metric-unit">%</span></div>
+              <div class="metric-sub" id="sHeadDev">头部偏离前方</div>
+              <div class="metric-spark"><i id="kHeadDev" style="width:0%"></i></div>
+            </div>
+
+            <div class="metric" id="mBlink">
+              <div class="metric-label">眨眼频率<span class="hint" title="正常成人自发眨眼约 12–22 次/分；疲劳早期因代偿性唤醒而升高，进入深度嗜睡后转为降低且单次时长明显变长">?</span></div>
+              <div class="metric-value"><span class="tnum" id="vBlink">0.0</span><span class="metric-unit">次/分</span></div>
+              <div class="metric-sub" id="sBlink">正常区间 12–22</div>
+              <div class="metric-spark"><i id="kBlink" style="width:0%"></i></div>
+            </div>
+
+            <div class="metric pro-only" id="mBlinkDur">
+              <div class="metric-label">平均眨眼时长</div>
+              <div class="metric-value"><span class="tnum" id="vBlinkDur">--</span><span class="metric-unit">ms</span></div>
+              <div class="metric-sub" id="sBlinkDur">清醒约 100–200</div>
+              <div class="metric-spark"><i id="kBlinkDur" style="width:0%"></i></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card ord-timeline">
+          <div class="card-head">
+            <div class="card-title">
+              <svg width="16" height="16" aria-hidden="true"><use href="#i-activity"></use></svg>
+              检测记录
+            </div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <span class="badge" id="eventCount">0 条</span>
+              <button class="btn btn-ghost btn-sm" id="btnFilterEvents" type="button">仅看异常</button>
+            </div>
+          </div>
+          <div class="timeline" id="timeline">
+            <div class="empty">暂无事件</div>
+          </div>
+        </div>
+
+        <!-- 个人基准值（专业模式） -->
+        <div class="card card-compact ord-calib pro-only">
+          <div class="card-head" style="margin-bottom:10px">
+            <div class="card-title" style="font-size:var(--fs-body)">你的个人基准值</div>
+            <span class="badge" id="calibQuality">未测量</span>
+          </div>
+          <table class="tbl">
+            <tbody>
+              <tr><th>睁眼 EAR 基线</th><td class="tnum" id="cbEarBase">--</td></tr>
+              <tr><th>闭眼判定阈值</th><td class="tnum" id="cbEarClose">--</td></tr>
+              <tr><th>张口判定阈值</th><td class="tnum" id="cbMarOpen">--</td></tr>
+              <tr><th>姿态零点 (P/Y/R)</th><td class="tnum" id="cbPose">--</td></tr>
+              <tr><th>推理耗时 / 委托</th><td class="tnum" id="cbInfer">--</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- 视图三：会话报告（Apple 报告页头部模式）                      -->
+<!-- ============================================================ -->
+<section class="view" id="viewReport">
+  <div class="page">
+    <div class="report-head">
+      <!-- 头部左文右钮：标题与摘要靠左，动作按钮组靠右（Apple 报告页排布） -->
+      <div class="report-head-main">
+        <div class="hero-eyebrow">
+          <svg width="14" height="14" aria-hidden="true"><use href="#i-file-text"></use></svg>
+          检测报告
+        </div>
+        <h1 class="t-title report-title" id="rpTitle">本次检测汇总</h1>
+        <p class="t-secondary report-subtitle" id="rpSubtitle">--</p>
+        <div class="report-meta-pills" id="rpMetaPills"></div>
+      </div>
+      <!-- 普通用户只需要两个动作：把报告存下来、或者再测一次。
+           两个数据导出按钮是论文做数据分析用的，收进专业模式。 -->
+      <div class="report-head-actions no-print">
+        <button class="btn btn-primary" id="btnPrint" type="button">
+          <svg width="16" height="16" aria-hidden="true"><use href="#i-download"></use></svg>下载报告
+        </button>
+        <button class="btn btn-secondary" id="btnBackWork" type="button">再次检测</button>
+        <button class="btn btn-outline pro-only" id="btnExportJson" type="button">完整数据（JSON）</button>
+        <button class="btn btn-outline pro-only" id="btnExportCsv" type="button">指标表格（CSV）</button>
+      </div>
+    </div>
+
+    <!-- 空态引导卡：直接进入报告页且本次打开从未生成过报告时显示
+         （report.js 的 hasReport 标志控制），同时隐藏下方 .report-grid
+         并禁用"下载报告"。 -->
+    <div class="card rp-empty no-print report-empty" id="rpEmpty" hidden>
+      <h2 class="t-title report-empty-title">还没有检测记录</h2>
+      <p class="t-secondary report-empty-sub">完成一次检测后，这里会生成完整的疲劳分析报告。</p>
+      <div class="report-empty-actions">
+        <button class="btn btn-primary btn-lg" id="rpEmptyStart" type="button">
+          <svg width="18" height="18" aria-hidden="true"><use href="#i-play"></use></svg>
+          开始一次检测
+        </button>
+        <button class="btn btn-secondary btn-lg" id="rpEmptyDemo" type="button">看演示模式</button>
+      </div>
+    </div>
+
+    <div class="report-grid">
+      <div class="card">
+        <div class="card-head"><div class="card-title">检测概要</div><span class="badge" id="rpLevelBadge">--</span></div>
+        <div class="report-stat-grid">
+          <div class="stat-item"><div class="n tnum" id="rpDuration">--</div><div class="l">检测时长</div></div>
+          <div class="stat-item"><div class="n tnum" id="rpAvgScore">--</div><div class="l">平均疲劳指数</div></div>
+          <div class="stat-item"><div class="n tnum" id="rpPeakScore">--</div><div class="l">峰值疲劳指数</div></div>
+          <div class="stat-item"><div class="n tnum" id="rpAvgPerclos">--</div><div class="l">平均闭眼占比</div></div>
+        </div>
+        <!-- 有效覆盖率提示：人脸丢失的那段时间不参与统计，必须说清楚，
+             否则读者无法判断上面这些数字有多可信。 -->
+        <p class="t-caption" id="rpCoverage" style="margin-top:14px" hidden></p>
+        <!-- 会话趋势摘要：前半程 vs 后半程均值对比（数据不足时整行隐藏） -->
+        <p class="t-caption" id="rpTrend" style="margin-top:8px" hidden></p>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><div class="card-title">各状态时长占比</div></div>
+        <div class="dist-bar" id="rpDist"></div>
+        <div class="dist-legend">
+          <span><i style="background:var(--lv-awake)"></i>清醒 <b id="rpdAwake">0%</b></span>
+          <span><i style="background:var(--lv-mild)"></i>轻度 <b id="rpdMild">0%</b></span>
+          <span><i style="background:var(--lv-moderate)"></i>中度 <b id="rpdModerate">0%</b></span>
+          <span><i style="background:var(--lv-severe)"></i>重度 <b id="rpdSevere">0%</b></span>
+        </div>
+        <!-- 原第三份"纯时长数字块"（dist-stat-row）已删除：与图例里的时长重复 -->
+      </div>
+
+      <div class="card">
+        <div class="card-head"><div class="card-title">检测到的行为</div></div>
+        <div class="report-event-table-wrap">
+          <table class="tbl">
+            <thead><tr><th>行为</th><th style="text-align:right;white-space:nowrap">次数</th><th style="text-align:right;white-space:nowrap">每分钟</th></tr></thead>
+            <tbody id="rpEventTable"></tbody>
+          </table>
+        </div>
+        <!-- "发出疲劳提醒"是系统动作而非检测到的行为，从表中移出，改为此处小字说明 -->
+        <p class="t-caption" id="rpAlarmNote" style="margin-top:10px" hidden></p>
+      </div>
+
+      <div class="card" style="grid-column:1/-1">
+        <div class="card-head">
+          <div class="card-title">全程疲劳指数曲线</div>
+          <!-- 三条阈值参考线（虚线）的图例，与图内标线颜色一一对应（边界值同 CONFIG.fusion.levels） -->
+          <div class="legend">
+            <span><i style="background:var(--lv-mild)"></i>轻度 24</span>
+            <span><i style="background:var(--lv-moderate)"></i>中度 52</span>
+            <span><i style="background:var(--lv-severe)"></i>重度 74</span>
+          </div>
+        </div>
+        <div class="chart-box" style="height:220px"><canvas id="rpChart" role="img" aria-label="本次会话全程疲劳指数曲线，含轻中重三级阈值参考线"></canvas></div>
+      </div>
+
+      <div class="card" style="grid-column:1/-1">
+        <div class="card-head"><div class="card-title">分析与建议</div></div>
+        <div class="advice-list" id="rpAdvice"></div>
+      </div>
+
+      <!-- ===== 实验分析：参数敏感性 + 消融 + 离线复现（专业模式） ===== -->
+      <div class="card pro-only span-full">
+        <div class="card-head">
+          <div class="card-title">
+            <svg width="16" height="16" aria-hidden="true"><use href="#i-flask"></use></svg>
+            参数敏感性分析
+          </div>
+          <span class="badge badge-info">论文实验工具</span>
+        </div>
+        <p class="t-caption" style="margin-bottom:14px">
+          把本次会话的指标序列在多组参数下离线重算，用于回答「为什么阈值取这个值」。
+          结论对参数不敏感的区间称为<b>稳定平台区</b>，默认值应落在其中——这比只引用文献范围更有说服力。
+        </p>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px" class="no-print">
+          <select class="select" id="selSensParam" style="max-width:240px" aria-label="敏感性分析参数选择"></select>
+          <button class="btn btn-primary btn-sm" id="btnRunSens" type="button">运行敏感性分析</button>
+          <button class="btn btn-secondary btn-sm" id="btnRunAblation" type="button">运行权重消融实验</button>
+          <button class="btn btn-outline btn-sm" id="btnExportAnalysis" type="button">导出分析结果 CSV</button>
+        </div>
+        <p class="t-caption" id="sensDesc" style="margin-bottom:10px"></p>
+        <div style="overflow-x:auto"><table class="tbl" id="sensTable"></table></div>
+        <div id="sensConclusion" style="margin-top:14px"></div>
+      </div>
+
+      <div class="card pro-only span-full">
+        <div class="card-head">
+          <div class="card-title">
+            <svg width="16" height="16" aria-hidden="true"><use href="#i-file-text"></use></svg>
+            离线复现（导入会话 CSV）
+          </div>
+          <span class="badge" id="replayBadge">未导入</span>
+        </div>
+        <p class="t-caption" style="margin-bottom:14px">
+          导入本系统导出的会话 CSV，用<b>完全相同的融合算法</b>重跑一遍并输出结论。
+          用于证明结果可复现，也可在无摄像头的环境（如答辩现场）直接演示完整判定链路。
+        </p>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap" class="no-print">
+          <input type="file" id="fileReplay" accept=".csv,text/csv" style="display:none">
+          <button class="btn btn-secondary btn-sm" id="btnPickReplay" type="button">选择会话 CSV 文件</button>
+          <span class="t-caption" id="replayInfo">尚未导入文件。</span>
+        </div>
+        <div id="replayResult" style="margin-top:14px"></div>
+      </div>
+
+      <!-- ===== 视频离线评测：真人准确率验证（专业模式） ===== -->
+      <div class="card pro-only span-full">
+        <div class="card-head">
+          <div class="card-title">
+            <svg width="16" height="16" aria-hidden="true"><use href="#i-video"></use></svg>
+            视频离线评测（准确率验证）
+          </div>
+          <span class="badge badge-info" id="evalBadge">未导入视频</span>
+        </div>
+        <p class="t-caption" style="margin-bottom:14px">
+          导入录制好的视频，按<b>固定步长</b>逐帧跑完整算法管线（与实时检测同一套代码），
+          再与你的人工标注比对，输出混淆矩阵、灵敏度、特异度与响应延迟。
+          固定步长保证结果与主机性能无关、可复现。视频只在本机解码，不会上传。
+        </p>
+
+        <div class="controls no-print" style="margin-bottom:16px">
+          <div class="controls-group">
+            <span class="controls-label" aria-hidden="true">视频</span>
+            <input type="file" id="fileVideo" accept="video/*" style="display:none">
+            <button class="pill pill-solid" id="btnPickVideo" type="button">
+              <svg aria-hidden="true"><use href="#i-download"></use></svg>选择视频文件
+            </button>
+            <span class="t-caption" id="videoInfo">尚未选择。建议 MP4（H.264），时长 2–5 分钟</span>
+          </div>
+        </div>
+
+        <!-- 视频预览 + 时间轴标注 -->
+        <div id="evalWorkspace" hidden>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,340px);gap:20px;align-items:start">
+            <div>
+              <div class="stage" style="aspect-ratio:16/9;background:#0a0a0b">
+                <video id="evalVideo" playsinline muted controls style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1"></video>
+              </div>
+
+              <!-- 标注时间轴 -->
+              <div class="card card-compact" style="margin-top:16px">
+                <div class="card-head" style="margin-bottom:10px">
+                  <div class="card-title" style="font-size:var(--fs-body)">时间区间标注</div>
+                  <span class="badge" id="annotCoverage">已标注 0.0s</span>
+                </div>
+                <p class="t-caption" style="margin-bottom:12px">
+                  播放视频，在你认为状态发生变化的时刻点「设为起点 / 终点」，然后选标签加入。
+                  标签由你本人主观自评给出，等价于 KSS 嗜睡量表的简化二分。
+                </p>
+                <div id="annotTimeline" style="position:relative;height:36px;border-radius:4px;background:var(--fill-quaternary);overflow:hidden;margin-bottom:12px"></div>
+                <div class="controls-group" style="margin-bottom:10px">
+                  <button class="pill pill-sm" id="btnMarkStart" type="button">设为起点</button>
+                  <span class="t-caption mono" id="markRange">-- ~ --</span>
+                  <button class="pill pill-sm" id="btnMarkEnd" type="button">设为终点</button>
+                </div>
+                <div class="controls-group">
+                  <button class="pill pill-sm" id="btnAddNormal" type="button" style="background:var(--ok-soft);color:var(--ok)">标为正常</button>
+                  <button class="pill pill-sm" id="btnAddFatigue" type="button" style="background:var(--danger-soft);color:var(--danger)">标为疲劳</button>
+                  <button class="pill pill-sm" id="btnAddIgnore" type="button">标为忽略</button>
+                  <span class="controls-spacer"></span>
+                  <button class="pill pill-sm" id="btnClearAnnot" type="button">清空标注</button>
+                </div>
+                <table class="tbl" id="annotTable" style="margin-top:12px"></table>
+              </div>
+            </div>
+
+            <div>
+              <div class="card card-compact">
+                <div class="card-head" style="margin-bottom:10px">
+                  <div class="card-title" style="font-size:var(--fs-body)">评测参数</div>
+                </div>
+                <div id="evalSliders"></div>
+                <div class="field-row" style="margin-top:14px">
+                  <div>
+                    <div class="field-label">疲劳判定起始等级</div>
+                    <div class="field-desc">从哪一级起算作"疲劳"正类</div>
+                  </div>
+                  <select class="select" id="selPositiveFrom">
+                    <option value="mild" selected>轻度及以上</option>
+                    <option value="moderate">中度及以上</option>
+                    <option value="severe">仅重度</option>
+                  </select>
+                </div>
+                <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px">
+                  <button class="pill pill-solid" id="btnRunEval" type="button" style="width:100%;height:38px">开始离线评测</button>
+                  <button class="pill pill-sm" id="btnCancelEval" type="button" disabled style="width:100%">取消评测</button>
+                </div>
+                <div class="progress" id="evalProgressWrap" hidden style="margin-top:14px">
+                  <div class="progress-bar" id="evalProgress" style="width:0%"></div>
+                </div>
+                <p class="t-caption" id="evalStatus" style="margin-top:10px"></p>
+              </div>
+
+              <div class="card card-compact" style="margin-top:16px">
+                <div class="card-head" style="margin-bottom:10px">
+                  <div class="card-title" style="font-size:var(--fs-body)">标注存档</div>
+                </div>
+                <p class="t-caption" style="margin-bottom:12px">
+                  标注结果可导出保存，下次换参数重跑不必重新标。
+                </p>
+                <div class="controls-group">
+                  <input type="file" id="fileAnnot" accept=".json,application/json" style="display:none">
+                  <button class="pill pill-sm" id="btnExportAnnot" type="button">导出标注</button>
+                  <button class="pill pill-sm" id="btnImportAnnot" type="button">导入标注</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 评测结果 -->
+          <div id="evalResult" style="margin-top:20px"></div>
+        </div>
+      </div>
+
+      <div class="card pro-only span-full">
+        <div class="card-head"><div class="card-title">检测参数与环境</div></div>
+        <table class="tbl" id="rpParams"></table>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <p>基于面部多特征融合的 Web 端驾驶员疲劳检测系统 · 本科毕业设计</p>
+  <p>关键点检测 MediaPipe Face Landmarker（本地部署） · 全部推理在浏览器内完成，不上传任何影像数据</p>
+  <!-- 显卡型号与逻辑核心数只在排查性能问题、写论文实验环境时有用 -->
+  <p id="footEnv" class="t-tertiary pro-only">--</p>
+</footer>
+
+<!-- ============ 报警层 ============
+     视觉闪烁幕布仍在（红色脉冲边框）；文字通知已统一并入
+     toast 家族（js/ui/alarm-visuals.js → toastAlarm），独立横幅移除。 -->
+<div class="alarm-veil" id="alarmVeil" data-level="mild" aria-hidden="true"></div>
+
+<!-- ============ 设置抽屉 ============ -->
+<div class="sheet-backdrop" id="sheetBackdrop"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" aria-hidden="true">
+  <div class="sheet-head">
+    <h2 class="t-headline" id="sheetTitle">设置</h2>
+    <button class="btn-icon" id="btnCloseSheet" type="button" aria-label="关闭设置"><svg aria-hidden="true"><use href="#i-close"></use></svg></button>
+  </div>
+  <div class="sheet-body">
+
+    <!-- ======== 常用设置（权重最高，普通用户最常操作） ======= -->
+
+    <div class="field-group">
+      <div class="group-title">提醒方式</div>
+      <div class="field-row">
+        <div><div class="field-label">声音与闪屏提醒</div><div class="field-desc">越困提醒越强烈</div></div>
+        <label class="switch"><input type="checkbox" id="swAlarm" checked aria-label="声音与闪屏提醒"><span class="switch-track"></span><span class="switch-thumb"></span></label>
+      </div>
+      <div class="field-row">
+        <div><div class="field-label">语音提示</div><div class="field-desc">用说话的方式提醒你休息</div></div>
+        <label class="switch"><input type="checkbox" id="swSpeech" checked aria-label="语音提示"><span class="switch-track"></span><span class="switch-thumb"></span></label>
+      </div>
+      <div class="field-row">
+        <div><div class="field-label">听一下提醒声</div><div class="field-desc">可选级别，对应强度的提醒声各播一次</div></div>
+        <button class="btn btn-secondary btn-sm" id="btnTestAlarm" type="button">试听</button>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <div class="group-title">画面</div>
+      <div class="field-row">
+        <div><div class="field-label">摄像头</div><div class="field-desc">换了之后需要重新做一次个人校准</div></div>
+        <select class="select" id="selCamera" aria-label="摄像头选择"></select>
+      </div>
+      <div class="field-row">
+        <div><div class="field-label">在脸上显示识别点</div></div>
+        <label class="switch"><input type="checkbox" id="swMesh" checked aria-label="在脸上显示识别点"><span class="switch-track"></span><span class="switch-thumb"></span></label>
+      </div>
+      <div class="field-row">
+        <div><div class="field-label">画面左右翻转</div><div class="field-desc">像照镜子一样，动作更好对应</div></div>
+        <label class="switch"><input type="checkbox" id="swMirror" checked aria-label="画面左右翻转"><span class="switch-track"></span><span class="switch-thumb"></span></label>
+      </div>
+      <div class="field-row pro-only">
+        <div><div class="field-label">推理委托</div><div class="field-desc">GPU 更快，CPU 兼容性更好</div></div>
+        <div class="segmented" id="segDelegate" role="tablist">
+          <button type="button" role="tab" data-v="GPU" aria-selected="true">GPU</button>
+          <button type="button" role="tab" data-v="CPU" aria-selected="false">CPU</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======== 演示与自检（权重中，答辩/展示场景用） ======= -->
+
+    <div class="field-group">
+      <div class="group-title">演示</div>
+      <div class="field-row">
+        <div><div class="field-label">演示模式</div><div class="field-desc">不用摄像头，用一段模拟的疲劳过程走通完整流程</div></div>
+        <label class="switch"><input type="checkbox" id="swSimulate" aria-label="演示模式"><span class="switch-track"></span><span class="switch-thumb"></span></label>
+      </div>
+      <div class="field-row">
+        <div><div class="field-label">演示从哪个阶段开始</div><div class="field-desc">完整剧本约 2.5 分钟；答辩时间紧可从中度开始</div></div>
+        <select class="select" id="selDemoStart" aria-label="演示起始阶段">
+          <option value="awake" selected>清醒（完整剧本）</option>
+          <option value="mild">轻度疲劳</option>
+          <option value="moderate">中度疲劳（最快出重度报警）</option>
+        </select>
+      </div>
+      <div class="field-row">
+        <div class="field-label" style="max-width:100%">更快的进入方式</div>
+        <div class="field-desc" style="max-width:100%">浏览器地址栏加 <code>?demo=moderate</code> 打开即演示（可选 awake / mild / moderate）</div>
+      </div>
+    </div>
+
+    <!-- E3 启动自检：环境能力清单，应用启动后自动填充 -->
+    <div class="field-group">
+      <div class="group-title" id="preflightTitle">启动自检</div>
+      <ul class="preflight-list" id="preflightList" aria-live="polite">
+        <li class="preflight-item"><span class="field-label">正在检查运行环境…</span></li>
+      </ul>
+    </div>
+
+    <!-- ======== 算法参数（权重最低，专业用户/论文用，收进专业模式） ======= -->
+
+    <!-- 算法参数三组：普通用户改了只会让判定变差，收进专业模式。
+         做敏感性分析与消融实验时需要，所以保留而不删除。 -->
+    <div class="field-group pro-only">
+      <div class="group-title">融合权重（合计自动归一化）</div>
+      <div id="weightSliders"></div>
+    </div>
+
+    <div class="field-group pro-only">
+      <div class="group-title">判定阈值</div>
+      <div id="thresholdSliders"></div>
+    </div>
+
+    <div class="field-group pro-only">
+      <div class="group-title">时间窗口</div>
+      <div id="windowSliders"></div>
+    </div>
+  </div>
+  <div class="sheet-foot">
+    <span class="t-caption sheet-foot-note">开关即时生效；「保存参数」会记住当前算法设置</span>
+    <button class="btn btn-ghost" id="btnResetCfg" type="button">恢复默认</button>
+    <button class="btn btn-primary" id="btnSaveCfg" type="button">保存参数</button>
+  </div>
+</div>
+
+<!-- 浏览器兼容性检测：外部脚本（内联会被本地 CSP 拦截），在 app.js 加载前执行 -->
+<script src="js/compat.js"></script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

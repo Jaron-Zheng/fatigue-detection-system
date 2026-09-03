@@ -1,0 +1,48 @@
+{
+  "mediapipeVersion": "1.0.0",
+  "fetchedAt": "2026-08-01T23:48:06.261Z",
+  "files": [
+    {
+      "file": "tasks-vision/vision_bundle.mjs",
+      "exists": true,
+      "size": 154839,
+      "sha256": "54ad628b478853dadb23261c1c7d14cfe3760b363ccf62b8c02ef73e5c7fb87a"
+    },
+    {
+      "file": "tasks-vision/vision.d.ts",
+      "exists": true,
+      "size": 130563,
+      "sha256": "be1e1d8ca5b0440bb8690c8d1d6bc0a5b4c1da32b51f5526648a568c79510cdc"
+    },
+    {
+      "file": "tasks-vision/wasm/vision_wasm_internal.js",
+      "exists": true,
+      "size": 323343,
+      "sha256": "e2da04fe2ab9f58eb2aeb8f8724c80ad8919d31d7f5fb99057565879f05f51ca"
+    },
+    {
+      "file": "tasks-vision/wasm/vision_wasm_internal.wasm",
+      "exists": true,
+      "size": 11532084,
+      "sha256": "c266c65f3789bea74ab12dd6609edc96c68655da4540d6097d0732d8be80b742"
+    },
+    {
+      "file": "tasks-vision/wasm/vision_wasm_nosimd_internal.js",
+      "exists": true,
+      "size": 323146,
+      "sha256": "3019218e99d08d95cf9710245e6785aeb68520cd703793e67ff1c583920d6345"
+    },
+    {
+      "file": "tasks-vision/wasm/vision_wasm_nosimd_internal.wasm",
+      "exists": true,
+      "size": 10815273,
+      "sha256": "850d2d7b318c017e71c11b712947df65088e966de3453b9cdf263556d8ae47a6"
+    },
+    {
+      "file": "models/face_landmarker.task",
+      "exists": true,
+      "size": 3758596,
+      "sha256": "64184e229b263107bc2b804c6625db1341ff2bb731874b0bcc2fe6544e0bc9ff"
+    }
+  ]
+}

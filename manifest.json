@@ -1,0 +1,20 @@
+{
+  "name": "驾驶员疲劳检测系统",
+  "short_name": "疲劳检测",
+  "description": "基于面部多特征融合的浏览器端驾驶员疲劳检测系统：全部推理在本机完成，不上传任何影像数据。",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#000000",
+  "theme_color": "#0071e3",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
