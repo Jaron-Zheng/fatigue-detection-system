@@ -34,7 +34,13 @@ const get = (k, d) => {
   const i = args.indexOf(k);
   return i >= 0 ? args[i + 1] : d;
 };
-const CACHE = JSON.parse(fs.readFileSync(get('--cache', 'D:\\fatigue-eval-data\\cache\\nthu-features.json'), 'utf8'));
+// 缓存查找顺序与 realdata-eval.mjs 一致：项目内 _eval-cache/ 优先，D 盘原始落点兜底
+const ROOT = path.resolve(__dirname, '..');
+const DEFAULT_CACHE =
+  [path.join(ROOT, '_eval-cache', 'nthu-features.json'), 'D:\\fatigue-eval-data\\cache\\nthu-features.json'].find((p) =>
+    fs.existsSync(p)
+  ) || path.join(ROOT, '_eval-cache', 'nthu-features.json');
+const CACHE = JSON.parse(fs.readFileSync(get('--cache', DEFAULT_CACHE), 'utf8'));
 const SUBJECT = get('--subject', '');
 const CLIP = get('--clip', '');
 const STEP = Number(get('--stepMs', '33.333'));

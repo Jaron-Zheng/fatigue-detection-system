@@ -81,11 +81,15 @@ const get = (k, d) => {
 };
 const MODE = get('--mode', 'baseline');
 const DATA_DIR = get('--data-dir', 'D:\\fatigue-eval-data');
-// --cache 未指定时按模式取默认缓存路径
+const ROOT = path.resolve(__dirname, '..');
+// --cache 未指定时按模式取缓存文件名，查找顺序：
+// 项目内 _eval-cache/（本地保存的完整特征缓存，首选，D 盘原始数据集
+// 删除后仍可回放全部真实数据指标）→ {data-dir}\cache（collect 原始落点兜底）。
+const CACHE_FILE = MODE === 'framelevel' ? 'uta-features.json' : 'nthu-features.json';
 const DEFAULT_CACHE =
-  MODE === 'framelevel'
-    ? path.join(DATA_DIR, 'cache', 'uta-features.json')
-    : path.join(DATA_DIR, 'cache', 'nthu-features.json');
+  [path.join(ROOT, '_eval-cache', CACHE_FILE), path.join(DATA_DIR, 'cache', CACHE_FILE)].find((p) =>
+    fs.existsSync(p)
+  ) || path.join(ROOT, '_eval-cache', CACHE_FILE);
 const CACHE_PATH = path.resolve(get('--cache', DEFAULT_CACHE));
 const STEP_MS = Number(get('--stepMs', '0')); // 0 = 用缓存 meta 里的 stepMs
 const CALIB_SEC = Number(get('--calibSec', '5'));

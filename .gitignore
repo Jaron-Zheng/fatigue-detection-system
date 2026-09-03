@@ -46,3 +46,7 @@ _tpl/
 
 # 本地评测数据集（tools/realdata-collect.mjs 按需下载，体积大不入库）
 _dataset/
+
+# 真实数据特征缓存（数据集派生的逐帧特征，不入库；D 盘原始数据集删除后
+# eval/diagnose 仍可从此处回放全部真实数据指标）
+_eval-cache/
