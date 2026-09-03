@@ -355,10 +355,11 @@ export class ReportView {
     if (!canvas) return;
     const data = { score: samples.map((s) => ({ t: s.t, v: s.score })) };
     const bands = [
-      { from: 0, to: 30, color: 'rgba(29,158,75,0.08)' },
-      { from: 30, to: 52, color: 'rgba(209,154,0,0.10)' },
-      { from: 52, to: 74, color: 'rgba(232,115,12,0.10)' },
-      { from: 74, to: 100, color: 'rgba(229,50,45,0.10)' },
+      /* 等级色带走 -soft 令牌（主题自适应），与工作台指数图同源 */
+      { from: 0, to: 30, color: cssVar('--ok-soft', 'rgba(31,163,85,0.12)') },
+      { from: 30, to: 52, color: cssVar('--warn-soft', 'rgba(168,119,5,0.14)') },
+      { from: 52, to: 74, color: cssVar('--caution-soft', 'rgba(242,104,12,0.15)') },
+      { from: 74, to: 100, color: cssVar('--danger-soft', 'rgba(224,43,43,0.13)') },
     ];
     // 用最后一个样本的时间作为右边界，保证图形从 x=0 画到 x=duration
     const lastT = samples.length ? samples[samples.length - 1].t : durationMs;
@@ -385,15 +386,15 @@ export class ReportView {
         series: [
           {
             key: 'score',
-            color: cssVar('--chart-score', '#e8730c'),
+            color: cssVar('--chart-score', '#3e6ae1'),
             width: 2,
-            fill: 'rgba(232,115,12,0.22)',
+            fill: 'rgba(62,106,225,0.22)',
           },
         ],
         refLines: [
-          { y: 30, color: cssVar('--lv-mild', '#d19a00'), label: '轻度 30' },
-          { y: 52, color: cssVar('--lv-moderate', '#e8730c'), label: '中度 52' },
-          { y: 74, color: cssVar('--lv-severe', '#e5322d'), label: '重度 74' },
+          { y: 30, color: cssVar('--lv-mild', '#a87705'), label: '轻度 30' },
+          { y: 52, color: cssVar('--lv-moderate', '#f2680c'), label: '中度 52' },
+          { y: 74, color: cssVar('--lv-severe', '#e02b2b'), label: '重度 74' },
         ],
       });
     } else {
@@ -414,14 +415,24 @@ export class ReportView {
   _refreshChartColors() {
     if (!this._lineChart) return;
     const o = this._lineChart.opts;
-    o.series[0].color = cssVar('--chart-score', '#e8730c');
+    o.series[0].color = cssVar('--chart-score', '#3e6ae1');
     const colors = [
-      cssVar('--lv-mild', '#d19a00'),
-      cssVar('--lv-moderate', '#e8730c'),
-      cssVar('--lv-severe', '#e5322d'),
+      cssVar('--lv-mild', '#a87705'),
+      cssVar('--lv-moderate', '#f2680c'),
+      cssVar('--lv-severe', '#e02b2b'),
     ];
     o.refLines.forEach((rl, i) => {
       if (colors[i]) rl.color = colors[i];
+    });
+    /* 等级色带同样重取（缓存实例的 bands 停在构造时的主题色上） */
+    const softs = [
+      cssVar('--ok-soft', 'rgba(31,163,85,0.12)'),
+      cssVar('--warn-soft', 'rgba(168,119,5,0.14)'),
+      cssVar('--caution-soft', 'rgba(242,104,12,0.15)'),
+      cssVar('--danger-soft', 'rgba(224,43,43,0.13)'),
+    ];
+    o.bands.forEach((b, i) => {
+      if (softs[i]) b.color = softs[i];
     });
   }
 
@@ -445,10 +456,10 @@ export class ReportView {
   _renderDist(host, summary) {
     if (!host) return;
     const colors = {
-      awake: cssVar('--lv-awake', '#146a38'),
-      mild: cssVar('--lv-mild', '#7a5a00'),
-      moderate: cssVar('--lv-moderate', '#b34e00'),
-      severe: cssVar('--lv-severe', '#c11f1a'),
+      awake: cssVar('--lv-awake', '#1fa355'),
+      mild: cssVar('--lv-mild', '#a87705'),
+      moderate: cssVar('--lv-moderate', '#f2680c'),
+      severe: cssVar('--lv-severe', '#e02b2b'),
     };
     renderDistribution(host, summary.levelRatios, LEVEL_LABELS, colors);
   }

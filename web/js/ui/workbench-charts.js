@@ -21,20 +21,22 @@ export class WorkbenchCharts {
       yMax: 100,
       windowMs: wMs,
       yTicks: 4,
+      /* 等级色带走 -soft 令牌；四档等级色两主题同值（单一配色），
+       * 主题切换只需重取非等级类线色 */
       bands: [
-        { from: 0, to: 30, color: 'rgba(29,158,75,0.07)' },
-        { from: 30, to: 52, color: 'rgba(209,154,0,0.09)' },
-        { from: 52, to: 74, color: 'rgba(232,115,12,0.09)' },
-        { from: 74, to: 100, color: 'rgba(229,50,45,0.09)' },
+        { from: 0, to: 30, color: cssVar('--ok-soft', 'rgba(31,163,85,0.12)') },
+        { from: 30, to: 52, color: cssVar('--warn-soft', 'rgba(168,119,5,0.14)') },
+        { from: 52, to: 74, color: cssVar('--caution-soft', 'rgba(242,104,12,0.15)') },
+        { from: 74, to: 100, color: cssVar('--danger-soft', 'rgba(224,43,43,0.13)') },
       ],
       series: [
         { key: 'raw', color: cssVar('--text-quaternary', '#aeaeb2'), width: 1.2, dash: [3, 3] },
-        { key: 'score', color: cssVar('--chart-score', '#e8730c'), width: 2.2, fill: 'rgba(232,115,12,0.20)' },
+        { key: 'score', color: cssVar('--chart-score', '#3e6ae1'), width: 2.2, fill: 'rgba(62,106,225,0.20)' },
       ],
       refLines: [
-        { y: 30, color: cssVar('--lv-mild', '#d19a00'), label: '轻度' },
-        { y: 52, color: cssVar('--lv-moderate', '#e8730c'), label: '中度' },
-        { y: 74, color: cssVar('--lv-severe', '#e5322d'), label: '重度' },
+        { y: 30, color: cssVar('--lv-mild', '#a87705'), label: '轻度' },
+        { y: 52, color: cssVar('--lv-moderate', '#f2680c'), label: '中度' },
+        { y: 74, color: cssVar('--lv-severe', '#e02b2b'), label: '重度' },
       ],
     });
 
@@ -67,17 +69,26 @@ export class WorkbenchCharts {
   /** 图表颜色取自 CSS 变量，主题切换后需要重新取色 */
   refreshColors() {
     this.score.opts.series[0].color = cssVar('--text-quaternary', '#aeaeb2');
-    this.score.opts.series[1].color = cssVar('--chart-score', '#e8730c');
+    this.score.opts.series[1].color = cssVar('--chart-score', '#3e6ae1');
     this.eye.opts.series[0].color = cssVar('--chart-ear', '#0071e3');
     this.eye.opts.series[1].color = cssVar('--chart-mar', '#9a4bd6');
-    /* E3：疲劳指数图的三条等级参考线同样是构造时取色的，主题切换后
-     * 会残留旧主题色值，一并重取（眼图的阈值参考线由 draw() 每次用
-     * cssVar 现取，无需在此处理） */
+    /* E3：疲劳指数图的三条等级参考线与四段等级色带同样是构造时取色的，
+     * 主题切换后会残留旧主题色值，一并重取（眼图的阈值参考线由 draw()
+     * 每次用 cssVar 现取，无需在此处理） */
+    const softs = [
+      cssVar('--ok-soft', 'rgba(31,163,85,0.12)'),
+      cssVar('--warn-soft', 'rgba(168,119,5,0.14)'),
+      cssVar('--caution-soft', 'rgba(242,104,12,0.15)'),
+      cssVar('--danger-soft', 'rgba(224,43,43,0.13)'),
+    ];
+    this.score.opts.bands.forEach((b, i) => {
+      if (softs[i]) b.color = softs[i];
+    });
     const rl = this.score.opts.refLines;
     if (rl.length >= 3) {
-      rl[0].color = cssVar('--lv-mild', '#d19a00');
-      rl[1].color = cssVar('--lv-moderate', '#e8730c');
-      rl[2].color = cssVar('--lv-severe', '#e5322d');
+      rl[0].color = cssVar('--lv-mild', '#a87705');
+      rl[1].color = cssVar('--lv-moderate', '#f2680c');
+      rl[2].color = cssVar('--lv-severe', '#e02b2b');
     }
   }
 
@@ -93,7 +104,7 @@ export class WorkbenchCharts {
       this.eye.opts.refLines = [
         {
           y: calib.earCloseThresh,
-          color: cssVar('--danger', '#e5322d'),
+          color: cssVar('--danger', '#e02b2b'),
           label: `闭眼阈值 ${calib.earCloseThresh.toFixed(3)}`,
         },
         {

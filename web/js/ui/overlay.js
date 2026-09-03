@@ -278,10 +278,10 @@ export class Overlay {
     const jaw = clamp(feat.jawOpen ?? clamp((feat.mar - 0.06) / (0.85 - 0.06), 0, 1), 0, 1);
     const level = (state && state.level) || 'awake';
     const LV = {
-      awake: cssVar('--lv-awake', '#30d158'),
-      mild: cssVar('--lv-mild', '#ffd60a'),
-      moderate: cssVar('--lv-moderate', '#ff9f0a'),
-      severe: cssVar('--lv-severe', '#ff453a'),
+      awake: cssVar('--lv-awake', '#1fa355'),
+      mild: cssVar('--lv-mild', '#a87705'),
+      moderate: cssVar('--lv-moderate', '#f2680c'),
+      severe: cssVar('--lv-severe', '#e02b2b'),
     };
     const lvColor = LV[level] || LV.awake;
     const fatigueK = level === 'severe' ? 1 : level === 'moderate' ? 0.6 : level === 'mild' ? 0.3 : 0;

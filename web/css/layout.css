@@ -377,15 +377,23 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   width: min(100%, 820px);
   margin: 0 auto;
 }
-/* ---- 概览页"数据流向"图（tsPrivacy 段落）：仅布局，配色走全局令牌 ---- */
-.ts-flow-figure {
-  width: min(100%, 860px);
-  margin: 0 auto;
+/* ---- 概览页"数据流向"四步卡（tsPrivacy 段落）：复用 .feat 卡体系，
+ * 01–04 小序号承担"流向"语义（Apple 规格表的编号风格：等宽数字、
+ * 第四档蓝调灰，只报顺序不抢注意力），配色走全局令牌 ---- */
+.feat-step {
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.08em;
+  color: var(--text-quaternary);
+  margin-bottom: var(--sp-3);
 }
-.ts-flow-figure svg {
-  width: 100%;
-  height: auto;
-  overflow: visible;
+.ts-flow-note {
+  margin-top: var(--sp-6);
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: var(--fs-caption);
+  letter-spacing: var(--ls-caption);
 }
 .vision-product-frame {
   width: 100%;

@@ -32,6 +32,13 @@ export class AlarmSystem {
     this.onRecovery = null;
     this.onVisualAlarm = null; // 由 UI 注入：触发视觉闪烁
     this._speakingUntil = 0;
+    /* 语音列表异步就绪（Chrome/Edge 首查为空，voiceschanged 后才完整）：
+     * 到达后清空选中缓存，下次播报重选。老浏览器无 addEventListener 则跳过 */
+    if ('speechSynthesis' in window && typeof speechSynthesis.addEventListener === 'function') {
+      speechSynthesis.addEventListener('voiceschanged', () => {
+        this._voice = undefined;
+      });
+    }
   }
 
   /** 在用户手势中调用，解锁音频 */
@@ -98,6 +105,40 @@ export class AlarmSystem {
     }
   }
 
+  /**
+   * 挑选自然度最高的中文语音。
+   *
+   * 报警语音"机器味重"的根因：SpeechSynthesis 默认用系统第一个语音，
+   * Windows 上即本地合成的"惠惠"（拼接感强、语调平）。而 Edge 自带的
+   * 在线神经语音（晓晓/云希 Natural 系列）自然度断代领先。评分策略：
+   *   100 分：Natural / Neural 在线神经语音（仅 Edge 提供，零依赖本地代码）
+   *   12 分：微软神经音色名（晓晓/云希/云扬，即使非在线档也优于惠惠）
+   *   20 分：zh-CN 大陆普通话（口音正确）
+   *   4 分：在线语音（localService=false）
+   * 语音列表异步加载（voiceschanged 事件后才完整），首查常为空——
+   * 选中结果缓存，事件到达后清缓存重选。
+   */
+  _pickVoice() {
+    if (this._voice === undefined) {
+      const voices = window.speechSynthesis
+        .getVoices()
+        .filter((v) => /^zh/i.test(v.lang || ''));
+      const score = (v) => {
+        const n = (v.name || '').toLowerCase();
+        let s = 0;
+        if (/natural|neural/.test(n)) s += 100;
+        else if (/xiaoxiao|yunxi|yunyang|晓晓|云希|云扬/.test(n)) s += 12;
+        if (/^zh[-_]cn/i.test(v.lang || '')) s += 20;
+        if (v.localService === false) s += 4;
+        return s;
+      };
+      this._voice = voices.length
+        ? voices.reduce((best, v) => (score(v) > score(best) ? v : best))
+        : null;
+    }
+    return this._voice;
+  }
+
   speak(text) {
     if (!CONFIG.alarm.speechEnabled || this.muted || !text) return;
     if (!('speechSynthesis' in window)) return;
@@ -107,7 +148,11 @@ export class AlarmSystem {
       window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
       u.lang = 'zh-CN';
-      u.rate = 1.05;
+      const v = this._pickVoice();
+      if (v) u.voice = v;
+      // 在线神经音 1.05 保持报警的紧迫感；本地合成音偏机械，
+      // 稍降回 1.0 减少赶句感（惠惠快读时机器味最重）
+      u.rate = v && v.localService === false ? 1.05 : 1.0;
       u.pitch = 1.0;
       u.volume = 1.0;
       // 用 onend 精确追踪结束时间；fallback 用保守估算（280ms/字）

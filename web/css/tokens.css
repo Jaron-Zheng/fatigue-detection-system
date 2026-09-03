@@ -144,35 +144,45 @@
   --fill-tertiary: rgba(23, 26, 32, 0.09);
 
   /* 语义色：数据可视化与报警专用（功能信息，不是装饰色）。
-   * 浅色下全部按白底 ≥4.5 校准。 */
-  --ok: #146a38;
-  --ok-soft: rgba(20, 106, 56, 0.12);
-  --warn: #7a5a00;
-  --warn-soft: rgba(122, 90, 0, 0.14);
-  --caution: #b34e00;
-  --caution-soft: rgba(179, 78, 0, 0.14);
-  --danger: #c11f1a;
-  --danger-soft: rgba(193, 31, 26, 0.13);
+   * 2026-09 重设计·单一配色：四档等级色在浅色/深色两套主题下取完全
+   * 相同的值（设计约束）。可行域是"中等明度"窗口——白底对比 ≥3:1
+   * 要求相对亮度 ≤0.30，深底 #171a20 对比 ≥3:1 要求 ≥0.13，取中间：
+   *   清醒 #1fa355（白 3.3 / 深 5.3） 轻度 #a87705（白 4.0 / 深 4.4）
+   *   中度 #f2680c（白 3.1 / 深 5.6） 重度 #e02b2b（白 4.6 / 深 3.8）
+   * 档间分离走"色相+明度"双通道：绿 145°→金 40°（105° 色相差）；
+   * 金暗 0.22→橙亮 0.29（明度跳 7 点 + 16°）；橙亮 0.29→红深 0.18
+   * （明度跳 11 点 + 23°）。等级色出现的场合均带文字标签（非仅色辨）。 */
+  --ok: #1fa355;
+  --ok-soft: rgba(31, 163, 85, 0.12);
+  --warn: #a87705;
+  --warn-soft: rgba(168, 119, 5, 0.14);
+  --caution: #f2680c;
+  --caution-soft: rgba(242, 104, 12, 0.15);
+  --danger: #e02b2b;
+  --danger-soft: rgba(224, 43, 43, 0.13);
   --info: #0066cc;
   --info-soft: rgba(0, 102, 204, 0.12);
   /* RGB 分量三元组：供发光阴影写 rgba(var(--danger-rgb), 0.42) */
-  --ok-rgb: 20, 106, 56;
-  --warn-rgb: 122, 90, 0;
-  --caution-rgb: 179, 78, 0;
-  --danger-rgb: 193, 31, 26;
+  --ok-rgb: 31, 163, 85;
+  --warn-rgb: 168, 119, 5;
+  --caution-rgb: 242, 104, 12;
+  --danger-rgb: 224, 43, 43;
   --accent-rgb: 0, 113, 227;
   --link-on-dark-rgb: 41, 151, 255;
   /* 报警发光专用色：报警底两主题都是暗的，发光色不随主题变 */
-  --glow-ok: 20, 106, 56;
-  --glow-warn: 122, 90, 0;
-  --glow-caution: 179, 78, 0;
-  --glow-danger: 193, 31, 26;
+  --glow-ok: 31, 163, 85;
+  --glow-warn: 168, 119, 5;
+  --glow-caution: 242, 104, 12;
+  --glow-danger: 224, 43, 43;
 
-  /* 疲劳等级配色（与语义色对应，单独命名便于图表复用） */
-  --lv-awake: #146a38;
-  --lv-mild: #7a5a00;
-  --lv-moderate: #b34e00;
-  --lv-severe: #c11f1a;
+  /* 疲劳等级配色（与语义色对应，单独命名便于图表复用）。
+   * 单一配色：深色主题取完全相同的值（见深色块注释） */
+  --lv-awake: #1fa355;
+  --lv-mild: #a87705;
+  --lv-moderate: #f2680c;
+  --lv-severe: #e02b2b;
+  /* 四档均为中等明度（相对亮度 0.17–0.29），实心底文字统一白色，
+   * 两主题同值；白色文字对最深一档 #e02b2b 也有 4.6:1 */
   --on-lv: #ffffff;
 
   /* 图表线色：主曲线改用品牌蓝，辅线用灰系
@@ -345,33 +355,36 @@
     --fill-quaternary: rgba(255, 255, 255, 0.06);
     --fill-tertiary: rgba(255, 255, 255, 0.1);
 
-    --ok: #4ade80;
-    --ok-soft: rgba(74, 222, 128, 0.14);
-    --warn: #fbbf24;
-    --warn-soft: rgba(251, 191, 36, 0.14);
-    --caution: #fb923c;
-    --caution-soft: rgba(251, 146, 60, 0.14);
-    --danger: #f87171;
-    --danger-soft: rgba(248, 113, 113, 0.13);
+    /* 语义色（深色）：与浅色完全同值（单一配色，设计约束）。
+     * 取值依据见 :root 浅色块注释：四档均为中等明度（相对亮度
+     * 0.17–0.29），在白底与 #171a20 深底上同时满足 ≥3:1，
+     * 因此无需按主题分档；-soft 为同基色的透明度晕染，同样同值。 */
+    --ok: #1fa355;
+    --ok-soft: rgba(31, 163, 85, 0.12);
+    --warn: #a87705;
+    --warn-soft: rgba(168, 119, 5, 0.14);
+    --caution: #f2680c;
+    --caution-soft: rgba(242, 104, 12, 0.15);
+    --danger: #e02b2b;
+    --danger-soft: rgba(224, 43, 43, 0.13);
     --info: #2997ff;
     --info-soft: rgba(41, 151, 255, 0.14);
-    --ok-rgb: 74, 222, 128;
-    --warn-rgb: 251, 191, 36;
-    --caution-rgb: 251, 146, 60;
-    --danger-rgb: 248, 113, 113;
+    --ok-rgb: 31, 163, 85;
+    --warn-rgb: 168, 119, 5;
+    --caution-rgb: 242, 104, 12;
+    --danger-rgb: 224, 43, 43;
     --accent-rgb: 41, 151, 255;
     --link-on-dark-rgb: 41, 151, 255;
-    --glow-ok: 20, 106, 56;
-    --glow-warn: 122, 90, 0;
-    --glow-caution: 179, 78, 0;
-    --glow-danger: 193, 31, 26;
+    --glow-ok: 31, 163, 85;
+    --glow-warn: 168, 119, 5;
+    --glow-caution: 242, 104, 12;
+    --glow-danger: 224, 43, 43;
 
-    --lv-awake: #4ade80;
-    --lv-mild: #fbbf24;
-    --lv-moderate: #fb923c;
-    --lv-severe: #f87171;
-    /* 深色下四档等级色都是高明度，实心底文字改近黑 */
-    --on-lv: #171a20;
+    --lv-awake: #1fa355;
+    --lv-mild: #a87705;
+    --lv-moderate: #f2680c;
+    --lv-severe: #e02b2b;
+    --on-lv: #ffffff;
 
     --chart-ear: #5a8bf2;
     --chart-mar: #a0a3a9;
@@ -446,32 +459,32 @@
   --fill-quaternary: rgba(255, 255, 255, 0.06);
   --fill-tertiary: rgba(255, 255, 255, 0.1);
 
-  --ok: #4ade80;
-  --ok-soft: rgba(74, 222, 128, 0.14);
-  --warn: #fbbf24;
-  --warn-soft: rgba(251, 191, 36, 0.14);
-  --caution: #fb923c;
-  --caution-soft: rgba(251, 146, 60, 0.14);
-  --danger: #f87171;
-  --danger-soft: rgba(248, 113, 113, 0.13);
+  --ok: #1fa355;
+  --ok-soft: rgba(31, 163, 85, 0.12);
+  --warn: #a87705;
+  --warn-soft: rgba(168, 119, 5, 0.14);
+  --caution: #f2680c;
+  --caution-soft: rgba(242, 104, 12, 0.15);
+  --danger: #e02b2b;
+  --danger-soft: rgba(224, 43, 43, 0.13);
   --info: #2997ff;
   --info-soft: rgba(41, 151, 255, 0.14);
-  --ok-rgb: 74, 222, 128;
-  --warn-rgb: 251, 191, 36;
-  --caution-rgb: 251, 146, 60;
-  --danger-rgb: 248, 113, 113;
+  --ok-rgb: 31, 163, 85;
+  --warn-rgb: 168, 119, 5;
+  --caution-rgb: 242, 104, 12;
+  --danger-rgb: 224, 43, 43;
   --accent-rgb: 41, 151, 255;
   --link-on-dark-rgb: 41, 151, 255;
-  --glow-ok: 20, 106, 56;
-  --glow-warn: 122, 90, 0;
-  --glow-caution: 179, 78, 0;
-  --glow-danger: 193, 31, 26;
+  --glow-ok: 31, 163, 85;
+  --glow-warn: 168, 119, 5;
+  --glow-caution: 242, 104, 12;
+  --glow-danger: 224, 43, 43;
 
-  --lv-awake: #4ade80;
-  --lv-mild: #fbbf24;
-  --lv-moderate: #fb923c;
-  --lv-severe: #f87171;
-  --on-lv: #171a20;
+  --lv-awake: #1fa355;
+  --lv-mild: #a87705;
+  --lv-moderate: #f2680c;
+  --lv-severe: #e02b2b;
+  --on-lv: #ffffff;
 
   --chart-ear: #5a8bf2;
   --chart-mar: #a0a3a9;
