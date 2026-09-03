@@ -1466,7 +1466,8 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
   place-items: center;
   font-size: var(--fs-micro);
   font-weight: var(--fw-medium);
-  /* 文字色由令牌分主题决定：浅色白字 / 深色近黑（见 tokens.css --on-lv） */
+  /* 文字色走 --on-lv 令牌：四档等级色为单一配色（两主题同值、中等明度），
+   * 实心底统一白字（见 tokens.css --on-lv 注释） */
   color: var(--on-lv);
   transition: flex-basis var(--dur-base) var(--ease);
   overflow: hidden;

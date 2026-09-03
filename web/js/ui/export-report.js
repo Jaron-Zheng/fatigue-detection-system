@@ -81,17 +81,44 @@ export async function exportReportHtml(recorder) {
    * 用户不跑检测直接进报告页点「下载报告」，会得到一份全空壳的
    * "成功"下载 + 绿色 toast——正是混沌测试里"没完成测试就能下载报告"的漏洞。 */
   if (!assertHasData(recorder)) return;
-  // 把 Canvas 元素替换成等尺寸的 <img>（base64），避免跨上下文丢失图像
+
+  /* 【导出主题对齐】canvas 位图是主题敏感的：会话在深色主题下渲染报告时，
+   * 阈值参考线标签的底衬（--bg-elevated 取深色值）、网格与轴色全部以
+   * 深色配色冻结进 canvas。导出文件强制浅色主题后，这些深色元素在白底
+   * 上就成了缺陷（实测：指数曲线右侧「轻度/中度/重度」标签带黑底）。
+   * 因此截图前把页面临时切到浅色，等 report 的 MutationObserver 触发
+   * redraw()（同步重绘 canvas）画完浅色版本再取位图，取完立刻恢复。
+   * redraw() 在 hasReport=true 时按缓存数据幂等重绘、不清数据，
+   * 临时切换不影响在线页面状态。CSS 变量仍走下方文本提取路线，
+   * 与这个临时切换互不依赖（见 extractLightVars 注释）。 */
+  const rootEl = document.documentElement;
+  const prevTheme = rootEl.getAttribute('data-theme');
+  const flipped = prevTheme !== 'light';
+  if (flipped) {
+    rootEl.setAttribute('data-theme', 'light');
+    // observer 回调走微任务、redraw() 内部同步绘制；双 rAF 只作裕量
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  }
   const reportEl = document.getElementById('viewReport');
+  let canvasUrls;
+  try {
+    // 位图必须在浅色窗口内截取；尺寸与主题无关，替换时再读
+    canvasUrls = [...reportEl.querySelectorAll('canvas')].map((c) => c.toDataURL('image/png'));
+  } finally {
+    if (flipped) {
+      if (prevTheme === null) rootEl.removeAttribute('data-theme');
+      else rootEl.setAttribute('data-theme', prevTheme);
+    }
+  }
+  // 把 Canvas 元素替换成等尺寸的 <img>（base64），避免跨上下文丢失图像
   const clone = reportEl.cloneNode(true);
 
   // 复制 Canvas 内容为 img
   reportEl.querySelectorAll('canvas').forEach((canvas, i) => {
     const img = clone.querySelectorAll('canvas')[i];
     if (!img) return;
-    const dataUrl = canvas.toDataURL('image/png');
     const replacement = document.createElement('img');
-    replacement.src = dataUrl;
+    replacement.src = canvasUrls[i];
     replacement.style.cssText = `width:100%;height:${canvas.offsetHeight}px;display:block;`;
     img.replaceWith(replacement);
   });
@@ -161,18 +188,16 @@ export async function exportReportHtml(recorder) {
   // body 背景被强制为白色，若沿用深色主题的变量会出现深色卡片
   // 叠在白底上的"花屏"。
   //
-  // 关键修复：此前通过临时修改 documentElement 的 data-theme 来读取
-  // 浅色变量值，但 ReportView 构造函数注册了 MutationObserver 监听
-  // data-theme 变化，临时切换会异步触发 redraw()。虽然 redraw() 在
-  // hasReport=true 时不清数据，但这一过程在导出函数执行期间引入了
-  // 不确定的状态干扰。改为从已加载的 CSS 规则文本中提取 :root 的
-  // 浅色变量定义，完全不触碰 documentElement，零副作用。
+  // 提取方式：从已加载的 CSS 规则文本中解析 :root 的浅色变量定义。
+  // 不通过 getComputedStyle 现读的原因：导出全程可能带着上面那次
+  // 临时主题切换，文本提取的结果只取决于 tokens.css 本身、与切换
+  // 时序无关；ReportView 的 MutationObserver 也不会被触发。
   const vars = [
     '--bg','--bg-elevated','--bg-inset','--bg-sunken','--text','--text-secondary',
     '--text-tertiary','--text-quaternary','--accent','--accent-soft','--separator',
     '--separator-soft','--fill-quaternary','--fill-tertiary','--ok','--ok-soft',
     '--warn','--warn-soft','--caution','--caution-soft','--danger','--danger-soft',
-    '--lv-awake','--lv-mild','--lv-moderate','--lv-severe',
+    '--lv-awake','--lv-mild','--lv-moderate','--lv-severe','--on-lv',
     '--chart-score','--chart-ear','--chart-mar',
     '--sp-2','--sp-3','--sp-4','--sp-5','--sp-6','--sp-8',
     '--r-sm','--r-md','--r-lg','--r-xl',

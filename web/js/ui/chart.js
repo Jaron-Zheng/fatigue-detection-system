@@ -404,8 +404,8 @@ export function renderDistribution(container, ratios, labels, colors) {
     // 过窄分段（<8%）放不下文字，靠 title 悬浮提示补全
     seg.textContent = pct >= 8 ? `${pct.toFixed(1)}%` : '';
     seg.title = `${labels[k]} ${pct.toFixed(1)}%`;
-    /* 文字色不再在这里硬编码：CSS 的 .dist-seg 用 --on-lv 分主题给出
-     * （浅色四档加深后配白字，深色高明度色配近黑字） */
+    /* 文字色不再在这里硬编码：CSS 的 .dist-seg 走 --on-lv 令牌
+     * （等级色为单一配色、中等明度，两主题统一白字） */
     container.appendChild(seg);
   }
   if (!container.children.length) {
