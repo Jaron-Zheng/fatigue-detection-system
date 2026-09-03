@@ -8,7 +8,7 @@
 
 import { el, clear, setText } from '../util/dom.js';
 import { fmtDuration } from '../util/math.js';
-import { LineChart, renderDistribution } from './chart.js';
+import { LineChart, renderDistribution, levelBands, levelRefLines } from './chart.js';
 import { cssVar } from '../util/dom.js';
 import { CONFIG } from '../config.js';
 import { INDICATOR_META } from '../core/fusion.js';
@@ -354,13 +354,9 @@ export class ReportView {
   _renderChart(canvas, samples, durationMs) {
     if (!canvas) return;
     const data = { score: samples.map((s) => ({ t: s.t, v: s.score })) };
-    const bands = [
-      /* 等级色带走 -soft 令牌（主题自适应），与工作台指数图同源 */
-      { from: 0, to: 30, color: cssVar('--ok-soft', 'rgba(31,163,85,0.12)') },
-      { from: 30, to: 52, color: cssVar('--warn-soft', 'rgba(168,119,5,0.14)') },
-      { from: 52, to: 74, color: cssVar('--caution-soft', 'rgba(242,104,12,0.15)') },
-      { from: 74, to: 100, color: cssVar('--danger-soft', 'rgba(224,43,43,0.13)') },
-    ];
+    /* 等级色带与参考线从 CONFIG.fusion.levels 派生（与工作台指数图同源，
+     * 边界随配置走，避免硬编码与等级阈值脱节） */
+    const bands = levelBands();
     // 用最后一个样本的时间作为右边界，保证图形从 x=0 画到 x=duration
     const lastT = samples.length ? samples[samples.length - 1].t : durationMs;
     const nowTs = Math.max(10000, lastT);
@@ -391,11 +387,7 @@ export class ReportView {
             fill: 'rgba(62,106,225,0.22)',
           },
         ],
-        refLines: [
-          { y: 30, color: cssVar('--lv-mild', '#a87705'), label: '轻度 30' },
-          { y: 52, color: cssVar('--lv-moderate', '#f2680c'), label: '中度 52' },
-          { y: 74, color: cssVar('--lv-severe', '#e02b2b'), label: '重度 74' },
-        ],
+        refLines: levelRefLines({ withValue: true }),
       });
     } else {
       // 复用实例：窗宽随本次会话时长变化，颜色可能停在旧主题上，重渲前刷新
@@ -416,24 +408,9 @@ export class ReportView {
     if (!this._lineChart) return;
     const o = this._lineChart.opts;
     o.series[0].color = cssVar('--chart-score', '#3e6ae1');
-    const colors = [
-      cssVar('--lv-mild', '#a87705'),
-      cssVar('--lv-moderate', '#f2680c'),
-      cssVar('--lv-severe', '#e02b2b'),
-    ];
-    o.refLines.forEach((rl, i) => {
-      if (colors[i]) rl.color = colors[i];
-    });
-    /* 等级色带同样重取（缓存实例的 bands 停在构造时的主题色上） */
-    const softs = [
-      cssVar('--ok-soft', 'rgba(31,163,85,0.12)'),
-      cssVar('--warn-soft', 'rgba(168,119,5,0.14)'),
-      cssVar('--caution-soft', 'rgba(242,104,12,0.15)'),
-      cssVar('--danger-soft', 'rgba(224,43,43,0.13)'),
-    ];
-    o.bands.forEach((b, i) => {
-      if (softs[i]) b.color = softs[i];
-    });
+    /* 等级参考线与色带直接重派生：颜色重取 + 边界与配置同源 */
+    o.refLines = levelRefLines({ withValue: true });
+    o.bands = levelBands();
   }
 
   /**

@@ -7,7 +7,7 @@
 
 import { $, throttle, cssVar } from '../util/dom.js';
 import { CONFIG } from '../config.js';
-import { LineChart } from './chart.js';
+import { LineChart, levelBands, levelRefLines } from './chart.js';
 
 export class WorkbenchCharts {
   /**
@@ -22,22 +22,13 @@ export class WorkbenchCharts {
       windowMs: wMs,
       yTicks: 4,
       /* 等级色带走 -soft 令牌；四档等级色两主题同值（单一配色），
-       * 主题切换只需重取非等级类线色 */
-      bands: [
-        { from: 0, to: 30, color: cssVar('--ok-soft', 'rgba(31,163,85,0.12)') },
-        { from: 30, to: 52, color: cssVar('--warn-soft', 'rgba(168,119,5,0.14)') },
-        { from: 52, to: 74, color: cssVar('--caution-soft', 'rgba(242,104,12,0.15)') },
-        { from: 74, to: 100, color: cssVar('--danger-soft', 'rgba(224,43,43,0.13)') },
-      ],
+       * 主题切换只需重取非等级类线色；边界从 CONFIG 派生（chart.levelBands） */
+      bands: levelBands(),
       series: [
         { key: 'raw', color: cssVar('--text-quaternary', '#aeaeb2'), width: 1.2, dash: [3, 3] },
         { key: 'score', color: cssVar('--chart-score', '#3e6ae1'), width: 2.2, fill: 'rgba(62,106,225,0.20)' },
       ],
-      refLines: [
-        { y: 30, color: cssVar('--lv-mild', '#a87705'), label: '轻度' },
-        { y: 52, color: cssVar('--lv-moderate', '#f2680c'), label: '中度' },
-        { y: 74, color: cssVar('--lv-severe', '#e02b2b'), label: '重度' },
-      ],
+      refLines: levelRefLines(),
     });
 
     this.eye = new LineChart($('#chartEye'), {
@@ -72,24 +63,12 @@ export class WorkbenchCharts {
     this.score.opts.series[1].color = cssVar('--chart-score', '#3e6ae1');
     this.eye.opts.series[0].color = cssVar('--chart-ear', '#0071e3');
     this.eye.opts.series[1].color = cssVar('--chart-mar', '#9a4bd6');
-    /* E3：疲劳指数图的三条等级参考线与四段等级色带同样是构造时取色的，
-     * 主题切换后会残留旧主题色值，一并重取（眼图的阈值参考线由 draw()
+    /* E3：疲劳指数图的等级色带与参考线同样是构造时取色的，
+     * 主题切换后会残留旧主题色值——直接用 chart 的派生函数重建，
+     * 颜色与边界始终跟 CONFIG 同源（眼图的阈值参考线由 draw()
      * 每次用 cssVar 现取，无需在此处理） */
-    const softs = [
-      cssVar('--ok-soft', 'rgba(31,163,85,0.12)'),
-      cssVar('--warn-soft', 'rgba(168,119,5,0.14)'),
-      cssVar('--caution-soft', 'rgba(242,104,12,0.15)'),
-      cssVar('--danger-soft', 'rgba(224,43,43,0.13)'),
-    ];
-    this.score.opts.bands.forEach((b, i) => {
-      if (softs[i]) b.color = softs[i];
-    });
-    const rl = this.score.opts.refLines;
-    if (rl.length >= 3) {
-      rl[0].color = cssVar('--lv-mild', '#a87705');
-      rl[1].color = cssVar('--lv-moderate', '#f2680c');
-      rl[2].color = cssVar('--lv-severe', '#e02b2b');
-    }
+    this.score.opts.bands = levelBands();
+    this.score.opts.refLines = levelRefLines();
   }
 
   /**

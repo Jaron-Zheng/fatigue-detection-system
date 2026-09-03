@@ -324,12 +324,20 @@ await scenario('S15 重度报警连点关闭x5(视觉不残留、会话不断)',
     if (!fired) await sleep(250);
   }
   if (!fired) throw new Error('前置失败:快进后未触发报警');
-  // 连点通知卡片 5 次（点击即提前关闭，等价于旧的"关闭报警"按钮）
+  // 连点通知卡片 5 次（点击即提前关闭，等价于旧的"关闭报警"按钮）。
+  // 首次点击后元素即消失，剩余点击必须用短超时快速跳过——若沿用页面级
+  // 7s 默认超时，断言会被拖到重度报警 8s 冷却期之后，把按设计再次触发的
+  // 新通知误判成"残留"（曾稳定误报 x1 的根因）
   for (let i = 0; i < 5; i++) {
-    await page.click('.toast[data-kind="alarm"]').catch(() => {});
+    await page
+      .locator('.toast[data-kind="alarm"]')
+      .first()
+      .click({ timeout: 500 })
+      .catch(() => {});
     await sleep(120);
   }
-  // 红闪幕布为定时自动隐没（重度 3.4s），等它走完再验不残留
+  // 红闪幕布为定时自动隐没（重度 3.4s），等它走完再验不残留。
+  // 断言整体需在首报后 8s 冷却窗口内完成，新报警属于按设计的持续提醒
   let veilGone = false;
   for (let i = 0; i < 20 && !veilGone; i++) {
     veilGone = !(await page.evaluate(() => document.querySelector('#alarmVeil.on')));

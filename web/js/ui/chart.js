@@ -11,6 +11,46 @@
  */
 
 import { fitCanvas, cssVar } from '../util/dom.js';
+import { CONFIG } from '../config.js';
+
+/** 等级色带 / 参考线取色与短标签（与 tokens.css 等级令牌一一对应） */
+const LEVEL_SOFT = {
+  awake: '--ok-soft',
+  mild: '--warn-soft',
+  moderate: '--caution-soft',
+  severe: '--danger-soft',
+};
+const LEVEL_LINE = { mild: '--lv-mild', moderate: '--lv-moderate', severe: '--lv-severe' };
+const LEVEL_SHORT = { mild: '轻度', moderate: '中度', severe: '重度' };
+
+/**
+ * 疲劳等级背景色带，从 CONFIG.fusion.levels 派生。
+ * 此前工作台与报告页各自硬编码 30/52/74，等级边界调至 24 后图表没跟着变，
+ * 参考线画错了位置——此函数保证图表与配置永远同源。
+ * @returns {{from:number,to:number,color:string}[]}
+ */
+export function levelBands() {
+  return CONFIG.fusion.levels.map((l) => ({
+    from: l.min,
+    to: l.max,
+    color: cssVar(LEVEL_SOFT[l.key] ?? '--fill-tertiary', 'rgba(127,127,127,0.12)'),
+  }));
+}
+
+/**
+ * 等级分界参考线（轻度/中度/重度的下边界）。
+ * @param {{withValue?: boolean}} [opts] withValue 为 true 时标签带数值（报告页样式）
+ * @returns {{y:number,color:string,label:string}[]}
+ */
+export function levelRefLines({ withValue = false } = {}) {
+  return CONFIG.fusion.levels
+    .filter((l) => LEVEL_LINE[l.key])
+    .map((l) => ({
+      y: l.min,
+      color: cssVar(LEVEL_LINE[l.key], '#888888'),
+      label: withValue ? `${LEVEL_SHORT[l.key]} ${l.min}` : LEVEL_SHORT[l.key],
+    }));
+}
 
 /**
  * Canvas 的 ctx.font 是独立的 CSS 解析器，不支持 var()——
