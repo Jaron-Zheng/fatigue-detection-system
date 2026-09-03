@@ -240,6 +240,9 @@ export class ReportView {
       setText(g(id), `${r.toFixed(1)}% · ${fmtDuration(summary.levelDurations[k] || 0)}`);
     }
 
+    /* ---------- 会话趋势（前后半程对比，summary.trend） ---------- */
+    this._renderTrend(summary);
+
     /* ---------- 事件统计表 ---------- */
     const tbody = g('rpEventTable');
     clear(tbody);
@@ -316,6 +319,36 @@ export class ReportView {
             `另有 ${summary.unreliableText} 未测到人脸，未计入下方各项统计。`
     );
     node.style.color = summary.insufficient ? 'var(--danger)' : 'var(--text-tertiary)';
+  }
+
+  /**
+   * 会话趋势摘要（前后半程均值对比，recorder.trendOf 的展示层）。
+   * 数据不足（trend=null，样本 <8 或会话太短）时整行隐藏，
+   * 不留"暂无数据"空行。三档方向文案与建议区的趋势句同一口径。
+   */
+  _renderTrend(summary) {
+    const node = document.getElementById('rpTrend');
+    if (!node) return;
+    const tr = summary.trend;
+    if (!tr) {
+      node.hidden = true;
+      setText(node, '');
+      return;
+    }
+    const pct = (v) => (v != null ? (v * 100).toFixed(1) + '%' : '--');
+    const DIRECTION = {
+      worsening: ['疲劳呈加重趋势', 'var(--danger)'],
+      recovering: ['状态在好转', 'var(--ok)'],
+      stable: ['全程状态稳定', 'var(--text-tertiary)'],
+    };
+    const [label, color] = DIRECTION[tr.direction] || DIRECTION.stable;
+    node.hidden = false;
+    setText(
+      node,
+      `${label}：前半程平均疲劳指数 ${tr.firstHalfScore} / PERCLOS ${pct(tr.firstHalfPerclos)}，` +
+        `后半程 ${tr.secondHalfScore} / ${pct(tr.secondHalfPerclos)}（按有效样本时间中点分割）。`
+    );
+    node.style.color = color;
   }
 
   _renderChart(canvas, samples, durationMs) {

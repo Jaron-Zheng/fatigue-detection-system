@@ -224,6 +224,8 @@ class App {
 
     // 报警视觉回调由 UI 提供
     this.alarm.onVisualAlarm = (level) => this.alarmUi.flash(level);
+    // B2 恢复通知回调（事件本体在主循环里写时间轴，此处只管弹通知）
+    this.alarm.onRecovery = (ev) => this.alarmUi.notifyRecovery(ev);
   }
 
   /* ==================== 布局与重绘 ==================== */
@@ -483,10 +485,16 @@ class App {
     /* ---- 报警 ---- */
     const alarmEv = this.alarm.update(fus.level, now, fus.override === 'critical_closure' ? '持续闭眼' : '');
     if (alarmEv) {
-      // 冷却期内的 suppressed 事件仍写入时间轴留痕，但不重复弹提示
-      this.recorder.addEvent(alarmEv);
-      this.timeline.add([alarmEv]);
-      if (!alarmEv.suppressed) this.alarmUi.notify(fus.level, fus);
+      if (alarmEv.type === 'recovery') {
+        // B2 恢复事件：写时间轴留痕即可，通知由 alarm.onRecovery 回调发出
+        this.recorder.addEvent(alarmEv);
+        this.timeline.add([alarmEv]);
+      } else {
+        // 冷却期内的 suppressed 事件仍写入时间轴留痕，但不重复弹提示
+        this.recorder.addEvent(alarmEv);
+        this.timeline.add([alarmEv]);
+        if (!alarmEv.suppressed) this.alarmUi.notify(fus.level, fus, alarmEv);
+      }
     }
 
     /* ---- 记录 ---- */

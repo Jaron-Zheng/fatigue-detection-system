@@ -22,6 +22,14 @@ export class AlarmSystem {
     this.enabled = true;
     this.muted = false;
     this.fireCount = 0;
+    /** 各等级累计触发次数（B1：通知文案"第 N 次"用，不受 suppressed 影响） */
+    this.fireCountByLevel = { mild: 0, moderate: 0, severe: 0 };
+    /** 报警段追踪（B2）：第一次报警时刻 → 回落清醒时刻，用于恢复通知的持续时长 */
+    this.activeSince = null;
+    /** 首次回到清醒的时刻（恢复驻留计时起点，边沿置位） */
+    this._awakeSince = null;
+    /** 恢复通知回调（由 UI 注入）：参数 (durationMs, worstLevelThisSegment) */
+    this.onRecovery = null;
     this.onVisualAlarm = null; // 由 UI 注入：触发视觉闪烁
     this._speakingUntil = 0;
   }
@@ -113,22 +121,37 @@ export class AlarmSystem {
 
   /**
    * 由主循环调用：根据当前等级决定是否报警。
-   * @returns {object|null} 本次触发的报警信息（用于写入事件时间轴）
+   * @returns {object|null} 本次触发/恢复的报警事件（用于写入事件时间轴）
+   *
+   * B2 恢复闭环：报警触发后记录 activeSince；等级回落 awake 且驻留
+   * 足够（回到清醒并保持 recoveryHoldMs）时发出 recovery 事件（写时间轴
+   * + onRecovery 通知），一段疲劳的"发生→持续→恢复"全程可追溯。
+   * 驻留门槛防抖：清醒判定本身有滞回，但等级在临界值附近仍可能单帧抖回，
+   * 1.2s 保持才确认恢复（与分心判据 distractionMinMs 同量级）。
    */
   update(level, ts, reason = '') {
     const cfg = CONFIG.alarm;
     const levelChanged = level !== this.lastLevel;
     const prevLevel = this.lastLevel;
     this.lastLevel = level;
+    // 首次回到清醒记时刻（B2 恢复驻留计时的起点，只在边沿置位）
+    if (levelChanged && level === 'awake') this._awakeSince = ts;
 
     if (!cfg.enabled || !this.enabled) return null;
-    if (level === 'awake') return null;
+    if (level === 'awake') return this._maybeRecover(ts);
 
     const spec = cfg.byLevel[level];
     if (!spec) return null;
 
     const last = this.lastFireAt[level] || 0;
+    // B3 双字段语义：
+    //   escalated（宽）= 等级上行跨越（含从清醒进入疲劳）——绕过冷却立即
+    //   报警的历史语义，awake→mild 是"新一段疲劳开始"，必须立即提醒；
+    //   escalating（窄）= 疲劳等级之间的进一步上行（mild→moderate、
+    //   moderate→severe）——只有这才配"疲劳在加重"文案，首次触发说
+    //   "加重"是误导（之前没有任何疲劳）。
     const escalated = levelChanged && this._idx(level) > this._idx(prevLevel);
+    const escalating = levelChanged && this._idx(prevLevel) >= 1 && this._idx(level) > this._idx(prevLevel);
     // 等级升高时立即报警；否则遵守该等级的冷却时间。
     // 冷却期内的重复事件不静默丢弃：返回带 suppressed 标记的记录供时间轴
     // 留痕（验收 TC-B5-02：抑制打扰不等于抹去痕迹，事后复盘能看到"冷却
@@ -148,6 +171,8 @@ export class AlarmSystem {
 
     this.lastFireAt[level] = ts;
     this.fireCount++;
+    this.fireCountByLevel[level] = (this.fireCountByLevel[level] || 0) + 1;
+    if (this.activeSince == null) this.activeSince = ts;
 
     if (spec.beep) this.beepPattern(spec.beep);
     if (spec.speak) this.speak(spec.speak);
@@ -161,8 +186,32 @@ export class AlarmSystem {
       alarmLevel: level,
       ts,
       escalated,
+      /** B3 窄升级标志（疲劳等级间上行），通知文案"疲劳在加重"专用 */
+      escalating,
+      /** B1：本会话该等级第几次提醒（含本次），供通知文案与时间轴使用 */
+      count: this.fireCountByLevel[level],
       message: `${level === 'severe' ? '重度' : level === 'moderate' ? '中度' : '轻度'}疲劳报警${reason ? ' · ' + reason : ''}`,
     };
+  }
+
+  /** B2：等级回落清醒且驻留超门槛 → 恢复事件。 */
+  _maybeRecover(ts) {
+    if (this.activeSince == null) return null;
+    const RECOVERY_HOLD_MS = 1200;
+    if (ts - this._awakeSince < RECOVERY_HOLD_MS) return null;
+    const durationMs = this._awakeSince - this.activeSince;
+    this.activeSince = null;
+    this._awakeSince = null;
+    if (durationMs < 500) return null; // 抖动残留段不足 0.5s，不值得打扰
+    const ev = {
+      type: 'recovery',
+      level: 'ok',
+      ts,
+      durationMs,
+      message: `状态已恢复清醒，本次疲劳段持续 ${Math.round(durationMs / 100) / 10} 秒`,
+    };
+    if (typeof this.onRecovery === 'function') this.onRecovery(ev);
+    return ev;
   }
 
   _idx(level) {
@@ -179,6 +228,9 @@ export class AlarmSystem {
     this.lastFireAt = { awake: 0, mild: 0, moderate: 0, severe: 0 };
     this.lastLevel = 'awake';
     this.fireCount = 0;
+    this.fireCountByLevel = { mild: 0, moderate: 0, severe: 0 };
+    this.activeSince = null;
+    this._awakeSince = null;
     this._speakingUntil = 0;
     try {
       if ('speechSynthesis' in window) window.speechSynthesis.cancel();

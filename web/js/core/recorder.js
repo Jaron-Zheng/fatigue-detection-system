@@ -34,12 +34,16 @@ const EVENT_LABEL = {
   quality_low: '画面看不清',
   quality_ok: '画面恢复正常',
   alarm: '疲劳提醒',
+  recovery: '状态恢复',
   calibrated: '校准完成',
   session_start: '开始检测',
   session_end: '结束检测',
 };
 
 export const eventLabel = (t) => EVENT_LABEL[t] || t;
+
+/** 等级中文名（buildAdvice 的等级驻留句复用；与 summary 的 LABELS 同源） */
+const LEVEL_LABELS = { awake: '清醒', mild: '轻度疲劳', moderate: '中度疲劳', severe: '重度疲劳' };
 
 export class SessionRecorder {
   constructor() {
@@ -201,12 +205,17 @@ export class SessionRecorder {
       calibration: this.calib,
       device: this.deviceInfo,
       engine: engineStats || null,
+      /** 会话趋势（前后半程对比），见 trendOf */
+      trend: !insufficient ? trendOf(validSamples) : null,
       /** 综合建议：按本次达到过的最高等级与事件给出可执行结论 */
       advice: buildAdvice(worstLevel, counts, durationMs, lastFusion, {
         insufficient,
         coverage,
         unreliableMs,
         measuredMs,
+        samples: validSamples,
+        calib: this.calib,
+        levelDurations: ld,
       }),
     };
   }
@@ -295,6 +304,34 @@ function countEvents(events) {
   };
 }
 
+/**
+ * 会话趋势：前后半程对比（trendOf 的判定与文案在 buildAdvice 里拼装）。
+ * 数据基础是有效样本（人脸丢失帧不参与），按时间中位数分割，
+ * 样本太少（<8）时返回 null——趋势判定需要最小数据量。
+ * threshold：score 均值差 ≥5 分且 PERCLOS 差 ≥0.05 双条件同时满足
+ * 才判"显著"，单指标小幅波动不给趋势结论（防过度解读）。
+ */
+function trendOf(samples) {
+  if (!samples || samples.length < 8) return null;
+  const mid = samples[Math.floor(samples.length / 2)].t;
+  const first = samples.filter((s) => s.t < mid);
+  const second = samples.filter((s) => s.t >= mid);
+  if (first.length < 4 || second.length < 4) return null;
+  const mean = (arr, k) => avg(arr.map((s) => s[k]).filter(Number.isFinite));
+  const dScore = mean(second, 'score') - mean(first, 'score');
+  const dPerclos = mean(second, 'perclos') - mean(first, 'perclos');
+  const worsening = dScore >= 5 && dPerclos >= 0.05;
+  const recovering = dScore <= -5 && dPerclos <= -0.05;
+  return {
+    direction: worsening ? 'worsening' : recovering ? 'recovering' : 'stable',
+    firstHalfScore: round(mean(first, 'score'), 1),
+    secondHalfScore: round(mean(second, 'score'), 1),
+    firstHalfPerclos: round(mean(first, 'perclos'), 3),
+    secondHalfPerclos: round(mean(second, 'perclos'), 3),
+    splitAtMs: mid,
+  };
+}
+
 function buildAdvice(worstLevel, counts, durationMs, lastFusion, quality = {}) {
   const minutes = durationMs / 60000;
   const lines = [];
@@ -336,6 +373,51 @@ function buildAdvice(worstLevel, counts, durationMs, lastFusion, quality = {}) {
     lines.push('出现轻度疲劳征兆。建议开窗通风、调整坐姿，并留意后续状态变化。');
   } else {
     lines.push('本次检测全程状态良好，未发现明显疲劳特征。');
+  }
+
+  /* ---- A4：等级驻留量化 —— 等级结论句后接时长与占比，让"中度"有具体分量 */
+  const ld = quality.levelDurations || {};
+  const levelMs = ld[level] || 0;
+  const measuredMsQ = quality.measuredMs || 0;
+  if (level !== 'awake' && levelMs > 0 && measuredMsQ > 0) {
+    const pctStr = ((levelMs / measuredMsQ) * 100).toFixed(1);
+    lines.push(`其中「${LEVEL_LABELS[level]}」状态累计 ${fmtDuration(levelMs)}，占有效检测时间的 ${pctStr}%。`);
+  }
+
+  /* ---- A1+A2：会话趋势 —— 前后半程对比（有效样本，双条件显著判定） */
+  const trend = trendOf(quality.samples);
+  if (trend) {
+    const pct = (v) => (v != null ? (v * 100).toFixed(1) + '%' : '--');
+    if (trend.direction === 'worsening') {
+      lines.push(
+        `疲劳呈加重趋势：后半小时段平均疲劳指数 ${trend.secondHalfScore}（前半 ${trend.firstHalfScore}），` +
+          `PERCLOS 均值从 ${pct(trend.firstHalfPerclos)} 升至 ${pct(trend.secondHalfPerclos)}。` +
+          '当前状态若持续，建议尽快安排休息，不要等下一级报警。'
+      );
+    } else if (trend.direction === 'recovering') {
+      lines.push(
+        `状态在好转：平均疲劳指数从 ${trend.firstHalfScore} 回落到 ${trend.secondHalfScore}，` +
+          `PERCLOS 均值从 ${pct(trend.firstHalfPerclos)} 降至 ${pct(trend.secondHalfPerclos)}。` +
+          '但仍以本次达到过的最高等级为结论口径，不要因末段好转放松。'
+      );
+    } else {
+      lines.push(
+        `全程状态稳定：前后半程平均疲劳指数 ${trend.firstHalfScore} → ${trend.secondHalfScore}，` +
+          `PERCLOS 均值 ${pct(trend.firstHalfPerclos)} → ${pct(trend.secondHalfPerclos)}，无显著漂移。`
+      );
+    }
+  }
+
+  /* ---- A3：标定质量 —— 阈值回退通用值时结论置信度降级提示
+   * fallback 结果不带显式标志，可靠判据是 quality===0（正常标定 ≥1）
+   * 或 skipped/FAILED（见 calibration.js _fallback/useFallback）。 */
+  const calib = quality.calib;
+  if (calib && (calib.quality === 0 || calib.skipped || calib.state === 'failed')) {
+    lines.push(
+      '注意：本次判定使用通用阈值（未完成个性化标定）。' +
+        '睁眼/闭眼基准未按你本人的面部特征校准，判定的置信度低于正常会话；' +
+        '建议下次检测开始时保持正视镜头 5 秒以完成标定。'
+    );
   }
 
   if (counts.yawn >= 3 && minutes > 1) {

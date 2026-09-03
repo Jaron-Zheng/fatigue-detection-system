@@ -291,6 +291,67 @@ const hasInsufficientAdvice = advice6.some((l) => l.includes('不足以') || l.i
 assert(hasInsufficientAdvice, '无人脸时不给出"状态良好"');
 assert(!advice6.some((l) => l.includes('状态良好')), '无人脸时不出现"状态良好"');
 
+// ── 6b. 趋势分析（trendOf）+ 建议量化（A1–A4 断言） ──
+console.log('\n[6b] 会话趋势与建议量化');
+{
+  const mkSum = (scores, percloses, calibOverride = null) => {
+    const rec = new SessionRecorder();
+    rec.begin(calibOverride || calib, { simulated: true });
+    let lastInd = null;
+    let lastFus = null;
+    for (let i = 0; i < scores.length; i++) {
+      const ts = 1000 + i * 500;
+      const ind = { ts, sessionMs: ts, perclos: percloses[i], perclosReady: true, dataValid: true, facePresent: true, closure: 0, maxClosureMs: 0, currentClosureMs: 0, blinkRate: 0, avgBlinkMs: 100, yawnRate: 0, nodRate: 0, headDevRatio: 0 };
+      const fus = { score: scores[i], raw: scores[i], level: 'awake', levelDurations: { awake: scores.length * 500 }, peakScore: Math.max(...scores) };
+      rec.sample(ind, fus, { ear: 0.3, mar: 0.1, pitch: 0, yaw: 0, roll: 0 });
+      lastInd = ind;
+      lastFus = fus;
+    }
+    rec.end();
+    lastInd.sessionMs = scores.length * 500;
+    return rec.summary(lastInd, lastFus, null);
+  };
+
+  // 恶化趋势：后半小时段 score+20 且 PERCLOS+0.25 → worsening + 建议含量化数字
+  const w = mkSum(
+    Array.from({ length: 40 }, (_, i) => (i < 20 ? 10 : 30)),
+    Array.from({ length: 40 }, (_, i) => (i < 20 ? 0.05 : 0.3))
+  );
+  assert(w.trend && w.trend.direction === 'worsening', `恶化会话 trend=worsening (got ${w.trend && w.trend.direction})`);
+  assert(w.advice.some((l) => l.includes('加重趋势')), '恶化建议含"加重趋势"句');
+  assert(w.advice.some((l) => /\d+\.\d+%/.test(l)), '建议含 PERCLOS 量化数字');
+
+  // 好转趋势
+  const r = mkSum(
+    Array.from({ length: 40 }, (_, i) => (i < 20 ? 35 : 12)),
+    Array.from({ length: 40 }, (_, i) => (i < 20 ? 0.32 : 0.06))
+  );
+  assert(r.trend && r.trend.direction === 'recovering', `好转会话 trend=recovering (got ${r.trend && r.trend.direction})`);
+
+  // 稳定会话
+  const s = mkSum(new Array(40).fill(20), new Array(40).fill(0.1));
+  assert(s.trend && s.trend.direction === 'stable', '平稳会话 trend=stable');
+
+  // 样本不足（<8）→ trend=null，不产生趋势建议
+  const tiny = mkSum(new Array(5).fill(20), new Array(5).fill(0.1));
+  assert(tiny.trend === null, '样本不足时 trend=null');
+
+  // 标定回退（quality=0）→ 建议含置信度降级句（A3）
+  const fbCalib = { ...calib, quality: 0, qualityLabel: '未校准' };
+  const fb = mkSum(new Array(40).fill(10), new Array(40).fill(0.05), fbCalib);
+  assert(fb.advice.some((l) => l.includes('通用阈值')), '标定回退建议含置信度降级提示');
+
+  // 等级驻留量化（A4）：worstLevel=moderate 且驻留>0 → 建议含时长句
+  const lvRec = new SessionRecorder();
+  lvRec.begin(calib, { simulated: true });
+  const lvInd = { ts: 1000, sessionMs: 21000, perclos: 0.1, perclosReady: true, dataValid: true, facePresent: true, closure: 0, maxClosureMs: 0, currentClosureMs: 0, blinkRate: 0, avgBlinkMs: 100, yawnRate: 0, nodRate: 0, headDevRatio: 0 };
+  const lvFus = { score: 55, raw: 55, level: 'moderate', levelDurations: { awake: 5000, mild: 3000, moderate: 8000, severe: 0 }, peakScore: 55 };
+  lvRec.sample(lvInd, lvFus, { ear: 0.3 });
+  lvRec.end();
+  const lvSum = lvRec.summary(lvInd, lvFus, null);
+  assert(lvSum.advice.some((l) => l.includes('累计') && l.includes('%')), '等级驻留建议含量化占比句');
+}
+
 // ── 7. computeMetrics 基本 sanity ──
 console.log('\n[7] 评测指标计算');
 const pairs = [
@@ -604,6 +665,61 @@ console.log('\n[15] 会话状态机');
     assert(seen.length === 1, '取消订阅后不再收到钩子');
     assert(sm.history.length === 2, 'history 记录全部成功迁移');
   }
+}
+
+// ── 15b. 报警闭环（B1 计数 / B2 恢复 / B3 升级） ──
+console.log('\n[15b] 报警计数与恢复闭环');
+{
+  const { AlarmSystem } = await importFromWeb('core/alarm.js');
+  const alarm = new AlarmSystem();
+
+  // 模拟等级序列：awake→mild(触发#1)→awake(驻留不足不恢复)→mild(冷却内 suppressed)
+  // →moderate(升级触发#1)→awake(驻留 1.2s+ 后恢复事件)
+  const t0 = 10000;
+  let ev;
+  ev = alarm.update('awake', t0);
+  assert(ev === null, '初始 awake 无事件');
+
+  ev = alarm.update('mild', t0 + 1000);
+  assert(ev && ev.type === 'alarm' && !ev.suppressed, 'mild 首次触发报警');
+  assert(ev.count === 1, `B1 首次计数=1 (got ${ev && ev.count})`);
+  assert(!ev.escalating, 'B3 awake→mild 首次触发不算"疲劳在加重"');
+
+  // 冷却期内同级重复：suppressed 且计数不增加
+  const cd = CONFIG.alarm.byLevel.mild.cooldownMs;
+  ev = alarm.update('mild', t0 + 1000 + cd - 1);
+  assert(ev && ev.suppressed === true, '冷却期内同级重复被抑制');
+  assert(alarm.fireCountByLevel.mild === 1, 'suppressed 不增加计数');
+
+  // 跨级升级：立即触发 + escalated/escalating 双标志
+  ev = alarm.update('moderate', t0 + 5000);
+  assert(ev && ev.type === 'alarm' && !ev.suppressed, '升级到 moderate 立即触发');
+  assert(ev.escalated === true, 'B3 跨级升级带 escalated 标志（绕过冷却语义）');
+  assert(ev.escalating === true, 'B3 跨级升级带 escalating 标志（加重文案语义）');
+  assert(ev.count === 1, 'moderate 首次计数=1');
+
+  // 回落清醒：驻留不足 1.2s 前不发恢复事件
+  ev = alarm.update('awake', t0 + 5100);
+  assert(ev === null, '回落后驻留未满不发恢复事件');
+  // 驻留中再报警：恢复计时作废（段持续时长正确累计）
+  ev = alarm.update('severe', t0 + 5300);
+  assert(ev && ev.type === 'alarm', '驻留中再报警正常触发');
+  // 之后真正回落并保持
+  ev = alarm.update('awake', t0 + 5600);
+  assert(ev === null, '再次回落的驻留从边沿重新计时');
+  ev = alarm.update('awake', t0 + 5600 + 1300);
+  assert(ev && ev.type === 'recovery', 'B2 驻留满 1.2s 后发出恢复事件');
+  assert(ev.durationMs >= 500, `恢复事件带疲劳段持续时长 (got ${ev && ev.durationMs})`);
+  assert(String(ev.message).includes('恢复'), '恢复事件文案含"恢复"');
+
+  // 恢复后再次报警 → 新段落从头计
+  ev = alarm.update('mild', t0 + 9000);
+  assert(ev && ev.count === 2, 'B1 新段落第 2 次计数（mild 累计）');
+  assert(alarm.activeSince === t0 + 9000, '新报警段起点重置');
+
+  // reset 清空全部状态
+  alarm.reset();
+  assert(alarm.fireCountByLevel.mild === 0 && alarm.activeSince === null, 'reset 清空计数与段落追踪');
 }
 
 // ── 16. RenderLoop：启动/停止/帧回调（第三轮角色二新增） ──
