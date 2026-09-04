@@ -71,6 +71,9 @@ export function exportSessionCsv(recorder) {
   toastOk('已导出 CSV', '可直接用 Excel 打开绘图');
 }
 
+/** exportReportHtml 重入锁（见函数内说明） */
+let exporting = false;
+
 /**
  * 把报告页序列化为独立 HTML 文件直接下载，无需弹出打印对话框。
  * Canvas 图表转为 base64 data URL 内联，CSS 从已加载的样式表提取后内联，
@@ -81,6 +84,17 @@ export async function exportReportHtml(recorder) {
    * 用户不跑检测直接进报告页点「下载报告」，会得到一份全空壳的
    * "成功"下载 + 绿色 toast——正是混沌测试里"没完成测试就能下载报告"的漏洞。 */
   if (!assertHasData(recorder)) return;
+  // 连点/双击：第二次会在第一次临时切浅色期间读到 prevTheme='light'，恢复主题时序错乱、截到深色 canvas
+  if (exporting) return;
+  exporting = true;
+  try {
+    await exportReportHtmlUnsafe(recorder);
+  } finally {
+    exporting = false;
+  }
+}
+
+async function exportReportHtmlUnsafe(recorder) {
 
   /* 【导出主题对齐】canvas 位图是主题敏感的：会话在深色主题下渲染报告时，
    * 阈值参考线标签的底衬（--bg-elevated 取深色值）、网格与轴色全部以
@@ -97,7 +111,16 @@ export async function exportReportHtml(recorder) {
   if (flipped) {
     rootEl.setAttribute('data-theme', 'light');
     // observer 回调走微任务、redraw() 内部同步绘制；双 rAF 只作裕量
-    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    // 被遮挡/后台窗口里 rAF 可能长时间不触发（主题会一直停在被翻转的浅色且无下载）：300ms 兜底
+    await new Promise((r) => {
+      const fallback = setTimeout(r, 300);
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          clearTimeout(fallback);
+          r();
+        }),
+      );
+    });
   }
   const reportEl = document.getElementById('viewReport');
   let canvasUrls;
@@ -220,13 +243,15 @@ export async function exportReportHtml(recorder) {
   ].join(' ');
 
   const title = document.getElementById('rpTitle')?.textContent || '疲劳检测报告';
+  // 标题来自页面 textContent（当前为系统生成），出口处仍做 HTML 转义：与 csvCell 同属"数据出口统一防护"
+  const escHtml = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
 
   const html = `<!DOCTYPE html>
 <html lang="zh-CN" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${title}</title>
+<title>${escHtml(title)}</title>
 <style>
 :root{${resolvedVars}}
 ${cssText}
