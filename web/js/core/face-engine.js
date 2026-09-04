@@ -437,6 +437,12 @@ export class CameraSource {
     /** 采集轨道意外结束（拔线/系统撤销权限/被其他应用抢占）时回调 */
     this.onTrackLost = null;
     this._boundTrackEnded = null;
+    /**
+     * 启动代次：每次 start()/stop() 递增。并发 start()（取消后立即重开、快速切换设备）时，
+     * 先发出的 getUserMedia 迟到落定后代次已过期，其流必须立即回收，否则会被后到的流
+     * 覆盖而泄漏（指示灯常亮 / 下次启动 NotReadableError）。
+     */
+    this._startSeq = 0;
   }
 
   static get supported() {
@@ -598,6 +604,13 @@ export class CameraSource {
     }
     // 重复调用先回收旧流（切换设备/重试路径），避免同一设备被两条流占用
     this.stop();
+    const seq = ++this._startSeq;
+    /** 本轮是否已被更新一轮 start()/stop() 接管；是则回收传入的流 */
+    const superseded = (s) => {
+      if (seq === this._startSeq) return false;
+      if (s) s.getTracks().forEach((t) => t.stop());
+      return true;
+    };
 
     let stream = null;
     try {
@@ -621,8 +634,10 @@ export class CameraSource {
       }
     }
     if (!stream) throw new Error('摄像头启动被取消。');
+    if (superseded(stream)) throw new Error('CAMERA_SUPERSEDED');
 
     if (!deviceId) stream = await this._avoidUndesirableDevice(stream);
+    if (superseded(stream)) throw new Error('CAMERA_SUPERSEDED');
     this.stream = stream;
     if (deviceId) this.deviceId = deviceId;
 
@@ -649,6 +664,8 @@ export class CameraSource {
     try {
       // 先 play 再等首帧（顺序很关键，见文件头说明）
       await this.ensurePlaying();
+      // 播放等待期间被 stop()/新一轮 start() 接管：不能再等首帧，也不能在下方 catch 里 stop() 新一轮的流
+      if (seq !== this._startSeq) throw new Error('CAMERA_SUPERSEDED');
       await this._waitFirstFrame();
       return {
         width: v.videoWidth,
@@ -656,6 +673,7 @@ export class CameraSource {
         label: track ? track.label : 'camera',
       };
     } catch (err) {
+      if (err && err.message === 'CAMERA_SUPERSEDED') throw err; // 新一轮已接管：本轮的流已由 stop() 回收
       this.stop();
       if (err && err.message === 'VIDEO_PLAY_BLOCKED') {
         throw new Error(
@@ -698,6 +716,7 @@ export class CameraSource {
   }
 
   stop() {
+    this._startSeq++; // 使仍在 await 中的 start() 失效：其迟到的流将在代次校验处被回收
     if (this.stream) {
       const t = this.stream.getVideoTracks()[0];
       if (t && this._boundTrackEnded) t.removeEventListener('ended', this._boundTrackEnded);

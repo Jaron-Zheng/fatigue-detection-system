@@ -45,7 +45,14 @@ export async function bootEngine(app) {
 export async function startCamera(app) {
   if (!app.camera) app.camera = new CameraSource(app.video);
   app.dash.setStatus('正在开启摄像头', 'var(--warn)', true);
-  const info = await app.camera.start(app._cameraId || null);
+  let info;
+  try {
+    info = await app.camera.start(app._cameraId || null);
+  } catch (err) {
+    // 本轮启动已被更新一轮 start()/stop() 接管（CameraSource 代次失效）：迟到的流已在其内部回收，静默退出
+    if (err && err.message === 'CAMERA_SUPERSEDED') return;
+    throw err;
+  }
   // 等待授权期间用户可能已点「结束」/切演示：迟到的流必须回收，否则摄像头指示灯常亮、
   // 下次启动报"设备被占用"（幽灵流）
   if (app.startAbort || app.simulate) {

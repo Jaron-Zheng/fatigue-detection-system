@@ -79,6 +79,8 @@ class App {
     this.simulate = false;
     this.lastFrameAt = 0;
     this.startAbort = false;
+    /** 启动代次：每轮 start() 递增；跨 await 后代次不一致 = 本轮已被取消并由新一轮接管，必须静默退出 */
+    this._startGen = 0;
     /** 会话看门狗状态（见 _watchdog）：最近一次成功推理 / 黑帧计数 / 提示节流 */
     this._wd = { lastInferAt: 0, lastPlayFixAt: 0, darkFrames: 0, darkWarnedAt: 0, mutedWarnedAt: 0, cpuFallbackDone: false };
     this.rawWin = new TimeWindow(CONFIG.window.waveSec * 1000, 40);
@@ -290,13 +292,14 @@ class App {
     if (!this.sm.send(SessionEvent.START)) return;
 
     this.startAbort = false;
+    const gen = ++this._startGen;
     this.router.switchView('viewWork');
     this.stage.showBoot();
     this.dash.setStatus('正在初始化', 'var(--warn)', true);
 
     // 音频必须在用户手势链路内解锁
     await this.alarm.unlock();
-    if (this._cancelledStopCamera()) return;
+    if (this._cancelledStopCamera(gen)) return;
 
     try {
       if (!this.simulate) {
@@ -315,15 +318,15 @@ class App {
           await cameraP.catch(() => {});
           throw engineErr;
         }
-        if (this._cancelledStopCamera()) return;
+        if (this._cancelledStopCamera(gen)) return;
         await cameraP;
-        if (this._cancelledStopCamera()) return;
+        if (this._cancelledStopCamera(gen)) return;
       } else {
         // 模拟模式无需摄像头与模型
         this.deviceInfo = { label: '模拟驾驶员（合成特征）', width: 0, height: 0 };
       }
     } catch (err) {
-      if (this._cancelledStopCamera()) return;
+      if (this._cancelledStopCamera(gen)) return;
       failStart(this, err);
       return;
     }
@@ -345,7 +348,10 @@ class App {
   }
 
   /** 启动流程被取消时的统一收尾；未取消返回 false */
-  _cancelledStopCamera() {
+  _cancelledStopCamera(gen) {
+    // 旧一轮 start() 在 await 期间被取消且用户已重新开始：状态机与摄像头已归新一轮所有，
+    // 旧流程只能静默退出，否则会替新一轮 send(BEGIN_CALIBRATION) / failStart(FAIL) 造成串线
+    if (gen !== undefined && gen !== this._startGen) return true;
     if (!this.startAbort) return false;
     if (this.camera) this.camera.stop();
     cancelStart(this, '已取消启动');
