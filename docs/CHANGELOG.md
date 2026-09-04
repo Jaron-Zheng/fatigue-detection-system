@@ -4,6 +4,76 @@
 每一项均可在 `system-delivery/comparison/文件变更清单.md` 中找到对应文件，
 在 `docs/代码审计报告.md` 中找到问题编号。
 
+## [3.5.0] — 深度代码质量加固 r2（外部审计补丁合入，8 项修复 + 1 个回归测试文件）
+
+来源：外部模型（fable5）对 main@c0c590e 的深度质量审计交付（纯补丁形态，基线核对一致后按 9 个独立提交合入）。
+
+### Q-01 启动竞态根修：取消后立即重开 → 幽灵流 + 流程串线（高）
+
+- `startAbort` 全局布尔改为「启动代次」：app 层 `_startGen`、CameraSource 层
+  `_startSeq`，每个 `await` 之后校验代次，过期流程静默退出并回收本轮流。
+- 复现路径：开始 → 授权弹窗期间点结束 → 立即再点开始 → 允许。
+  旧现象：会话能跑但摄像头指示灯常亮，部分设备下次启动 `NotReadableError`。
+- 旧一轮迟到落定后会替新一轮 `send(BEGIN_CALIBRATION)` / `failStart(FAIL)`
+  造成状态串线（新一轮事件反被拒绝静默返回）。
+
+### Q-02 switchCamera 失败死路（中）
+
+- 切换新设备失败原先只 toast，停留在「RUNNING 但 srcObject 为空」：
+  `detect()` 恒 null、看门狗两分支都不触发，画面永久空白无出口。
+- 现在失败后回滚原设备；仍失败走 `_onTrackLost` 语义（有数据收束成报告，
+  无数据进错误舞台）。演示模式空 camera 直接早退（原先 TypeError）。
+
+### Q-03 标定基线下限（中）
+
+- 标定期间闭眼/眯眼时 `earBase≈0.05`，闭眼线派生为 ≈0.036，整场检测不出
+  闭眼且标定仍报「成功」。新增 `MIN_EAR_BASELINE = 0.12` 校验（低于最窄
+  眼型睁眼 EAR 下界 0.16，不误伤目标人群），失败给通用阈值回退与可操作提示。
+
+### Q-04 Service Worker 缓存加固（高·线上）
+
+- `cache.put` 改 `safePut`（配额不足/隐私模式 reject 不再变 SW 内
+  unhandledrejection）+ `event.waitUntil` 延寿。
+- 导航离线回退加 `ignoreSearch`（`?pwa=1`/`?demo=1` 入口原先命不中缓存），
+  首页回退兼容 `./index.html`。
+- `CACHE_VERSION` v4-r1 → v5-r1。
+
+### Q-05 recorder 三处（中）
+
+- `end()` 幂等（轨道丢失自动收束与手动结束并发不再写两条 session_end）；
+- `Math.max(...arr)` 改 reduce（maxSamples 调大后不再栈溢出）；
+- blob URL 撤销延后 1500ms（Firefox/Safari 大文件导出不再 0 字节）。
+
+### Q-06 HTML 报告导出加固（中）
+
+- 重入锁：双击导出不再让主题翻转时序错乱（深色 canvas 复发的另一条路径）；
+- 双 rAF 加 300ms 兜底（后台窗口 rAF 不触发时不再卡在浅色无下载）；
+- `<title>` 出口转义（与 csvCell 同属数据出口统一防护）。
+
+### Q-07 状态机监听器隔离（中）
+
+- `send()` 中单个 onChange 钩子抛错不再跳过后续钩子（UI 与状态机脱节
+  即用户感知「卡死」）；错误收集后仍重抛第一个（不吞错）。
+
+### Q-08 模型完整性校验失败显式报错（中）
+
+- 同源模型文件哈希不匹配（vendor 损坏/被篡改）原先静默回退未校验加载，
+  仅 console warn。现在抛可读错误进错误舞台，提示重新运行 fetch-vendor.js。
+  镜像/网络类失败保持原回退行为。
+
+### 新增回归测试 `tools/regression-quality-r2.mjs`
+
+- Q-01~Q-07 的可自动化断言（9 用例：并发启动迟到流回收、end 幂等、
+  标定下限三态、钩子隔离、SW 静态守护、大数组 summary），零依赖 Node 18+。
+
+### 验证记录（合入方执行）
+
+- 修前/修后 `npm run verify:full` 均全绿（静态 + 回归 165 + 集成 41 +
+  typecheck/lint 0 错误）；`regression-quality-r2.mjs` 9/9；
+  `demo-url-test.mjs` 26/26；`pwa-offline-test.mjs` 12/12（对本地服务器实测）。
+- 遗留决策项：线上版 vision_bundle/WASM 走 CDN 无完整性校验（L-01，
+  属既有设计决策，待作者择一：同源加载 / fetch+integrity / 文档声明局限）。
+
 ## [3.4.1] — 安全审计四项修复（CSP meta / 模型哈希校验 / 部署令牌根修 / 测试钩子收口）
 
 ### 修复 1：GitHub Pages 线上版补 CSP（web/index.html）
