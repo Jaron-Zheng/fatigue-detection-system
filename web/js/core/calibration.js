@@ -23,6 +23,9 @@
 import { CONFIG } from '../config.js';
 import { median, stdev, mean } from '../util/math.js';
 
+/** 睁眼 EAR 基线下限（见 _finish 说明）。TODO: 待 AppConfig 类型补齐后迁入 CONFIG.calibration */
+const MIN_EAR_BASELINE = 0.12;
+
 /**
  * 标定结果。失败/跳过时携带 reason 并回退通用阈值（fallback 字段）。
  * @typedef {object} CalibrationResult
@@ -155,6 +158,20 @@ export class Calibrator {
     }
 
     const earBase = median(ear);
+    /* 基线合理性下限：标定期间一直闭眼/眯眼、或暗光下眼裂被算得极小时，睁眼基线会
+     * 接近 0，派生的闭眼线（×0.72）更接近 0——之后整场会话永远判不出闭眼，且不会报失败。
+     * 0.12 取自 EAR 生理下界（Soukupová & Čech 2016：闭眼态约 0.05~0.10；最窄眼型的
+     * 睁眼态也高于 0.15）以下留裕量：低于此值的"睁眼样本"不可能是睁眼。 */
+    if (!(earBase >= MIN_EAR_BASELINE)) {
+      this.state = CalibState.FAILED;
+      this.result = {
+        ok: false,
+        reason: `睁眼基线异常（${earBase.toFixed(3)} < ${MIN_EAR_BASELINE}），标定期间请保持自然睁眼、正视镜头`,
+        ...this._fallback(),
+      };
+      return;
+    }
+
     const earSd = stdev(ear, mean(ear));
     const marBase = this.samples.mar.length ? median(this.samples.mar) : 0.08;
 
