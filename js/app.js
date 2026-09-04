@@ -79,6 +79,8 @@ class App {
     this.simulate = false;
     this.lastFrameAt = 0;
     this.startAbort = false;
+    /** 会话看门狗状态（见 _watchdog）：最近一次成功推理 / 黑帧计数 / 提示节流 */
+    this._wd = { lastInferAt: 0, lastPlayFixAt: 0, darkFrames: 0, darkWarnedAt: 0, mutedWarnedAt: 0, cpuFallbackDone: false };
     this.rawWin = new TimeWindow(CONFIG.window.waveSec * 1000, 40);
 
     this.loop = new RenderLoop({
@@ -298,9 +300,23 @@ class App {
 
     try {
       if (!this.simulate) {
-        await this._bootEngine();
+        /* 摄像头与推理引擎并行启动，且摄像头请求先发出：
+         *   · getUserMedia / video.play() 必须尽量贴近用户点击——首次模型
+         *     加载可能长达数十秒，串行等完引擎再开摄像头时用户手势早已过期，
+         *     部分浏览器（iOS 低电量模式、严格自动播放策略）会拒绝播放 → 黑屏；
+         *   · 用户在模型加载期间就能看到自己的画面，"黑屏等待"的体感消失。
+         * 摄像头失败不等引擎、引擎失败不等摄像头：任一失败立即进入错误舞台。 */
+        const cameraP = this._startCamera();
+        cameraP.catch(() => {}); // 由下方 await 统一处理，避免未捕获拒绝告警
+        try {
+          await this._bootEngine();
+        } catch (engineErr) {
+          // 引擎失败时摄像头可能仍在开启中：等它落定后再回收，避免幽灵流
+          await cameraP.catch(() => {});
+          throw engineErr;
+        }
         if (this._cancelledStopCamera()) return;
-        await this._startCamera();
+        await cameraP;
         if (this._cancelledStopCamera()) return;
       } else {
         // 模拟模式无需摄像头与模型
@@ -340,8 +356,9 @@ class App {
     return bootEngine(this);
   }
 
-  _startCamera() {
-    return startCamera(this);
+  async _startCamera() {
+    await startCamera(this);
+    if (this.camera) this.camera.onTrackLost = (err) => this._onTrackLost(err);
   }
 
   _switchCamera(id) {
@@ -349,6 +366,7 @@ class App {
   }
 
   _beginCalibration() {
+    this._resetWatchdog();
     this.extractor.reset();
     this.calibrator.start(performance.now());
     this.stage.showCalibrating(() => {
@@ -381,7 +399,13 @@ class App {
     this._beginCalibration();
   }
 
+  _resetWatchdog() {
+    this._wd = { lastInferAt: 0, lastPlayFixAt: 0, darkFrames: 0, darkWarnedAt: 0, mutedWarnedAt: 0, cpuFallbackDone: false, lastLightAt: 0 };
+    this.lighting.reset();
+  }
+
   _beginRunning() {
+    this._resetWatchdog();
     this.stage.hide();
     this.extractor.reset();
     this.indicators.reset();
@@ -450,7 +474,13 @@ class App {
       feat = this.sim.frame(now);
     } else {
       const result = this.engine.detect(this.video, now);
-      if (!result) return; // 同一帧或未就绪
+      if (!result) {
+        // 同一帧或未就绪：交给看门狗判断是"正常去重"还是"画面卡死/推理持续失败"
+        this._watchdog(now);
+        return;
+      }
+      this._wd.lastInferAt = now;
+      this._watchdogDarkFrame(now);
       feat = this.extractor.extract(result, now, this.camera ? this.camera.aspect : 4 / 3);
     }
     this.lastFeat = feat;
@@ -511,6 +541,103 @@ class App {
 
     /* ---- 渲染 ---- */
     this.presenter.present(feat, ind, fus, now);
+  }
+
+  /* ==================== 会话看门狗 ==================== */
+
+  /**
+   * 推理长时间没有产出时的自愈与诊断（真机"黑屏/校准倒计时不动"的根修）。
+   * 触发条件：连续 4 秒 detect() 未返回结果（同帧去重或推理抛错）。
+   *   1. <video> 处于暂停（play() 被自动播放策略拒绝）→ 主动重试播放；
+   *      重试仍失败 → 进入错误舞台，"重试"按钮的点击就是新的用户手势；
+   *   2. 采集轨道已结束/被系统静音（拔线、隐私挡板、被其他应用抢占）→ 提示；
+   *   3. GPU 推理连续抛错 → 运行期切换 CPU 委托，一次性。
+   */
+  _watchdog(now) {
+    const wd = this._wd;
+    if (!wd.lastInferAt) wd.lastInferAt = now; // 会话刚开始：从现在起计时
+    const stalledMs = now - wd.lastInferAt;
+    if (stalledMs < 4000) return;
+
+    const video = this.video;
+    const cam = this.camera;
+
+    // 1) 画面暂停 —— 最常见的黑屏根因
+    if (video && video.srcObject && video.paused && cam && now - wd.lastPlayFixAt > 3000) {
+      wd.lastPlayFixAt = now;
+      cam.ensurePlaying(2).then(
+        () => {
+          wd.lastInferAt = performance.now();
+          toast('画面已恢复播放', '刚才浏览器暂停了摄像头画面，系统已自动恢复', 'info', 2600);
+        },
+        (err) => {
+          if (!this.sm.is(State.CALIBRATING, State.RUNNING)) return;
+          failStart(
+            this,
+            new Error('摄像头已授权，但浏览器拒绝播放画面（常见于 iPhone 低电量模式或浏览器自动播放限制）。请点击「重试」。', { cause: err }),
+          );
+        },
+      );
+      return;
+    }
+
+    // 2) 轨道不健康：ended 由 onTrackLost 处理；muted（系统暂停供帧）给出提示
+    if (cam && cam.stream && !cam.healthy && now - wd.mutedWarnedAt > 15000) {
+      wd.mutedWarnedAt = now;
+      toastWarn('摄像头暂时没有画面', '设备可能被其他应用占用、隐私挡板关闭或系统暂停了供帧。若持续无画面，请在设置中切换摄像头。', 6000);
+    }
+
+    // 3) GPU 推理持续失败 → 运行期回退 CPU
+    if (!wd.cpuFallbackDone && this.engine.consecutiveFailures >= 20 && this.engine.delegate !== 'CPU') {
+      wd.cpuFallbackDone = true;
+      this.engine.fallbackToCpu().then((ok) => {
+        if (ok) {
+          wd.lastInferAt = performance.now();
+          toastWarn('已切换为 CPU 推理', '当前显卡的 GPU 推理持续失败，系统已自动改用 CPU 委托（帧率可能略降）', 5200);
+          this.dash.updateEngineInfo({ avgMs: this.engine.avgInferMs, delegate: 'CPU' });
+        } else if (this.sm.is(State.CALIBRATING, State.RUNNING)) {
+          failStart(this, new Error('推理引擎在当前设备上持续失败（GPU 与 CPU 委托均不可用）。请更新显卡驱动或更换浏览器后重试。'));
+        }
+      });
+    }
+  }
+
+  /**
+   * 黑帧诊断：推理正常在跑但画面几乎全黑（红外摄像头、隐私挡板、镜头被遮），
+   * 人脸不可能被检出，校准同样卡住。用光照监测的平均亮度判断，连续 ≥2 秒
+   * 全黑给一次可操作提示（每 30 秒最多一次）。
+   */
+  _watchdogDarkFrame(now) {
+    const wd = this._wd;
+    const lit = this.lighting.evaluate(this.video, now);
+    if (!lit || lit.valid === null) return;
+    // evaluate 有 500ms 节流，未到间隔时返回缓存值；只在新评估时计数
+    if (this._wd.lastLightAt === this.lighting.lastAt) return;
+    this._wd.lastLightAt = this.lighting.lastAt;
+    if (lit.average < 8 && lit.contrast < 6) wd.darkFrames++;
+    else wd.darkFrames = 0;
+    if (wd.darkFrames >= 4 && now - wd.darkWarnedAt > 30000) {
+      wd.darkWarnedAt = now;
+      this.dash.setStatus('画面全黑', 'var(--warn)', true);
+      toastWarn(
+        '摄像头画面全黑',
+        '摄像头已开启但画面没有内容：请检查镜头是否被遮挡 / 隐私挡板是否关闭；若电脑有多个摄像头（如红外摄像头），请在设置中切换到普通彩色摄像头。',
+        8000,
+      );
+    }
+  }
+
+  /** 采集轨道意外结束（拔线 / 系统撤销权限 / 被抢占）：进入错误舞台而不是静默黑屏 */
+  _onTrackLost(err) {
+    if (this.simulate) return;
+    // 已有有效数据的会话：正常收束成报告，不让用户的数据随故障一起丢失
+    if (this.sm.is(State.RUNNING, State.PAUSED) && this.recorder.samples.length > 30) {
+      toastWarn('摄像头连接已断开', '本次检测已提前结束并生成报告', 6000);
+      stopSession(this);
+      return;
+    }
+    if (!this.sm.is(State.CALIBRATING, State.RUNNING, State.PAUSED, State.BOOTING)) return;
+    failStart(this, err);
   }
 
   _finishCalibration() {

@@ -170,7 +170,11 @@ export class FaceEngine {
     this.lastVideoTime = -1;
     this.initError = null;
     this._vision = null;
-    this.stats = { infer: 0, totalMs: 0, lastMs: 0, dropped: 0 };
+    this.stats = { infer: 0, totalMs: 0, lastMs: 0, dropped: 0, errors: 0 };
+    /** 连续 detectForVideo 抛错次数（成功一次即清零） */
+    this.consecutiveFailures = 0;
+    this._modelBuffer = null;
+    this._fallingBack = null;
     /**
      * MediaPipe VIDEO 模式要求送入的时间戳严格单调递增，否则整张计算图报
      * "Packet timestamp mismatch" 并且该帧推理直接失败。
@@ -236,21 +240,8 @@ export class FaceEngine {
         console.warn('[FaceEngine] 模型镜像链全部失败，改用 modelAssetPath：', modelErr.message);
       }
       // 先尝试 GPU，失败则回退 CPU（buffer 会被引擎消耗，重试需传副本）
-      const tryCreate = async (delegate) => {
-        const opts = modelBuffer
-          ? { modelAssetBuffer: modelBuffer.slice(), delegate }
-          : { modelAssetPath: MODEL_URL, delegate };
-        return FaceLandmarker.createFromOptions(fileset, {
-          baseOptions: opts,
-          runningMode: 'VIDEO',
-          numFaces: 1,
-          outputFaceBlendshapes: true,
-          outputFacialTransformationMatrixes: true,
-          minFaceDetectionConfidence: 0.5,
-          minFacePresenceConfidence: 0.5,
-          minTrackingConfidence: 0.5,
-        });
-      };
+      this._modelBuffer = modelBuffer;
+      const tryCreate = (delegate) => this._create(delegate);
 
       const preferred = CONFIG.capture.delegate === 'CPU' ? 'CPU' : 'GPU';
       try {
@@ -262,6 +253,7 @@ export class FaceEngine {
         this.landmarker = await tryCreate('CPU');
         this.delegate = 'CPU';
       }
+      this.consecutiveFailures = 0;
 
       onProgress('模型就绪', 100);
       this.ready = true;
@@ -272,6 +264,57 @@ export class FaceEngine {
       console.error('[FaceEngine] 初始化失败：', err);
       throw new Error(this._friendlyError(err), { cause: err });
     }
+  }
+
+  /** 用当前 fileset 与模型创建一个指定委托的 landmarker（init 与运行期回退共用） */
+  _create(delegate) {
+    const { FaceLandmarker, fileset } = this._vision;
+    const opts = this._modelBuffer
+      ? { modelAssetBuffer: this._modelBuffer.slice(), delegate }
+      : { modelAssetPath: MODEL_URL, delegate };
+    return FaceLandmarker.createFromOptions(fileset, {
+      baseOptions: opts,
+      runningMode: 'VIDEO',
+      numFaces: 1,
+      outputFaceBlendshapes: true,
+      outputFacialTransformationMatrixes: true,
+      minFaceDetectionConfidence: 0.5,
+      minFacePresenceConfidence: 0.5,
+      minTrackingConfidence: 0.5,
+    });
+  }
+
+  /**
+   * 运行期回退 CPU：部分显卡/驱动上 GPU 委托能创建成功，但 detectForVideo
+   * 每帧都抛错（WebGL 上下文丢失、着色器编译失败等）。原实现只是
+   * "跳过该帧"，结果是校准永远不推进、画面无任何反馈。
+   * 连续失败达到阈值时由上层调用本方法切到 CPU，切换失败返回 false。
+   */
+  async fallbackToCpu() {
+    if (this.delegate === 'CPU' || !this._vision) return false;
+    if (this._fallingBack) return this._fallingBack;
+    this._fallingBack = (async () => {
+      try {
+        const next = await this._create('CPU');
+        try {
+          if (this.landmarker) this.landmarker.close();
+        } catch {
+          /* noop */
+        }
+        this.landmarker = next;
+        this.delegate = 'CPU';
+        this.consecutiveFailures = 0;
+        this.lastVideoTime = -1;
+        console.warn('[FaceEngine] GPU 推理连续失败，已在运行期切换为 CPU 委托');
+        return true;
+      } catch (err) {
+        console.error('[FaceEngine] 运行期回退 CPU 失败：', err);
+        return false;
+      } finally {
+        this._fallingBack = null;
+      }
+    })();
+    return this._fallingBack;
   }
 
   _friendlyError(err) {
@@ -324,10 +367,16 @@ export class FaceEngine {
     try {
       result = this.landmarker.detectForVideo(video, ts);
     } catch (err) {
-      // 时间戳回退等偶发错误：跳过该帧而不是崩掉整个循环
-      console.warn('[FaceEngine] detectForVideo 异常，跳过该帧：', err);
+      // 时间戳回退等偶发错误：跳过该帧而不是崩掉整个循环；
+      // 连续失败计数供上层判断是否需要回退 CPU（见 fallbackToCpu）
+      this.consecutiveFailures = (this.consecutiveFailures || 0) + 1;
+      this.stats.errors = (this.stats.errors || 0) + 1;
+      if (this.consecutiveFailures <= 3 || this.consecutiveFailures % 50 === 0) {
+        console.warn('[FaceEngine] detectForVideo 异常，跳过该帧（连续 ' + this.consecutiveFailures + ' 次）：', err);
+      }
       return null;
     }
+    this.consecutiveFailures = 0;
     const dt = performance.now() - t0;
     this.stats.infer++;
     this.stats.totalMs += dt;
@@ -340,7 +389,8 @@ export class FaceEngine {
   }
 
   resetStats() {
-    this.stats = { infer: 0, totalMs: 0, lastMs: 0, dropped: 0 };
+    this.stats = { infer: 0, totalMs: 0, lastMs: 0, dropped: 0, errors: 0 };
+    this.consecutiveFailures = 0;
     this.lastVideoTime = -1;
     // 注意：不重置 lastTimestamp。它必须跨会话保持单调，
     // 否则下一次会话又会与已用过的时间戳冲突。
@@ -363,16 +413,39 @@ export class FaceEngine {
  * 说明：http://localhost 属于 Secure Context，因此无需 HTTPS 即可调用
  * getUserMedia。若通过 IP 访问（如 192.168.x.x）浏览器会拒绝，
  * 这也是本项目服务器只监听 127.0.0.1 的原因之一。
+ *
+ * 2026-09 黑屏根修（"权限已授予但画面全黑/校准倒计时不动"）——真机复现的四类根因：
+ *   1. video.play() 被拒绝（iOS 低电量模式、自动播放策略、用户手势在模型加载
+ *      期间过期）却被 .catch(()=>{}) 吞掉：视频停在 currentTime=0，
+ *      FaceEngine.detect 的同帧去重把每一帧都丢弃，校准永远不推进，
+ *      而校准遮罩是 90% 不透明的近黑色——用户看到的就是"黑屏"。
+ *      → play() 失败改为多次重试 + 明确抛错，由 app 层提供"点击重试"出口
+ *        （点击本身就是新的用户手势，重试必然成功）。
+ *   2. 等待 loadeddata 后才 play()：部分 Safari/WebView 对 MediaStream
+ *      不先 play 就不推进 readyState，12 秒后报"画面加载超时"。
+ *      → 先 play() 再等首帧（loadeddata / playing / videoWidth>0 三选一）。
+ *   3. Windows Hello 红外摄像头 / 虚拟摄像头被当成默认设备：画面全黑或灰。
+ *      → 首次启动无指定设备时，在授权后枚举设备，自动避开 IR/虚拟摄像头。
+ *   4. 授权超时后用户再点"允许"，迟到的流没人回收：指示灯常亮，下次启动
+ *      NotReadableError（设备被占用）。→ 迟到的流立即 stop。
  */
 export class CameraSource {
   constructor(videoEl) {
     this.video = videoEl;
     this.stream = null;
     this.deviceId = null;
+    /** 采集轨道意外结束（拔线/系统撤销权限/被其他应用抢占）时回调 */
+    this.onTrackLost = null;
+    this._boundTrackEnded = null;
   }
 
   static get supported() {
     return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+  }
+
+  /** 常见"不是给人看画面"的设备名（红外/深度/虚拟摄像头） */
+  static isUndesirableLabel(label) {
+    return /\b(IR|infrared|depth)\b|红外|深度|virtual|OBS|Snap Camera|ManyCam|XSplit|DroidCam/i.test(label || '');
   }
 
   async listCameras() {
@@ -384,12 +457,13 @@ export class CameraSource {
     }
   }
 
-  async start(deviceId = null) {
-    if (!CameraSource.supported) {
-      throw new Error('当前浏览器不支持摄像头采集（navigator.mediaDevices 不可用）。请使用最新版 Chrome / Edge。');
-    }
+  _constraints(deviceId, { relaxed = false } = {}) {
     const c = CONFIG.capture;
-    const constraints = {
+    if (relaxed) {
+      // 兜底：只保留设备选择（若有），放弃分辨率/帧率约束
+      return { audio: false, video: deviceId ? { deviceId: { exact: deviceId } } : true };
+    }
+    return {
       audio: false,
       video: deviceId
         ? { deviceId: { exact: deviceId }, width: { ideal: c.width }, height: { ideal: c.height } }
@@ -400,61 +474,195 @@ export class CameraSource {
             frameRate: { ideal: 30 },
           },
     };
+  }
 
+  /**
+   * 带超时的 getUserMedia。
+   * 用户忽略权限对话框时 Promise 会一直 pending，界面停留在 BOOTING 无任何反馈；
+   * 15 秒未决即放弃并给出可操作提示。超时后若用户才点"允许"，迟到的流会被立即回收。
+   */
+  async _getUserMedia(constraints, timeoutMs = 15000) {
+    let timerId = null;
+    let settled = false;
+    const req = navigator.mediaDevices.getUserMedia(constraints);
+    const timeout = new Promise((_, reject) => {
+      timerId = setTimeout(() => reject(new Error('CAMERA_PERMISSION_TIMEOUT')), timeoutMs);
+    });
     try {
-      /**
-       * 权限弹窗超时兜底：
-       * 用户忽略权限对话框时 getUserMedia 会一直 pending，
-       * 界面将停留在 BOOTING 无任何反馈（实测"卡死"投诉的根源之一）。
-       * 15 秒未决即放弃并给出可操作的提示。
-       */
-      // 声明必须先于 Promise 构造：executor 同步执行，若 timerId 还在
-      // TDZ（let 提升但未初始化）赋值会直接抛 ReferenceError
-      let timerId = null;
-      const timeout = new Promise((_, reject) => {
-        timerId = setTimeout(() => reject(new Error('CAMERA_PERMISSION_TIMEOUT')), 15000);
-      });
-      const clearTimeout15s = () => clearTimeout(timerId);
-      this.stream = await Promise.race([
-        navigator.mediaDevices.getUserMedia(constraints).then((s) => {
-          clearTimeout15s();
+      const s = await Promise.race([
+        req.then((s) => {
+          if (settled) {
+            // 已超时放弃：回收迟到的流，避免摄像头被"幽灵流"占用
+            s.getTracks().forEach((t) => t.stop());
+            return null;
+          }
           return s;
         }),
         timeout,
       ]);
+      settled = true;
+      return s;
+    } catch (err) {
+      settled = true;
+      // 超时路径：原始请求之后若成功也要回收
+      req.then((s) => s.getTracks().forEach((t) => t.stop())).catch(() => {});
+      throw err;
+    } finally {
+      clearTimeout(timerId);
+    }
+  }
+
+  /**
+   * 首次启动（未指定设备）时避开红外/虚拟摄像头：
+   * 已经拿到一次授权后 enumerateDevices 才会返回设备名，据此判断当前轨道
+   * 是否是 IR 相机；若是且存在其他可用相机，则切换过去。
+   * 返回最终使用的流（可能与传入相同）。
+   */
+  async _avoidUndesirableDevice(stream) {
+    const track = stream.getVideoTracks()[0];
+    if (!track || !CameraSource.isUndesirableLabel(track.label)) return stream;
+    const cams = await this.listCameras();
+    const better = cams.find((d) => d.deviceId && !CameraSource.isUndesirableLabel(d.label));
+    if (!better) return stream;
+    try {
+      const alt = await this._getUserMedia(this._constraints(better.deviceId), 8000);
+      if (!alt) return stream;
+      stream.getTracks().forEach((t) => t.stop());
+      console.info('[Camera] 默认设备疑似红外/虚拟摄像头（' + track.label + '），已自动切换到：' + better.label);
+      this.deviceId = better.deviceId;
+      return alt;
+    } catch {
+      return stream;
+    }
+  }
+
+  /**
+   * 确保 <video> 处于播放状态。失败重试三次（每次间隔递增），
+   * 仍失败则抛出 VIDEO_PLAY_BLOCKED，由上层给出"点击重试"出口。
+   */
+  async ensurePlaying(retries = 3) {
+    const v = this.video;
+    if (!v.srcObject) throw new Error('VIDEO_NO_STREAM');
+    let lastErr = null;
+    for (let i = 0; i <= retries; i++) {
+      try {
+        // play() 在已播放时返回已 resolve 的 Promise，重复调用安全
+        await v.play();
+        if (!v.paused) return true;
+      } catch (err) {
+        lastErr = err;
+      }
+      await new Promise((r) => setTimeout(r, 150 * (i + 1)));
+    }
+    const e = new Error('VIDEO_PLAY_BLOCKED');
+    /** @type {any} */ (e).cause = lastErr;
+    throw e;
+  }
+
+  /** 等待首帧可用：loadeddata / playing / videoWidth>0 任一满足即可 */
+  _waitFirstFrame(timeoutMs = 12000) {
+    const v = this.video;
+    return new Promise((resolve, reject) => {
+      let done = false;
+      const finish = (ok, err) => {
+        if (done) return;
+        done = true;
+        clearTimeout(to);
+        clearInterval(poll);
+        v.removeEventListener('loadeddata', onEvt);
+        v.removeEventListener('playing', onEvt);
+        v.removeEventListener('error', onErr);
+        ok ? resolve(undefined) : reject(err);
+      };
+      const ready = () => v.readyState >= 2 || v.videoWidth > 0;
+      const onEvt = () => ready() && finish(true);
+      const onErr = () => finish(false, new Error('视频元素报告解码错误，请更换摄像头或浏览器后重试。'));
+      const to = setTimeout(
+        () => finish(false, new Error('摄像头画面加载超时（12 秒无画面）。请检查设备是否被其他程序占用、隐私挡板是否关闭，或在设置中切换摄像头。')),
+        timeoutMs,
+      );
+      const poll = setInterval(() => ready() && finish(true), 200);
+      v.addEventListener('loadeddata', onEvt);
+      v.addEventListener('playing', onEvt);
+      v.addEventListener('error', onErr);
+      if (ready()) finish(true);
+    });
+  }
+
+  async start(deviceId = null) {
+    if (!CameraSource.supported) {
+      if (!window.isSecureContext) {
+        throw new Error('当前页面不是安全上下文（需 https:// 或 http://localhost），浏览器禁止访问摄像头。请改用 https 地址或本地 127.0.0.1 访问。');
+      }
+      throw new Error('当前浏览器不支持摄像头采集（navigator.mediaDevices 不可用）。请使用最新版 Chrome / Edge / Safari。');
+    }
+    // 重复调用先回收旧流（切换设备/重试路径），避免同一设备被两条流占用
+    this.stop();
+
+    let stream = null;
+    try {
+      stream = await this._getUserMedia(this._constraints(deviceId));
     } catch (err) {
       if (err && err.message === 'CAMERA_PERMISSION_TIMEOUT') {
         throw new Error('等待摄像头授权超时（15 秒无响应）。请在浏览器弹窗中点击「允许」，然后重新开始检测。', {
           cause: err,
         });
       }
-      throw new Error(CameraSource.friendlyError(err), { cause: err });
+      const name = err && err.name;
+      // 分辨率/设备约束不满足：退化为最宽松约束再试一次（老旧/USB 摄像头常见）
+      if (name === 'OverconstrainedError' || name === 'ConstraintNotSatisfiedError' || name === 'NotFoundError') {
+        try {
+          stream = await this._getUserMedia(this._constraints(deviceId, { relaxed: true }));
+        } catch (err2) {
+          throw new Error(CameraSource.friendlyError(err2), { cause: err2 });
+        }
+      } else {
+        throw new Error(CameraSource.friendlyError(err), { cause: err });
+      }
+    }
+    if (!stream) throw new Error('摄像头启动被取消。');
+
+    if (!deviceId) stream = await this._avoidUndesirableDevice(stream);
+    this.stream = stream;
+    if (deviceId) this.deviceId = deviceId;
+
+    // 轨道意外结束（拔线、系统撤销权限、被其他应用抢占）：通知上层而不是静默黑屏
+    const track = stream.getVideoTracks()[0];
+    if (track) {
+      this._boundTrackEnded = () => {
+        if (this.stream !== stream) return;
+        if (typeof this.onTrackLost === 'function') this.onTrackLost(new Error('摄像头连接已断开（设备被拔出、被其他程序占用或权限被系统撤销）。'));
+      };
+      track.addEventListener('ended', this._boundTrackEnded);
     }
 
-    this.deviceId = deviceId;
-    this.video.srcObject = this.stream;
-    this.video.muted = true;
-    this.video.playsInline = true;
+    // 属性必须先于 srcObject 设置：部分 WebKit 在赋流瞬间就依据 muted/playsInline 决定能否自动播放
+    const v = this.video;
+    v.muted = true;
+    v.defaultMuted = true;
+    v.playsInline = true;
+    v.setAttribute('playsinline', '');
+    v.setAttribute('muted', '');
+    v.setAttribute('autoplay', '');
+    v.srcObject = stream;
 
     try {
-      await new Promise((resolve, reject) => {
-        const to = setTimeout(() => reject(new Error('摄像头画面加载超时，请检查设备是否被其他程序占用。')), 12000);
-        const onReady = () => {
-          clearTimeout(to);
-          resolve(undefined);
-        };
-        if (this.video.readyState >= 2) onReady();
-        else this.video.addEventListener('loadeddata', onReady, { once: true });
-      });
-
-      await this.video.play().catch(() => {});
+      // 先 play 再等首帧（顺序很关键，见文件头说明）
+      await this.ensurePlaying();
+      await this._waitFirstFrame();
       return {
-        width: this.video.videoWidth,
-        height: this.video.videoHeight,
-        label: this.stream.getVideoTracks()[0] ? this.stream.getVideoTracks()[0].label : 'camera',
+        width: v.videoWidth,
+        height: v.videoHeight,
+        label: track ? track.label : 'camera',
       };
     } catch (err) {
       this.stop();
+      if (err && err.message === 'VIDEO_PLAY_BLOCKED') {
+        throw new Error(
+          '摄像头已授权，但浏览器拒绝播放画面（常见于 iPhone 低电量模式、浏览器自动播放限制或页面长时间未响应操作）。请点击「重试」，或关闭低电量模式后再试。',
+          { cause: err },
+        );
+      }
       throw err;
     }
   }
@@ -470,22 +678,36 @@ export class CameraSource {
         return '未找到摄像头设备。请确认设备已连接且未被系统禁用。';
       case 'NotReadableError':
       case 'TrackStartError':
-        return '摄像头被其他程序占用（如会议软件、相机应用）。请关闭后重试。';
+        return '摄像头被其他程序占用（如会议软件、相机应用），或被系统隐私设置禁用。请关闭占用程序 / 检查「设置 → 隐私 → 相机」后重试。';
       case 'OverconstrainedError':
+      case 'ConstraintNotSatisfiedError':
         return '摄像头不支持请求的分辨率，请在设置中降低采集分辨率。';
       case 'SecurityError':
-        return '当前页面不是安全上下文，无法访问摄像头。请通过 http://localhost 访问。';
+        return '当前页面不是安全上下文，无法访问摄像头。请通过 https 或 http://localhost 访问。';
+      case 'AbortError':
+        return '摄像头启动被系统中断（设备可能正在被另一个应用初始化），请稍后重试。';
       default:
         return '摄像头启动失败：' + ((err && err.message) || String(err));
     }
   }
 
+  /** 当前轨道是否仍在正常产出画面 */
+  get healthy() {
+    const t = this.stream && this.stream.getVideoTracks()[0];
+    return !!t && t.readyState === 'live' && !t.muted;
+  }
+
   stop() {
     if (this.stream) {
+      const t = this.stream.getVideoTracks()[0];
+      if (t && this._boundTrackEnded) t.removeEventListener('ended', this._boundTrackEnded);
       this.stream.getTracks().forEach((t) => t.stop());
       this.stream = null;
     }
-    if (this.video) this.video.srcObject = null;
+    this._boundTrackEnded = null;
+    if (this.video) {
+      this.video.srcObject = null;
+    }
   }
 
   get aspect() {

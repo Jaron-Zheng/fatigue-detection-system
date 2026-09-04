@@ -31,10 +31,14 @@ export class SessionStage {
     this._calibFlashTimer = null;
   }
 
-  _frame(title, text, { ring = false } = {}) {
+  _frame(title, text, { ring = false, translucent = false } = {}) {
     // 任何新阶段接管遮罩时，撤销"校准完成"反馈的挂起状态与定时器
     this._cancelCalibFlash();
     this.overlay.hidden = false;
+    /* 启动/校准阶段用半透明遮罩：用户能看见摄像头画面正在工作、
+     * 能对着预览把脸摆进画面；90% 不透明的近黑遮罩是"授权了还是黑屏"
+     * 投诉的直接观感来源（真机走查）。待机/暂停/错误仍用实色遮罩。 */
+    this.overlay.classList.toggle('is-translucent', translucent);
     this.ring.hidden = !ring;
     setText(this.title, title);
     setText(this.text, text);
@@ -64,12 +68,13 @@ export class SessionStage {
   showBoot() {
     this._frame(
       '正在准备视觉引擎',
-      '模型和摄像头均在本机启动，不会上传任何影像数据。'
+      '模型和摄像头均在本机启动，不会上传任何影像数据。',
+      { translucent: true }
     );
   }
 
   showCalibrating(onSkip) {
-    this._frame('正在认识你的眼睛', calibInstructionText(), { ring: true });
+    this._frame('正在认识你的眼睛', calibInstructionText(), { ring: true, translucent: true });
 
     /* 「直接开始」入口：
      * 首屏不再摆这个按钮（普通用户没有理由主动跳过校准），
@@ -107,7 +112,7 @@ export class SessionStage {
    * 收起由这里的定时器负责；期间若有新阶段（如暂停）接管遮罩则立即让位。
    */
   showCalibrated() {
-    this._frame('校准完成', '开始监测');
+    this._frame('校准完成', '开始监测', { translucent: true });
     this._calibFlashOn = true;
     clearTimeout(this._calibFlashTimer);
     this._calibFlashTimer = setTimeout(() => {

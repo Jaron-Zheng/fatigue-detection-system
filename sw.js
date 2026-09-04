@@ -16,7 +16,7 @@
  */
 'use strict';
 
-const CACHE_VERSION = 'fatigue-v3-r1';
+const CACHE_VERSION = 'fatigue-v4-r1'; // 2026-09 黑屏根修版本：强制刷新旧缓存
 const CACHE_NAME = `fatigue-cache-${CACHE_VERSION}`;
 
 self.addEventListener('install', () => {
