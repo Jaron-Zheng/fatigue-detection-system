@@ -45,7 +45,14 @@ export async function bootEngine(app) {
 export async function startCamera(app) {
   if (!app.camera) app.camera = new CameraSource(app.video);
   app.dash.setStatus('正在开启摄像头', 'var(--warn)', true);
-  const info = await app.camera.start(app._cameraId || null);
+  let info;
+  try {
+    info = await app.camera.start(app._cameraId || null);
+  } catch (err) {
+    // 本轮启动已被更新一轮 start()/stop() 接管（CameraSource 代次失效）：迟到的流已在其内部回收，静默退出
+    if (err && err.message === 'CAMERA_SUPERSEDED') return;
+    throw err;
+  }
   // 等待授权期间用户可能已点「结束」/切演示：迟到的流必须回收，否则摄像头指示灯常亮、
   // 下次启动报"设备被占用"（幽灵流）
   if (app.startAbort || app.simulate) {
@@ -63,9 +70,11 @@ export async function startCamera(app) {
 
 /** 运行中切换摄像头：重启采集并重新校准 */
 export async function switchCamera(app, id) {
+  const prevId = app._cameraId || null;
   app._cameraId = id || null;
   const active = ['running', 'paused', 'calibrating'];
   if (!active.includes(app.state)) return;
+  if (app.simulate || !app.camera) return; // 演示模式没有 CameraSource，下面的 stop() 会直接 TypeError
   try {
     app.camera.stop();
     await app.camera.start(app._cameraId);
@@ -73,7 +82,20 @@ export async function switchCamera(app, id) {
     app.recalibrate();
     toastOk('已切换摄像头', '正在重新校准');
   } catch (err) {
+    if (err && err.message === 'CAMERA_SUPERSEDED') return;
     toastError('切换失败', err.message);
+    /* 切换失败后不能停在「RUNNING 但 srcObject 为空」的死路：detect() 永远返回 null，
+     * 看门狗两个分支（分别要求 srcObject / stream 存在）都不会触发，画面永久空白且无出口。
+     * 先回滚到原设备；仍失败则按轨道丢失处理（有数据则收束成报告，否则进错误舞台）。 */
+    app._cameraId = prevId;
+    try {
+      await app.camera.start(prevId);
+      if (app.camera.deviceId) app._cameraId = app.camera.deviceId;
+      toast('已恢复原摄像头', '切换未成功，继续使用原设备', 'info', 3000);
+    } catch (err2) {
+      if (err2 && err2.message === 'CAMERA_SUPERSEDED') return;
+      app._onTrackLost(err2);
+    }
   }
 }
 

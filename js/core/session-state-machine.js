@@ -147,9 +147,18 @@ export class SessionStateMachine {
     this._state = next;
     this._history.push({ from: prev, event, to: next });
     if (this._history.length > 64) this._history.shift();
+    // 监听器隔离：一个钩子抛错不能让后续钩子被跳过（状态已变更，跳过会让 UI 与状态机脱节）。
+    // 错误不吞掉：全部执行完后把第一个错误重新抛给调用方。
+    let firstErr = null;
     for (const listener of this._listeners.slice()) {
-      listener(prev, next, event, payload);
+      try {
+        listener(prev, next, event, payload);
+      } catch (err) {
+        if (firstErr === null) firstErr = err;
+        console.error('[SessionStateMachine] onChange 钩子异常：', err);
+      }
     }
+    if (firstErr !== null) throw firstErr;
     return true;
   }
 

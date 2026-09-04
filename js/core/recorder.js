@@ -71,6 +71,7 @@ export class SessionRecorder {
   }
 
   end() {
+    if (this.endedAt) return; // 幂等：轨道丢失自动收束与用户手动「结束」并发时不重复写 session_end
     this.endedAt = new Date();
     this.addEvent({ type: 'session_end', ts: performance.now(), level: 'info', message: '本次检测结束' });
   }
@@ -196,7 +197,8 @@ export class SessionRecorder {
       avgScore: scores.length ? avg(scores) : 0,
       peakScore: lastFusion ? lastFusion.peakScore : 0,
       avgPerclos: perclosArr.length ? avg(perclosArr) : 0,
-      maxPerclos: perclosArr.length ? Math.max(...perclosArr) : 0,
+      // 不用 Math.max(...arr)：展开参数受调用栈上限约束（数万元素即可能 RangeError），maxSamples 可配置
+      maxPerclos: perclosArr.length ? perclosArr.reduce((m, v) => (v > m ? v : m), -Infinity) : 0,
       levelDurations: ld,
       levelRatios: Object.fromEntries(Object.entries(ld).map(([k, v]) => [k, v / total])),
       counts,
@@ -517,8 +519,10 @@ export function downloadFile(filename, content, mime = 'application/octet-stream
   // 不会执行，导致 <a> 永久残留在 DOM 中
   setTimeout(() => {
     if (a.parentNode) a.parentNode.removeChild(a);
-    URL.revokeObjectURL(url);
   }, 0);
+  // blob: URL 的撤销单独延后：Firefox/Safari 的下载在 click() 后异步开始，
+  // 立即 revoke 会让大文件（长会话 JSON / 自包含 HTML 报告）下载失败或得到 0 字节文件
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
 // 会话内单调计数：同一秒内多次导出文件名仍唯一（见 timestampName）

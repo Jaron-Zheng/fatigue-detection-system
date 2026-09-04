@@ -16,8 +16,22 @@
  */
 'use strict';
 
-const CACHE_VERSION = 'fatigue-v4-r1'; // 2026-09 黑屏根修版本：强制刷新旧缓存
+const CACHE_VERSION = 'fatigue-v5-r1'; // 2026-09 质量加固 r2：缓存写入容错 + 导航回退忽略 query
 const CACHE_NAME = `fatigue-cache-${CACHE_VERSION}`;
+
+/**
+ * 缓存写入必须容错：Cache.put 在配额不足（vendor 单文件 22MB，受限存储环境常见）、
+ * 隐私模式或响应体不可缓存时会 reject。此前直接 `cache.put(...)` 不 await 也不 catch，
+ * 表现为 SW 内 unhandledrejection——对用户静默，但 DevTools 满屏红字，且部分浏览器
+ * 会因此判定 SW 脚本异常。写入失败不影响本次响应（响应已返回），忽略即可，下次在线再试。
+ */
+async function safePut(cache, req, res) {
+  try {
+    await cache.put(req, res);
+  } catch {
+    /* 配额/不可缓存：忽略 */
+  }
+}
 
 self.addEventListener('install', () => {
   // 不做静态预缓存：首次在线访问时运行时缓存自动填充全部资源
@@ -50,7 +64,7 @@ self.addEventListener('fetch', (event) => {
         const hit = await cache.match(req);
         if (hit) return hit;
         const res = await fetch(req);
-        if (res.ok) cache.put(req, res.clone());
+        if (res.ok) event.waitUntil(safePut(cache, req, res.clone()));
         return res;
       })()
     );
@@ -63,14 +77,16 @@ self.addEventListener('fetch', (event) => {
       const cache = await caches.open(CACHE_NAME);
       try {
         const res = await fetch(req);
-        if (res.ok) cache.put(req, res.clone());
+        if (res.ok) event.waitUntil(safePut(cache, req, res.clone()));
         return res;
       } catch {
-        const hit = await cache.match(req);
+        // 导航请求忽略 query：入口常带 ?pwa=1 / ?demo=1，精确匹配会让离线回退找不到已缓存首页
+        const hit = await cache.match(req, { ignoreSearch: req.mode === 'navigate' });
         if (hit) return hit;
         // 导航请求离线且无缓存时，回退到已缓存的首页
         if (req.mode === 'navigate') {
-          const home = await cache.match('./');
+          const home =
+            (await cache.match('./', { ignoreSearch: true })) || (await cache.match('./index.html', { ignoreSearch: true }));
           if (home) return home;
         }
         return new Response('离线且无缓存', { status: 503, statusText: 'Offline' });
