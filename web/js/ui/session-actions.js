@@ -46,10 +46,19 @@ export async function startCamera(app) {
   if (!app.camera) app.camera = new CameraSource(app.video);
   app.dash.setStatus('正在开启摄像头', 'var(--warn)', true);
   const info = await app.camera.start(app._cameraId || null);
+  // 等待授权期间用户可能已点「结束」/切演示：迟到的流必须回收，否则摄像头指示灯常亮、
+  // 下次启动报"设备被占用"（幽灵流）
+  if (app.startAbort || app.simulate) {
+    app.camera.stop();
+    return;
+  }
   app.deviceInfo = info;
+  // 自动避开红外/虚拟摄像头后 deviceId 会变化，同步回 app 让设置面板选中真实设备
+  if (app.camera.deviceId) app._cameraId = app.camera.deviceId;
   const cams = await app.camera.listCameras();
   app.settings.setCameras(cams, app._cameraId);
   toggleClass(app.video, 'mirrored', CONFIG.render.mirror);
+  app.dash.setStatus('摄像头已就绪', 'var(--warn)', true);
 }
 
 /** 运行中切换摄像头：重启采集并重新校准 */

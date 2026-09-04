@@ -1093,6 +1093,11 @@ body:has(#viewHome.active) .global-nav:not(.is-scrolled) .gn-toggle:hover {
 .stage-overlay[hidden] {
   display: none;
 }
+/* 启动/校准阶段：半透明 + 文字加描影，摄像头预览透出来 */
+.stage-overlay.is-translucent {
+  background: rgba(10, 10, 11, 0.42); /* lit-ok: 近黑半透明遮罩，固定色 */
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7); /* lit-ok: 遮罩文字描影 */
+}
 .stage-overlay h3 {
   font-size: var(--fs-headline);
   margin-bottom: var(--sp-2);

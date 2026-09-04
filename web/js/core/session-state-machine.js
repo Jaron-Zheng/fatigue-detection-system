@@ -75,6 +75,7 @@ const TRANSITIONS = Object.freeze({
     [SessionEvent.RECALIBRATE]: SessionState.CALIBRATING,
     [SessionEvent.SIM_ENTER]: SessionState.RUNNING,
     [SessionEvent.SIM_EXIT]: SessionState.IDLE,
+    [SessionEvent.FAIL]: SessionState.ERROR, // 暂停期间摄像头被拔出/权限被撤销
   },
   [SessionState.REPORT]: {
     [SessionEvent.START]: SessionState.BOOTING,
