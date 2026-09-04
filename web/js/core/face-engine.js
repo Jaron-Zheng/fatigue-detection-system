@@ -237,6 +237,15 @@ export class FaceEngine {
       try {
         modelBuffer = await fetchModelBuffer(onProgress);
       } catch (modelErr) {
+        /* 同源文件本身哈希不匹配 = vendor 损坏/被篡改：回退 modelAssetPath 会加载同一份坏文件
+         * 且不再校验，校验形同虚设。必须显式失败并告知用户，而不是静默用未校验模型继续。 */
+        if (/integrity mismatch/.test(String(modelErr && modelErr.message))) {
+          throw new Error(
+            '模型文件完整性校验失败（web/vendor/models/face_landmarker.task 与 inventory.json 记录的 SHA-256 不一致）。' +
+              '文件可能损坏或被篡改，请运行 node tools/fetch-vendor.js 重新下载后重试。',
+            { cause: modelErr },
+          );
+        }
         console.warn('[FaceEngine] 模型镜像链全部失败，改用 modelAssetPath：', modelErr.message);
       }
       // 先尝试 GPU，失败则回退 CPU（buffer 会被引擎消耗，重试需传副本）
