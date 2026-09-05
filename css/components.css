@@ -720,6 +720,23 @@ body.pro-mode .metric-grid .metric:nth-last-child(-n + 2) {
   font-size: var(--fs-caption);
   color: var(--text-secondary);
 }
+/* r3 P7：行内二次确认（toastConfirm）。同一张毛玻璃卡片，说明文字下方放
+ * "取消 / 继续"两枚小按钮；图标章顶对齐，因为卡片高度比普通通知高一截。 */
+.toast-confirm {
+  align-items: flex-start;
+}
+.toast-confirm .toast-icon {
+  margin-top: 2px;
+}
+.toast-confirm .toast-msg {
+  white-space: pre-line;
+}
+.toast-actions {
+  display: flex;
+  gap: var(--sp-2);
+  justify-content: flex-end;
+  margin-top: var(--sp-3);
+}
 
 /* ============ 模态 / 抽屉 ============ */
 /* Apple 风格 sheet：右侧滑出，顶部圆角，轻柔阴影。
