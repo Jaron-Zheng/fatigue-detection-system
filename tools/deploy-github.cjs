@@ -78,6 +78,19 @@ async function main() {
   console.log('══════════════════════════════════════════════════════');
   console.log('');
 
+  // 0. r3 P2/P8：部署前刷新 sw.js 预缓存清单与内容指纹（否则线上 SW 会带旧指纹/缺文件）
+  console.log('[0] 刷新 Service Worker 预缓存清单...');
+  {
+    const r = require('child_process').spawnSync(process.execPath, [path.join(ROOT, 'tools', 'gen-sw-precache.mjs')], {
+      cwd: ROOT,
+      stdio: 'inherit',
+    });
+    if (r.status !== 0) {
+      console.error('  生成 sw.js 预缓存清单失败，终止部署。');
+      process.exit(1);
+    }
+  }
+
   // 1. 获取用户信息（失败时尚无任何令牌落盘状态，直接退出是安全的）
   console.log('[1] 获取 GitHub 用户信息...');
   const userResp = await ghRequest('GET', '/user');

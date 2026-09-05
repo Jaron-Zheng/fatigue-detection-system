@@ -4,6 +4,63 @@
 每一项均可在 `system-delivery/comparison/文件变更清单.md` 中找到对应文件，
 在 `docs/代码审计报告.md` 中找到问题编号。
 
+## [3.6.0] — 质量加固 r3 合入（外部优化包，SW 预缓存重设计 + 体验修复九项）
+
+来源：外部模型（Claudefable5.1）基于 3.5.0（7eb662d）产出的优化包。因与 L-01
+（399ca69，推理运行时全同源 + CSP 收紧）并行改动，合入时以 main 为基逐文件
+三方合并：L-01 的同源加载、CSP、SW v5-r2 语义全部保留。合并审查中剔除：
+包内模型文件哈希与同源 inventory.json 不符（导出损坏，保留仓库版本，否则引擎
+完整性校验必失败）、fixture CSV 仅 BOM/换行伪差异、README/CHANGELOG/
+regression-quality-r2 无实质改动。
+
+### SW 离线链路重做（P2/P8，改动最大）
+
+- `sw.js`：install 阶段一次性预缓存首页与全部同源源码（旧方案"运行时自动填充"
+  在"开启 ?pwa=1 后立刻断网"场景必 503——首次加载永远发生在 SW 接管前）；
+  预缓存带 `cache:'reload'` 绕过 GitHub Pages max-age=600 的旧文件；任一核心
+  文件失败即 install 失败（宁可没有 SW 也不要缺文件的半成品缓存）。
+- 缓存版本改内容指纹：`CACHE_NAME` 前缀 + 全部预缓存文件 SHA-256 指纹
+  （新工具 `tools/gen-sw-precache.mjs` 生成，任何源码改动自动换缓存名）。
+- `vendor/inventory.json` 从 cache-first 改 network-first：它是模型哈希清单，
+  被 cache-first 锁死时"换模型 → 老清单验新模型 → 误报篡改"且无法自救。
+- `app.js`：离线就绪全程用户可见（准备中 → 就绪（N 个文件）/ 失败给出重试指引），
+  SW 以 postMessage SW_READY / 响应 GET_STATUS 汇报版本与 vendor 就绪度。
+- 门禁与部署：`project-check` 新增静态检查——sw.js 清单/指纹与 web/ 实际文件
+  不一致即 fail；两个 deploy 脚本部署前自动重刷清单。
+
+### 体验修复（P1/P5/P6/P7）
+
+- 报告页空态（P1）：只隐藏依赖会话数据的卡片（`.rp-data`），实验工具卡
+  （`.rp-lab`：离线复现/视频评测/敏感性）空态保持可达——"无摄像头演示完整
+  判定链路"的产品承诺重新成立；空态新增专业模式引导入口。
+- 主题三态（P6）：跟随系统 → 深色 → 浅色循环（旧实现点过一次后永远回不到
+  跟随系统）；监听系统深浅色变化同步图标；修复 storage 事件跨窗口回写环；
+  图标语义显示当前态，title/aria-label 同步。
+- `toastConfirm`（P7）：应用内行内二次确认替代原生 confirm（主题一致、可自动
+  化、不阻塞），alertdialog 语义 + Esc 取消 + 确认键聚焦 + 单实例互斥；
+  视频评测"未标注区间仍继续"确认已迁移。
+- 视频评测两阶段进度（P5）：标定段此前不回报进度，长视频下状态文字停留
+  "正在初始化推理引擎"实测 54 秒（假死感）；现在标定/评测两阶段各自 0→100%
+  并明确"阶段 1/2"。
+
+### 正确性与工具链
+
+- 摄像头启动竞态补两处防护：等首帧期间被新一轮 start() 接管时，复核代次
+  （返回新流尺寸配旧轨道 label 的张冠李戴结果）；catch 中被接管时按
+  SUPERSEDED 静默出局，不再误杀新流。
+- `cdp-util.findBrowser` 跨平台（Linux/macOS/PATH/Playwright 缓存/CHROME_PATH
+  环境变量），screenshot.mjs 统一走该实现（P9）。
+- 测试适配：pwa-offline 新增"冷开启即断网"回归（预缓存 ≥50 条、激活后不刷新
+  直接离线重载）与 inventory 回源断言；cross-browser/toggle-chaos 适配三态主题。
+- 工具修复（合并验证时发现）：cdp-util `close()` 在 Windows 上按 proc.pid 杀
+  进程树会扑空——Edge"兼容层重启"后真正持有调试端口的浏览器是其子进程且
+  启动器已退出，残留进程占住端口导致同端口高频启停的测试工具（demo-url 每
+  探针重启浏览器）连锁失败；改为按调试端口找监听进程 `taskkill /T /F` 并等待
+  端口真正释放，launchHeadless 端口探测加短重试窗口。修复 zip 包内
+  pwa-offline 的 2 处 lint error（evalJs 模板串内正则转义）。
+- 验证：verify:full 全绿（静态检查含新预缓存门禁 + 回归 165/165 + 集成 41/41
+  + typecheck + lint）+ quality-r2 10/10 + demo-url 26/26 + pwa-offline 16/16。
+
 ## [3.5.1] — L-01 决策落地：推理运行时全同源加载 + CSP 收紧（第三方可执行代码面归零）
 
 fable5 审计台账最高优先级遗留项的决策与实施。决策：**可执行代码（vision_bundle.mjs

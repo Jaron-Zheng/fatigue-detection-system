@@ -149,14 +149,15 @@ await runSession();
 {
   await page.evaluate(() => {
     if (!document.body.classList.contains('pro-mode')) window.__fatigue.app.chrome.toggleProMode();
-    if (document.documentElement.dataset.theme !== 'dark') window.__fatigue.app.chrome.toggleTheme();
+    // r3：主题为三态循环（auto→dark→light），用 setTheme 直达深色，不再依赖单次 toggle
+    window.__fatigue.app.chrome.setTheme('dark');
   });
   await sleep(300);
   const { body } = await exportHtml('T6-dark-pro');
   if (/data-theme="light"/.test(body) && /class="[^"]*pro-mode/.test(body)) ok('深色+专业导出：主题转浅色且 pro 保留');
   else bad(`深色+专业导出异常: ${body}`);
-  // 还原主题
-  await page.evaluate(() => window.__fatigue.app.chrome.toggleTheme());
+  // 还原主题（回到跟随系统）
+  await page.evaluate(() => window.__fatigue.app.chrome.setTheme('auto'));
 }
 
 // ---------- T7 刷新后开关持久化：开着的还是开的 ----------

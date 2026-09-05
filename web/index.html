@@ -74,6 +74,11 @@
     <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
     </symbol>
+    <!-- r3 P6：主题"跟随系统"态图标——半填充圆（左亮右暗） -->
+    <symbol id="i-theme-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="9"/>
+      <path d="M12 3a9 9 0 0 1 0 18Z" fill="currentColor" stroke="none"/>
+    </symbol>
     <symbol id="i-sound" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
       <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
@@ -275,7 +280,8 @@
       <button class="gn-icon" id="btnMute" type="button" title="报警声音开关" aria-label="报警声音开关">
         <svg aria-hidden="true"><use href="#i-sound" id="muteIcon"></use></svg>
       </button>
-      <button class="gn-icon" id="btnTheme" type="button" title="切换深浅色" aria-label="切换深浅色">
+      <!-- r3 P6：三态循环 跟随系统 → 深色 → 浅色 → 跟随系统（title/aria-label 由 app-chrome 按当前态同步） -->
+      <button class="gn-icon" id="btnTheme" type="button" title="主题：跟随系统（点击切换）" aria-label="主题：跟随系统（点击切换）">
         <svg aria-hidden="true"><use href="#i-moon" id="themeIcon"></use></svg>
       </button>
       <button class="gn-icon" id="btnSettings" type="button" title="设置" aria-label="设置">
@@ -830,8 +836,11 @@
     </div>
 
     <!-- 空态引导卡：直接进入报告页且本次打开从未生成过报告时显示
-         （report.js 的 hasReport 标志控制），同时隐藏下方 .report-grid
-         并禁用"下载报告"。 -->
+         （report.js 的 hasReport 标志控制）。
+         r3 修复 P1：空态只隐藏依赖会话数据的卡片（.rp-data），
+         实验工具卡（.rp-lab：敏感性/离线复现/视频评测，专业模式）保持可达——
+         它们的定位就是"无摄像头、无会话也能演示完整判定链路"。
+         "下载报告 / 导出"按钮在空态仍禁用（无数据导出由 assertHasData 兜底）。 -->
     <div class="card rp-empty no-print report-empty" id="rpEmpty" hidden>
       <h2 class="t-title report-empty-title">还没有检测记录</h2>
       <p class="t-secondary report-empty-sub">完成一次检测后，这里会生成完整的疲劳分析报告。</p>
@@ -842,10 +851,16 @@
         </button>
         <button class="btn btn-secondary btn-lg" id="rpEmptyDemo" type="button">看演示模式</button>
       </div>
+      <!-- 实验工具入口提示：专业模式下指向下方工具卡；普通模式下提示如何开启 -->
+      <p class="t-caption report-empty-hint" id="rpEmptyLabHint">
+        <span class="pro-only">没有摄像头也可以：下方「离线复现」可导入会话 CSV 重跑判定链路，「视频离线评测」可用录制视频验证准确率。</span>
+        <span class="rp-empty-hint-basic">论文实验工具（离线复现 / 视频评测 / 敏感性分析）不需要检测记录，
+          <button class="link-btn" id="rpEmptyProMode" type="button">开启专业模式</button>后即可在此页使用。</span>
+      </p>
     </div>
 
     <div class="report-grid">
-      <div class="card">
+      <div class="card rp-data">
         <div class="card-head"><div class="card-title">检测概要</div><span class="badge" id="rpLevelBadge">--</span></div>
         <div class="report-stat-grid">
           <div class="stat-item"><div class="n tnum" id="rpDuration">--</div><div class="l">检测时长</div></div>
@@ -860,7 +875,7 @@
         <p class="t-caption" id="rpTrend" style="margin-top:8px" hidden></p>
       </div>
 
-      <div class="card">
+      <div class="card rp-data">
         <div class="card-head"><div class="card-title">各状态时长占比</div></div>
         <div class="dist-bar" id="rpDist"></div>
         <div class="dist-legend">
@@ -872,7 +887,7 @@
         <!-- 原第三份"纯时长数字块"（dist-stat-row）已删除：与图例里的时长重复 -->
       </div>
 
-      <div class="card">
+      <div class="card rp-data">
         <div class="card-head"><div class="card-title">检测到的行为</div></div>
         <div class="report-event-table-wrap">
           <table class="tbl">
@@ -884,7 +899,7 @@
         <p class="t-caption" id="rpAlarmNote" style="margin-top:10px" hidden></p>
       </div>
 
-      <div class="card" style="grid-column:1/-1">
+      <div class="card rp-data span-full">
         <div class="card-head">
           <div class="card-title">全程疲劳指数曲线</div>
           <!-- 三条阈值参考线（虚线）的图例，与图内标线颜色一一对应（边界值同 CONFIG.fusion.levels） -->
@@ -897,13 +912,14 @@
         <div class="chart-box" style="height:220px"><canvas id="rpChart" role="img" aria-label="本次会话全程疲劳指数曲线，含轻中重三级阈值参考线"></canvas></div>
       </div>
 
-      <div class="card" style="grid-column:1/-1">
+      <div class="card rp-data span-full">
         <div class="card-head"><div class="card-title">分析与建议</div></div>
         <div class="advice-list" id="rpAdvice"></div>
       </div>
 
-      <!-- ===== 实验分析：参数敏感性 + 消融 + 离线复现（专业模式） ===== -->
-      <div class="card pro-only span-full">
+      <!-- ===== 实验分析：参数敏感性 + 消融 + 离线复现（专业模式） =====
+           .rp-lab：不依赖会话数据，报告空态下也保持可见（P1） -->
+      <div class="card pro-only span-full rp-lab" id="cardSensitivity">
         <div class="card-head">
           <div class="card-title">
             <svg width="16" height="16" aria-hidden="true"><use href="#i-flask"></use></svg>
@@ -926,7 +942,7 @@
         <div id="sensConclusion" style="margin-top:14px"></div>
       </div>
 
-      <div class="card pro-only span-full">
+      <div class="card pro-only span-full rp-lab" id="cardReplay">
         <div class="card-head">
           <div class="card-title">
             <svg width="16" height="16" aria-hidden="true"><use href="#i-file-text"></use></svg>
@@ -947,7 +963,7 @@
       </div>
 
       <!-- ===== 视频离线评测：真人准确率验证（专业模式） ===== -->
-      <div class="card pro-only span-full">
+      <div class="card pro-only span-full rp-lab" id="cardEvaluation">
         <div class="card-head">
           <div class="card-title">
             <svg width="16" height="16" aria-hidden="true"><use href="#i-video"></use></svg>
@@ -1055,7 +1071,7 @@
         </div>
       </div>
 
-      <div class="card pro-only span-full">
+      <div class="card pro-only span-full rp-data">
         <div class="card-head"><div class="card-title">检测参数与环境</div></div>
         <table class="tbl" id="rpParams"></table>
       </div>

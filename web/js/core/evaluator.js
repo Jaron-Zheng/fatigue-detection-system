@@ -45,7 +45,10 @@ export class VideoEvaluator {
    *   calibSec     用于标定的时长（从视频开头算），0 表示跳过标定用通用阈值
    *   annotation   IntervalAnnotation 实例（可为 null，此时只出指标不出准确率）
    *   positiveFrom 二分类正类起始等级
-   *   onProgress   (done, total, tSec) => void
+   *   onProgress   (done, total, tSec, phase) => void
+   *                phase 为 'calib'（阶段一：个性化标定）或 'eval'（阶段二：逐点推理）。
+   *                r3 P5：标定段此前不回报进度，长视频下引擎初始化完成后状态文字
+   *                会在"正在初始化推理引擎…"上停留几十秒（本机实测 54s），用户误以为挂死。
    */
   async run(opts = {}) {
     const ev = CONFIG.evaluation;
@@ -100,6 +103,9 @@ export class VideoEvaluator {
         CONFIG.calibration.durationSec = calibSec;
         calibrator.start(0);
         const calibEnd = Math.min(calibSec, duration);
+        const calibTotal = Math.max(1, Math.ceil((calibEnd * 1000) / stepMs));
+        let calibDone = 0;
+        onProgress(0, calibTotal, 0, 'calib');
         for (let t = 0; t < calibEnd; t += stepMs / 1000) {
           if (this.cancelled) return { cancelled: true };
           await this.source.seekTo(t);
@@ -107,6 +113,8 @@ export class VideoEvaluator {
           // 引擎收到的是带偏移的时间戳；标定器收到的是视频内相对时间
           const res = this.engine.detect(this.source.video, Math.round(tsBase + localMs), true);
           const feat = res ? extractor.extract(res, localMs, aspect) : { ok: false, ts: localMs };
+          calibDone++;
+          if (calibDone % 8 === 0 || calibDone === calibTotal) onProgress(calibDone, calibTotal, t, 'calib');
           if (calibrator.feed(feat, localMs)) break;
         }
         if (calibrator.state !== CalibState.DONE) calibrator._finish();
@@ -184,7 +192,7 @@ export class VideoEvaluator {
       });
 
       done++;
-      if (done % 8 === 0 || done === total) onProgress(done, total, tSec);
+      if (done % 8 === 0 || done === total) onProgress(done, total, tSec, 'eval');
       // 让出主线程，保持界面可响应与进度可见
       if (done % 4 === 0) await new Promise((r) => setTimeout(r, 0));
     }

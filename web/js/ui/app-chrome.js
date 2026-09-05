@@ -24,36 +24,87 @@ export class AppChrome {
 
   /* ---------- 主题 ---------- */
 
+  /**
+   * 主题三态（r3 P6）：auto（跟随系统）→ dark → light → auto 循环。
+   * 此前 toggleTheme 只在 light/dark 之间二态切换，用户点过一次后永远回不到
+   * "跟随系统"——系统深浅色定时切换的用户会发现应用不再跟着变。
+   * 持久化约定不变：localStorage 'fatigue.theme' 只存 light/dark，auto 即不存（removeItem）。
+   */
+  static THEME_CYCLE = ['auto', 'dark', 'light'];
+  static THEME_LABEL = { auto: '跟随系统', dark: '深色', light: '浅色' };
+
   initTheme() {
     const saved = localStorage.getItem('fatigue.theme');
-    if (saved === 'light' || saved === 'dark') {
-      document.documentElement.dataset.theme = saved;
-    } else {
-      document.documentElement.dataset.theme = 'auto';
-    }
+    document.documentElement.dataset.theme = saved === 'light' || saved === 'dark' ? saved : 'auto';
     this._syncThemeIcon();
+    // auto 态下系统偏好变化时同步图标（sun/moon 取决于实际生效色），
+    // 颜色本身由 CSS 媒体查询接管，无需改属性；图表重取色也要跟上
+    if (!this._mq) {
+      this._mq = window.matchMedia('(prefers-color-scheme: dark)');
+      const onChange = () => {
+        if (document.documentElement.dataset.theme !== 'auto') return;
+        this._syncThemeIcon();
+        setTimeout(() => this._onThemeChanged(), 60);
+      };
+      if (typeof this._mq.addEventListener === 'function') this._mq.addEventListener('change', onChange);
+      else if (typeof this._mq.addListener === 'function') this._mq.addListener(onChange);
+    }
+  }
+
+  /** 当前生效的是否深色（auto 时看系统偏好） */
+  static isDarkEffective() {
+    const cur = document.documentElement.dataset.theme;
+    return cur === 'dark' || (cur === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   }
 
   toggleTheme() {
+    const cycle = AppChrome.THEME_CYCLE;
     const cur = document.documentElement.dataset.theme;
-    const isDarkNow =
-      cur === 'dark' || (cur === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    const next = isDarkNow ? 'light' : 'dark';
-    document.documentElement.dataset.theme = next;
+    const idx = cycle.indexOf(cur);
+    const next = cycle[(idx < 0 ? 0 : idx + 1) % cycle.length];
+    this.setTheme(next, true);
+  }
+
+  /**
+   * 设定主题。
+   * @param {'auto'|'dark'|'light'} mode
+   * @param {boolean} [notify] 是否 toast 提示（auto 与某一固定色在视觉上可能完全一样，
+   *   不提示用户无法分辨自己切到了哪一态）
+   */
+  setTheme(mode, notify = false) {
+    const m = AppChrome.THEME_CYCLE.includes(mode) ? mode : 'auto';
+    document.documentElement.dataset.theme = m;
     try {
-      localStorage.setItem('fatigue.theme', next);
+      if (m === 'auto') localStorage.removeItem('fatigue.theme');
+      else localStorage.setItem('fatigue.theme', m);
     } catch {
       /* 存储写满/隐私模式：主题本会话内仍生效，仅不持久化 */
     }
     this._syncThemeIcon();
+    if (notify) {
+      const label = AppChrome.THEME_LABEL[m];
+      const eff = m === 'auto' ? `（当前系统为${AppChrome.isDarkEffective() ? '深色' : '浅色'}）` : '';
+      toast(`主题：${label}${eff}`, m === 'auto' ? '将随系统深浅色自动切换' : '再点一次可继续切换', 'info', 2200);
+    }
     // 图表颜色取自 CSS 变量，主题切换后需要重新取色并重绘
     setTimeout(() => this._onThemeChanged(), 60);
   }
 
+  /**
+   * 图标语义：显示"当前态"而不是"下一步"——auto 用半填充圆，
+   * 固定深色用月亮、固定浅色用太阳；title/aria-label 同步为"主题：xx（点击切换）"。
+   */
   _syncThemeIcon() {
     const cur = document.documentElement.dataset.theme;
-    const isDark = cur === 'dark' || (cur === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    $('#themeIcon').setAttribute('href', isDark ? '#i-sun' : '#i-moon');
+    const icon = cur === 'auto' ? '#i-theme-auto' : cur === 'dark' ? '#i-moon' : '#i-sun';
+    const iconEl = $('#themeIcon');
+    if (iconEl) iconEl.setAttribute('href', icon);
+    const btn = $('#btnTheme');
+    if (btn) {
+      const label = `主题：${AppChrome.THEME_LABEL[cur] || '跟随系统'}（点击切换）`;
+      btn.setAttribute('title', label);
+      btn.setAttribute('aria-label', label);
+    }
   }
 
   /* ---------- 专业模式 ---------- */
@@ -122,11 +173,8 @@ export class AppChrome {
     window.addEventListener('storage', (e) => {
       if (e.key === 'fatigue.theme') {
         const saved = e.newValue;
-        if (saved === 'light' || saved === 'dark') {
-          document.documentElement.dataset.theme = saved;
-        } else {
-          document.documentElement.dataset.theme = 'auto';
-        }
+        // 只回放属性与图标，不再写 localStorage（写回会在对方窗口再触发一次 storage 事件）
+        document.documentElement.dataset.theme = saved === 'light' || saved === 'dark' ? saved : 'auto';
         this._syncThemeIcon();
         // 图表取色依赖 CSS 变量，主题回放后必须重绘（与 toggleTheme 同口径）
         setTimeout(() => this._onThemeChanged(), 60);

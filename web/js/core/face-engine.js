@@ -637,6 +637,9 @@ export class CameraSource {
       // 播放等待期间被 stop()/新一轮 start() 接管：不能再等首帧，也不能在下方 catch 里 stop() 新一轮的流
       if (seq !== this._startSeq) throw new Error('CAMERA_SUPERSEDED');
       await this._waitFirstFrame();
+      // r3 P3 补充：等首帧期间被接管时，本轮可能被新流的 loadeddata 唤醒而"成功"返回——
+      // 返回的却是新流的尺寸/旧轨道的 label，上层会拿到一份张冠李戴的启动结果。再复核一次。
+      if (seq !== this._startSeq) throw new Error('CAMERA_SUPERSEDED');
       return {
         width: v.videoWidth,
         height: v.videoHeight,
@@ -644,6 +647,10 @@ export class CameraSource {
       };
     } catch (err) {
       if (err && err.message === 'CAMERA_SUPERSEDED') throw err; // 新一轮已接管：本轮的流已由 stop() 回收
+      /* r3 P3：等首帧期间（play 已成功、loadeddata 未到）若新一轮 start() 已接管，
+       * 本轮的超时/解码错误属于陈旧结果——此时 this.stream 已是新流，
+       * 再调 this.stop() 会顶掉 _startSeq 并误杀新流。按 SUPERSEDED 静默出局即可。 */
+      if (seq !== this._startSeq) throw new Error('CAMERA_SUPERSEDED', { cause: err });
       this.stop();
       if (err && err.message === 'VIDEO_PLAY_BLOCKED') {
         throw new Error(

@@ -48,7 +48,36 @@ try {
   assert(swState.supported && swState.registered, `Service Worker 已注册（scope=${swState.scope || 'n/a'}）`);
   assert(swState.active === true, 'Service Worker 已激活（active）');
 
-  // 再加载一次确保所有资源都经过 SW 的 network-first 落缓存
+  /* ---- 1b. r3 P2 回归：冷开启即断网（不做第二次在线刷新） ----
+   * 旧实现 install 不预缓存，首页与源码的首次加载又发生在 SW 接管前，
+   * 这里若不"再刷新一次"就断网必然 503。新实现 install 阶段预缓存全部核心资源，
+   * 因此激活即应有 ≥50 条缓存，且立刻断网重载也要能打开。 */
+  console.log('\n[1b] 冷开启即断网：激活后不刷新直接离线重载');
+  const coldCache = await evalJs(cdp, `(async () => {
+    const keys = await caches.keys();
+    if (!keys.length) return { keys: [], entries: 0 };
+    const cache = await caches.open(keys[0]);
+    const reqs = await cache.keys();
+    // evalJs 模板串里写正则需双反斜杠转义，易错；这里直接用 endsWith 同义改写
+    const hasHome = reqs.some((r) => {
+      const p = new URL(r.url).pathname;
+      return p.endsWith('/') || p.endsWith('/index.html');
+    });
+    const hasApp = reqs.some((r) => new URL(r.url).pathname.endsWith('/js/app.js'));
+    return { keys, entries: reqs.length, hasHome, hasApp };
+  })()`);
+  assert(coldCache.entries >= 50, `install 阶段已预缓存核心资源（${coldCache.entries} 条，缓存名 ${coldCache.keys[0] || 'n/a'}）`);
+  assert(coldCache.hasHome && coldCache.hasApp, '预缓存包含首页与 js/app.js');
+  await cdp.send('Network.enable');
+  await cdp.send('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+  await cdp.send('Page.navigate', { url: URL_TARGET });
+  await sleep(4000);
+  const coldTitle = await evalJs(cdp, 'document.title').catch(() => null);
+  const coldHooks = await evalJs(cdp, 'Boolean(window.__fatigue)').catch(() => false);
+  assert(typeof coldTitle === 'string' && coldTitle.length > 0 && coldHooks === true, `冷开启即断网仍可加载首页并执行脚本（标题：${coldTitle}）`);
+  await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+
+  // 再加载一次（在线）以进入后续 vendor 预热流程
   await cdp.send('Page.navigate', { url: URL_TARGET + '?pwa=1' });
   await sleep(4000);
 
@@ -83,6 +112,12 @@ try {
   })()`);
   assert(cacheInfo.entries > 10, `缓存已填充（${cacheInfo.entries} 条资源）`);
   assert(cacheInfo.vendor >= 4, `vendor/ 模型与 WASM 已入缓存（${cacheInfo.vendor} 条，离线启动免下载 26MB）`);
+  // r3 P2 附带：inventory.json 走 network-first——在线时必须回源（Response 不来自缓存命中）
+  const invFresh = await evalJs(cdp, `(async () => {
+    const r = await fetch('vendor/inventory.json?probe=' + Date.now());
+    return r.ok;
+  })()`);
+  assert(invFresh === true, 'vendor/inventory.json 在线可回源（network-first，换模型不会被旧清单锁死）');
 
   /* ---- 2. 断网 ---- */
   console.log('\n[2] 切断网络（Network.emulateNetworkConditions）');

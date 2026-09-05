@@ -6,6 +6,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { scanLiterals } from './check-literals.mjs';
+import { computePrecache, renderSw } from './gen-sw-precache.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const failures = [];
@@ -111,12 +112,32 @@ function checkDesignTokenLiterals() {
   if (!count) pass(`设计令牌一致性检查通过（${files.length} 个样式文件无字面量颜色）`);
 }
 
+/**
+ * r3 P2/P8：sw.js 预缓存清单与内容指纹必须与 web/ 实际文件一致。
+ * 新增/删除源码文件、或任何源码改动后未重新生成，离线缓存会缺文件或带旧版本号——
+ * 这类问题在本机联网测试时完全不可见，只能靠门禁堵。
+ */
+function checkServiceWorkerPrecache() {
+  const src = read('web/sw.js');
+  const info = computePrecache();
+  const expected = renderSw(src, info);
+  if (expected !== src) {
+    fail(`sw.js 预缓存清单/指纹过期（应为 ${info.fingerprint} · ${info.urls.length} 项）：请运行 node tools/gen-sw-precache.mjs`);
+  } else {
+    pass(`Service Worker 预缓存清单最新（指纹 ${info.fingerprint} · ${info.urls.length} 项）`);
+  }
+  // 预缓存条目必须都存在于磁盘（防手改清单）
+  const missing = info.urls.filter((u) => u !== './' && !fs.existsSync(path.join(ROOT, 'web', u.slice(2))));
+  if (missing.length) fail(`sw.js 预缓存清单引用了不存在的文件：${missing.join(', ')}`);
+}
+
 console.log('\n=== 项目静态检查 ===\n');
 checkRequiredFiles();
 checkJavaScriptSyntax();
 checkHtml();
 checkSecurityBaselines();
 checkDesignTokenLiterals();
+checkServiceWorkerPrecache();
 
 if (failures.length) {
   console.error(`\n=== 结果：${failures.length} 项失败 ===`);

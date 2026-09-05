@@ -14,7 +14,7 @@ import { VideoEvaluator } from '../core/evaluator.js';
 import { pct, num, summarize } from '../core/evaluation.js';
 import { downloadFile, timestampName, csvCell } from '../core/recorder.js';
 import { EVAL_SAMPLE_COLUMNS, LEVEL_KEY_TO_ZH, TRUTH_KEY_TO_ZH } from '../core/csv-schema.js';
-import { toast, toastOk, toastWarn, toastError } from './toast.js';
+import { toast, toastOk, toastWarn, toastError, toastConfirm } from './toast.js';
 
 const LABEL_META = {
   normal: { text: '正常', color: 'var(--ok)', soft: 'var(--ok-soft)' },
@@ -300,10 +300,11 @@ export class EvaluationPanel {
     }
     const hasAnnot = this.annotation.intervals.some((iv) => iv.label !== 'ignore');
     if (!hasAnnot) {
-      const go = confirm(
-        '尚未标注任何"正常/疲劳"区间。\n\n' +
-          '继续将只输出算法指标，无法计算准确率、灵敏度等评估结果。\n\n' +
-          '是否仍要继续？'
+      // r3 P7：原生 confirm() 换成应用内行内确认（主题一致、可自动化、不阻塞主线程）
+      const go = await toastConfirm(
+        '尚未标注任何"正常 / 疲劳"区间',
+        '继续将只输出算法指标，无法计算准确率、灵敏度等评估结果。是否仍要继续？',
+        { confirmText: '仍要继续', cancelText: '返回标注' }
       );
       if (!go) return;
     }
@@ -318,6 +319,9 @@ export class EvaluationPanel {
         return;
       }
     }
+    // r3 P5：引擎就绪后立即改写状态，标定循环的逐点进度由 onProgress(phase='calib') 接管
+    setText($('#evalStatus'), CONFIG.evaluation.calibSec > 0 ? '引擎就绪，正在标定个人基线…' : '引擎就绪，正在开始评测…');
+    setStyle($('#evalStatus'), 'color', 'var(--text-secondary)');
 
     const btn = $('#btnRunEval');
     const cancel = $('#btnCancelEval');
@@ -335,9 +339,16 @@ export class EvaluationPanel {
         calibSec: CONFIG.evaluation.calibSec,
         annotation: this.annotation,
         positiveFrom: $('#selPositiveFrom').value,
-        onProgress: (done, total, tSec) => {
-          setStyle($('#evalProgress'), 'width', ((done / total) * 100).toFixed(1) + '%');
-          setText($('#evalStatus'), `评测中 ${done}/${total} 采样点（视频 ${tSec.toFixed(1)}s）`);
+        onProgress: (done, total, tSec, phase) => {
+          const pct = total > 0 ? (done / total) * 100 : 0;
+          setStyle($('#evalProgress'), 'width', pct.toFixed(1) + '%');
+          // 两阶段各自从 0% 走到 100%，文案里明确"阶段 1/2"，避免用户把标定段当成评测卡住
+          setText(
+            $('#evalStatus'),
+            phase === 'calib'
+              ? `阶段 1/2 标定个人基线 ${done}/${total} 采样点（视频 ${tSec.toFixed(1)}s）`
+              : `阶段 2/2 评测中 ${done}/${total} 采样点（视频 ${tSec.toFixed(1)}s）`
+          );
           setStyle($('#evalStatus'), 'color', 'var(--text-secondary)');
         },
       });

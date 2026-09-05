@@ -12,22 +12,117 @@
  *   await session.shot('name.png', outDir);
  *   await session.close();
  */
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 
-export const BROWSER_CANDIDATES = [
-  'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-  'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
-  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-];
+/**
+ * 浏览器可执行文件候选（r3 P9：补齐 Linux / macOS 路径，原先只有 4 个 Windows 路径，
+ * 在其他平台直接抛"未找到"）。查找顺序：
+ *   1. 环境变量 CHROME_PATH / BROWSER_PATH / PUPPETEER_EXECUTABLE_PATH（显式指定优先）
+ *   2. 本平台常见安装路径
+ *   3. PATH 中的常见命令名（google-chrome / chromium / msedge …）
+ */
+const LOCAL = process.env.LOCALAPPDATA || '';
+export const BROWSER_CANDIDATES = {
+  win32: [
+    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+    'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+    LOCAL && path.join(LOCAL, 'Google', 'Chrome', 'Application', 'chrome.exe'),
+    LOCAL && path.join(LOCAL, 'Microsoft', 'Edge', 'Application', 'msedge.exe'),
+  ].filter(Boolean),
+  darwin: [
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+    '/Applications/Chromium.app/Contents/MacOS/Chromium',
+    '/Applications/Brave Browser.app/Contents/MacOS/Brave Browser',
+    path.join(os.homedir(), 'Applications', 'Google Chrome.app', 'Contents', 'MacOS', 'Google Chrome'),
+  ],
+  linux: [
+    '/usr/bin/google-chrome',
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+    '/usr/bin/microsoft-edge',
+    '/usr/bin/microsoft-edge-stable',
+    '/usr/bin/brave-browser',
+    '/snap/bin/chromium',
+    '/opt/google/chrome/chrome',
+    '/opt/microsoft/msedge/msedge',
+  ],
+};
+/** PATH 上尝试的命令名（跨平台） */
+const PATH_NAMES = ['google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser', 'microsoft-edge', 'msedge', 'chrome', 'brave-browser'];
+
+function findOnPath(name) {
+  const dirs = (process.env.PATH || '').split(path.delimiter).filter(Boolean);
+  const exts = process.platform === 'win32' ? ['.exe', '.cmd', '.bat', ''] : [''];
+  for (const d of dirs) {
+    for (const ext of exts) {
+      const full = path.join(d, name + ext);
+      try {
+        if (fs.statSync(full).isFile()) return full;
+      } catch {
+        /* 不存在，继续 */
+      }
+    }
+  }
+  return null;
+}
+
+/** 按 Playwright 缓存目录约定再兜一层（devDependencies 里有 playwright-core 的机器常见） */
+function findPlaywrightChromium() {
+  const base =
+    process.env.PLAYWRIGHT_BROWSERS_PATH ||
+    (process.platform === 'win32'
+      ? path.join(LOCAL, 'ms-playwright')
+      : process.platform === 'darwin'
+      ? path.join(os.homedir(), 'Library', 'Caches', 'ms-playwright')
+      : path.join(os.homedir(), '.cache', 'ms-playwright'));
+  try {
+    const dirs = fs
+      .readdirSync(base)
+      .filter((d) => d.startsWith('chromium-'))
+      .sort()
+      .reverse();
+    for (const d of dirs) {
+      const cands =
+        process.platform === 'win32'
+          ? [path.join(base, d, 'chrome-win', 'chrome.exe'), path.join(base, d, 'chrome-win64', 'chrome.exe')]
+          : process.platform === 'darwin'
+          ? [path.join(base, d, 'chrome-mac', 'Chromium.app', 'Contents', 'MacOS', 'Chromium')]
+          : [path.join(base, d, 'chrome-linux', 'chrome'), path.join(base, d, 'chrome-linux64', 'chrome')];
+      const hit = cands.find((p) => fs.existsSync(p));
+      if (hit) return hit;
+    }
+  } catch {
+    /* 无 Playwright 缓存 */
+  }
+  return null;
+}
 
 export function findBrowser() {
-  const browser = BROWSER_CANDIDATES.find((p) => fs.existsSync(p));
-  if (!browser) throw new Error('未找到 Edge 或 Chrome 可执行文件');
-  return browser;
+  for (const key of ['CHROME_PATH', 'BROWSER_PATH', 'PUPPETEER_EXECUTABLE_PATH']) {
+    const p = process.env[key];
+    if (p && fs.existsSync(p)) return p;
+    if (p) console.warn(`[cdp-util] 环境变量 ${key}=${p} 指向的文件不存在，忽略`);
+  }
+  const list = BROWSER_CANDIDATES[process.platform] || BROWSER_CANDIDATES.linux;
+  const local = list.find((p) => fs.existsSync(p));
+  if (local) return local;
+  for (const name of PATH_NAMES) {
+    const hit = findOnPath(name);
+    if (hit) return hit;
+  }
+  const pw = findPlaywrightChromium();
+  if (pw) return pw;
+  throw new Error(
+    `未找到 Edge 或 Chrome 可执行文件（平台 ${process.platform}）。` +
+      '请安装 Chrome/Edge/Chromium，或用环境变量 CHROME_PATH=/path/to/chrome 显式指定。'
+  );
 }
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -80,13 +175,23 @@ export class Cdp {
  * @returns {Promise<{cdp:Cdp, proc:import('child_process').ChildProcess, userDataDir:string, close:()=>Promise<void>}>}
  */
 export async function launchHeadless({ debugPort = 9333, width = 1920, height = 1080, extraArgs = [] } = {}) {
-  // 防御：调试端口被残留浏览器进程占用时，会连到旧页面导致结果不可信
-  try {
-    const res = await fetch(`http://127.0.0.1:${debugPort}/json/version`, { signal: AbortSignal.timeout(1000) });
-    if (res.ok) throw new Error(`调试端口 ${debugPort} 已被占用（可能有残留的无头浏览器），请先清理或换一个端口`);
-  } catch (err) {
-    if (err.message && err.message.includes('调试端口')) throw err;
-    // fetch 失败 = 端口空闲，继续
+  // 防御：调试端口被残留浏览器进程占用时，会连到旧页面导致结果不可信。
+  // demo-url-test 等工具会在同一端口高频启停浏览器，上一个进程刚被 close 杀掉时
+  // 监听 socket 仍有数百毫秒残留（进程退出竞态），立即探测会误报"端口被占用"。
+  // 这里给"端口仍应答"的情况一个短暂重试窗口，期间恢复空闲即继续；始终应答才报错。
+  const portBusy = async () => {
+    try {
+      const res = await fetch(`http://127.0.0.1:${debugPort}/json/version`, { signal: AbortSignal.timeout(1000) });
+      return res.ok;
+    } catch {
+      return false; // fetch 失败 = 端口空闲
+    }
+  };
+  for (let waited = 0; (await portBusy()) && waited < 3000; waited += 300) {
+    await new Promise((r) => setTimeout(r, 300));
+  }
+  if (await portBusy()) {
+    throw new Error(`调试端口 ${debugPort} 已被占用（可能有残留的无头浏览器），请先清理或换一个端口`);
   }
   const browser = findBrowser();
   const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cdp-profile-'));
@@ -120,8 +225,31 @@ export async function launchHeadless({ debugPort = 9333, width = 1920, height = 
 
   async function close() {
     cdp.close();
-    try { process.kill(-proc.pid); } catch { proc.kill(); }
-    await sleep(1200); // 等浏览器进程完全释放临时目录
+    // Windows 下 Edge 存在"兼容层重启"：spawn 出的 msedge 只是启动器，真正持有
+    // 调试端口的浏览器进程是它的子进程，且启动器可能随即退出、真实进程被系统
+    // 收养——按 proc.pid 杀树会扑空，残留进程占住端口导致同端口下一次
+    // launchHeadless 误报"端口被占用"。因此改为按调试端口找监听进程整树终止。
+    if (process.platform === 'win32') {
+      try {
+        const res = spawnSync('netstat', ['-ano'], { encoding: 'utf8' });
+        const pids = new Set();
+        for (const line of String(res.stdout || '').split('\n')) {
+          if (line.includes(`:${debugPort} `) && line.includes('LISTENING')) {
+            const pid = line.trim().split(/\s+/).pop();
+            if (/^\d+$/.test(pid) && pid !== '0') pids.add(pid);
+          }
+        }
+        for (const pid of pids) spawnSync('taskkill', ['/PID', pid, '/T', '/F'], { stdio: 'ignore' });
+      } catch { /* netstat/taskkill 不可用时退回按 pid 杀 */ }
+    }
+    spawnSync('taskkill', ['/PID', String(proc.pid), '/T', '/F'], { stdio: 'ignore' });
+    if (process.platform !== 'win32') {
+      try { process.kill(-proc.pid); } catch { proc.kill(); }
+    }
+    // 等调试端口真正释放（而非固定睡一觉），消除同端口高频启停的竞态
+    for (let waited = 0; (await portBusy()) && waited < 5000; waited += 300) {
+      await new Promise((r) => setTimeout(r, 300));
+    }
     // 【F6·审计加固】Windows 上浏览器进程偶发未死透，rmSync 会抛 EBUSY/EPERM，
     // 把已经全部通过的测试翻转成非零退出码。临时目录清理失败只应留下垃圾文件，
     // 不应影响测试结论本身，故吞掉清理异常。

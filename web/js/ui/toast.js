@@ -52,6 +52,74 @@ export const toastOk = (t, m, ms) => toast(t, m, 'ok', ms);
 export const toastWarn = (t, m, ms) => toast(t, m, 'warn', ms ?? 5000);
 export const toastError = (t, m, ms) => toast(t, m, 'error', ms ?? 7000);
 
+/**
+ * 行内二次确认（r3 P7）——替代原生 confirm()。
+ *
+ * 全应用的通知/确认都走自定义毛玻璃卡片，唯独原生 confirm 是系统级对话框：
+ * 深色主题下视觉断裂、无法定制文案层级、在自动化测试环境里默认被 dismiss
+ * 导致动作静默不执行。这里在 toast 卡片内放两枚按钮，返回 Promise<boolean>。
+ *
+ * 行为约定：
+ *   · 不自动消失，也不响应"点卡片任意处关闭"（避免误触当成取消）；
+ *   · Esc 视为取消；确认键自动聚焦，Enter 即确认（与原生 confirm 的键盘习惯一致）；
+ *   · 同时只允许一个确认框：再次调用会先取消上一个（resolve(false)）。
+ *
+ * @param {string} title
+ * @param {string} msg
+ * @param {{confirmText?:string, cancelText?:string, kind?:'info'|'warn'|'error', danger?:boolean}} [opts]
+ * @returns {Promise<boolean>}
+ */
+let activeConfirm = null;
+export function toastConfirm(title, msg = '', opts = {}) {
+  if (activeConfirm) activeConfirm(false);
+  const { confirmText = '继续', cancelText = '取消', kind = 'warn', danger = false } = opts;
+  const h = ensureHost();
+  return new Promise((resolve) => {
+    const btnOk = el('button.btn.btn-sm', {
+      type: 'button',
+      class: danger ? 'btn-danger' : 'btn-primary',
+      text: confirmText,
+    });
+    const btnNo = el('button.btn.btn-sm.btn-secondary', { type: 'button', text: cancelText });
+    const node = el('div.toast.toast-confirm', { dataset: { kind }, role: 'alertdialog', 'aria-label': title }, [
+      el('div.toast-icon', { text: ICONS[kind] || '?', 'aria-hidden': 'true' }),
+      el('div.toast-body', {}, [
+        el('div.toast-title', { text: title }),
+        msg ? el('div.toast-msg', { text: msg }) : null,
+        el('div.toast-actions', {}, [btnNo, btnOk]),
+      ]),
+    ]);
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        settle(false);
+      }
+    };
+    const settle = (ok) => {
+      if (activeConfirm !== settle) return;
+      activeConfirm = null;
+      document.removeEventListener('keydown', onKey, true);
+      node.classList.add('leaving');
+      setTimeout(() => node.remove(), 220);
+      resolve(ok);
+    };
+    activeConfirm = settle;
+    btnOk.addEventListener('click', (e) => {
+      e.stopPropagation();
+      settle(true);
+    });
+    btnNo.addEventListener('click', (e) => {
+      e.stopPropagation();
+      settle(false);
+    });
+    document.addEventListener('keydown', onKey, true);
+    h.appendChild(node);
+    while (h.children.length > 4) h.removeChild(h.firstChild);
+    // 卡片有入场动画，聚焦放到下一帧以免被浏览器滚动定位打断
+    requestAnimationFrame(() => btnOk.focus());
+  });
+}
+
 /** 疲劳报警停留时长：等级越高停越久（点击任意处可提前关闭） */
 const ALARM_MS = { mild: 5500, moderate: 7000, severe: 9000 };
 

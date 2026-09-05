@@ -111,10 +111,15 @@ async function runSuite(label, launcher) {
     });
     if (proVisible) ok('专业模式面板可见（激活视图内）'); else bad('专业模式不可见');
     await page.evaluate(() => window.__fatigue.app.chrome.toggleProMode());
+    // r3：三态循环 auto→dark→light→auto；初始 auto，点一次应为 dark，再点两次回到 auto
     await page.evaluate(() => window.__fatigue.app.chrome.toggleTheme());
     await sleep(700);
     const theme = await page.evaluate(() => document.documentElement.dataset.theme);
     if (theme === 'dark' || theme === 'light') ok(`主题切换生效（${theme}）`); else bad('主题异常: ' + theme);
+    await page.evaluate(() => { window.__fatigue.app.chrome.toggleTheme(); window.__fatigue.app.chrome.toggleTheme(); });
+    await sleep(300);
+    const backAuto = await page.evaluate(() => document.documentElement.dataset.theme === 'auto' && localStorage.getItem('fatigue.theme') === null);
+    if (backAuto) ok('主题三态循环可回到「跟随系统」'); else bad('主题无法回到 auto');
 
     // 8. 控制台
     const realErrors = errors.filter((e) => !/favicon|Download the React/i.test(e));

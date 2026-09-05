@@ -179,7 +179,11 @@ class App {
     this.dash = new Dashboard();
     this.timeline = new Timeline('timeline', 'eventCount');
     // 空态"开始一次检测"走与首页主按钮完全相同的启动链路（E10 解耦注入）
-    this.report = new ReportView({ onStart: () => this.start(false) });
+    this.report = new ReportView({
+      onStart: () => this.start(false),
+      // r3 P1：空态提示里的"开启专业模式"入口（this.chrome 在 _initDom 之后才创建，延迟取用）
+      onToggleProMode: () => this.chrome && this.chrome.toggleProMode(),
+    });
     this.analysis = new AnalysisPanel(() => this.recorder.samples);
     /**
      * 视频离线评测面板。
@@ -715,12 +719,65 @@ installTestHooks(app, SessionState);
       console.log('[PWA] 已注销 Service Worker 并清空缓存（开发模式）');
       return;
     }
-    if (params.get('pwa') === '1') localStorage.setItem('fatigue.pwa', '1');
+    const justEnabled = params.get('pwa') === '1';
+    if (justEnabled) localStorage.setItem('fatigue.pwa', '1');
     if (localStorage.getItem('fatigue.pwa') !== '1') return;
+
+    /* r3 P2：离线就绪必须对用户可见。
+     * sw.js 现在在 install 阶段预缓存首页与全部源码，这里跟踪安装进度：
+     *   · 首次开启（?pwa=1）：先提示"正在准备离线资源"，SW 激活后提示"已就绪"；
+     *   · 安装失败（预缓存有文件 404/网络中断）：SW 变为 redundant，明确告知未就绪并给出重试办法；
+     *   · 回访（SW 早已激活）：不打扰。 */
+    const announceReady = (detail) => {
+      toastOk(
+        '离线模式已就绪',
+        `已缓存首页与全部源码${detail ? `（${detail}）` : ''}，断网后仍可打开本页并运行演示模式。` +
+          '真实摄像头检测需在线完成一次后才能离线使用（模型文件按需缓存）。',
+        7000
+      );
+    };
+    const announceFailed = () => {
+      toastWarn('离线资源准备失败', '部分文件未能缓存（网络中断或资源缺失）。请联网后刷新页面重试；访问 ?pwa=0 可关闭离线模式。', 8000);
+    };
+    // 页面激活后 SW 会 postMessage SW_READY（含预缓存条目数）；同时兜底监听 statechange
+    let announced = false;
+    navigator.serviceWorker.addEventListener('message', (e) => {
+      const d = e.data || {};
+      if (d.type === 'SW_READY' && justEnabled && !announced) {
+        announced = true;
+        announceReady(d.precached ? `${d.precached} 个文件` : '');
+      }
+    });
+
+    if (justEnabled) toast('正在准备离线资源…', '首页与全部源码将写入本地缓存，完成后会再次提示。', 'info', 4000);
     const reg = await navigator.serviceWorker.register('./sw.js');
     console.log('[PWA] Service Worker 已注册（演示/离线模式）', reg.scope);
+
+    const trackWorker = (worker) => {
+      if (!worker) return;
+      worker.addEventListener('statechange', () => {
+        if (worker.state === 'activated' && justEnabled && !announced) {
+          announced = true;
+          announceReady('');
+        } else if (worker.state === 'redundant' && !navigator.serviceWorker.controller) {
+          // 没有任何已激活的 SW 兜底 → 本次安装失败
+          announceFailed();
+        }
+      });
+    };
+    trackWorker(reg.installing);
+    reg.addEventListener('updatefound', () => trackWorker(reg.installing));
+    if (justEnabled && reg.active && !reg.installing && !reg.waiting && !announced) {
+      // 再次带 ?pwa=1 进入且 SW 已激活：直接确认
+      announced = true;
+      announceReady('');
+    }
   } catch (err) {
     console.warn('[PWA] Service Worker 注册失败（不影响正常使用）:', err);
+    if (params.get('pwa') === '1') announceFailedSafe();
+  }
+  function announceFailedSafe() {
+    toastWarn('离线模式开启失败', 'Service Worker 注册被浏览器拒绝（需 https 或 localhost）。不影响正常在线使用。', 8000);
   }
 })();
 

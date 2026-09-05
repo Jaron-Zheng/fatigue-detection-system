@@ -13,6 +13,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { findBrowser } from './cdp-util.mjs';
 
 const args = process.argv.slice(2);
 const get = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
@@ -22,14 +23,14 @@ const DEBUG_PORT = Number(get('--port', '9333'));
 
 fs.mkdirSync(OUT_DIR, { recursive: true });
 
-const BROWSER_CANDIDATES = [
-  'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-  'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
-  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-];
-const browser = BROWSER_CANDIDATES.find((p) => fs.existsSync(p));
-if (!browser) { console.error('未找到 Edge 或 Chrome 可执行文件'); process.exit(1); }
+// r3 P9：浏览器查找统一走 cdp-util.findBrowser（跨平台 + CHROME_PATH 环境变量）
+let browser;
+try {
+  browser = findBrowser();
+} catch (e) {
+  console.error(e.message);
+  process.exit(1);
+}
 console.log('浏览器:', browser);
 
 const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'shot-profile-'));

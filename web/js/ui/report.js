@@ -105,6 +105,15 @@ export class ReportView {
     // 整页跳转最可靠；本应用几乎没有需要随跳转保留的其他查询参数，直接覆盖。
     const demoBtn = document.getElementById('rpEmptyDemo');
     if (demoBtn) demoBtn.addEventListener('click', () => (location.href = '?demo=1'));
+    /* r3 P1：空态提示里的"开启专业模式"入口——复用导航栏按钮的完整链路
+     * （持久化 + toast + 布局重测），不自己改 body.class。 */
+    const proBtn = document.getElementById('rpEmptyProMode');
+    if (proBtn) {
+      proBtn.addEventListener('click', () => {
+        if (typeof this.hooks.onToggleProMode === 'function') this.hooks.onToggleProMode();
+        else document.getElementById('btnProMode')?.click();
+      });
+    }
 
     /* ---------- 主题跟随 ----------
      * 应用内按钮切主题已有重绘路径，但直接改 data-theme 属性
@@ -131,8 +140,7 @@ export class ReportView {
     this.hasReport = true;
     const emptyCard = g('rpEmpty');
     if (emptyCard) emptyCard.hidden = true;
-    const grid = document.querySelector('#viewReport .report-grid');
-    if (grid) grid.hidden = false;
+    this._setDataCardsHidden(false);
     const printBtn = g('btnPrint');
     if (printBtn) printBtn.disabled = false;
     for (const id of ['btnExportJson', 'btnExportCsv']) {
@@ -463,12 +471,25 @@ export class ReportView {
   _showEmpty() {
     const emptyCard = document.getElementById('rpEmpty');
     if (emptyCard) emptyCard.hidden = false;
+    /* r3 P1：只隐藏依赖会话数据的卡片（.rp-data）。实验工具卡（.rp-lab）
+     * 与会话无关——离线复现吃的是导入 CSV、视频评测吃的是本地视频文件、
+     * 敏感性/消融在导入回放数据后同样可跑——因此空态下保持可达，
+     * 否则"无摄像头环境直接演示判定链路"这一产品承诺在新开浏览器时不成立。
+     * 旧实现把整块 .report-grid 置 hidden，这里彻底不再动 grid 本身。 */
     const grid = document.querySelector('#viewReport .report-grid');
-    if (grid) grid.hidden = true;
+    if (grid) grid.hidden = false;
+    this._setDataCardsHidden(true);
     // 空态下三个导出动作一并禁用：否则会导出空文件还提示成功
     for (const id of ['btnPrint', 'btnExportJson', 'btnExportCsv']) {
       const btn = document.getElementById(id);
       if (btn) btn.disabled = true;
+    }
+  }
+
+  /** 会话数据卡（.rp-data）显隐；实验工具卡（.rp-lab）不受影响 */
+  _setDataCardsHidden(hidden) {
+    for (const card of document.querySelectorAll('#viewReport .report-grid > .rp-data')) {
+      card.hidden = hidden;
     }
   }
 
