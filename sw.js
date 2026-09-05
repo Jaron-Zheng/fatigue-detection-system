@@ -16,7 +16,7 @@
  */
 'use strict';
 
-const CACHE_VERSION = 'fatigue-v5-r1'; // 2026-09 质量加固 r2：缓存写入容错 + 导航回退忽略 query
+const CACHE_VERSION = 'fatigue-v5-r2'; // 2026-09 L-01 决策：推理运行时改全同源加载，强制刷新线上缓存
 const CACHE_NAME = `fatigue-cache-${CACHE_VERSION}`;
 
 /**

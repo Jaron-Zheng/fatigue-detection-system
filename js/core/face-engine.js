@@ -10,12 +10,14 @@
  *   · 优先 GPU 委托（WebGL 后端），失败自动回退 CPU（XPNPACK）；
  *   · wasm 目录同时包含 SIMD 与非 SIMD 版本，运行时由 MediaPipe 自动择优；
  *
- * 资源加载策略（CDN 优先 + 同源回退）：
- *   线上环境优先用 npmmirror CDN 加载 WASM/运行时（CORS 已支持），
- *   CDN 不可用时回退到 GitHub Pages 同源加载。
- *   模型文件（约 3.7MB）走 jsdelivr gh 镜像链（gcore→fastly→cdn，
- *   实测 550–690KB/s），全部失败后回退同源（国内实测仅约 20KB/s，
- *   是"加载不出来"的主因），本地运行始终同源加载。
+ * 资源加载策略（2026-09 L-01 决策：可执行代码全同源）：
+ *   · vision_bundle.mjs 与 wasm 一律从本仓库 vendor 目录同源加载（本地
+ *     与线上统一路径），不做任何第三方 CDN import——可执行代码不存在
+ *     "未经校验的第三方投毒面"，CSP script-src 亦无第三方域。
+ *   · 模型文件（约 3.7MB）保留 jsdelivr gh 镜像链（gcore→fastly→cdn，
+ *     实测 550–690KB/s）加速：每个候选下载后都经同源 inventory.json 的
+ *     SHA-256 校验，未通过即拒载并切下一候选，安全等价于同源；
+ *     全部失败后回退同源（本地运行始终同源加载）。
  */
 
 import { CONFIG } from '../config.js';
@@ -32,15 +34,7 @@ import { CONFIG } from '../config.js';
 const VENDOR_BASE = new URL('../../vendor', import.meta.url).href;
 
 /**
- * 国内 CDN — npmmirror（淘宝 NPM 镜像），CORS 完整支持。
- */
-const MP_VERSION = '1.0.0';
-const CDN_BASE = `https://registry.npmmirror.com/@mediapipe/tasks-vision/${MP_VERSION}/files`;
-const CDN_BUNDLE = `${CDN_BASE}/vision_bundle.mjs`;
-const CDN_WASM = `${CDN_BASE}/wasm`;
-
-/**
- * 同源路径（GitHub Pages 仓库 vendor 目录）
+ * 同源路径（本地与线上统一：vendor 目录随仓库部署，GitHub Pages 同源可直载）
  */
 const LOCAL_BUNDLE = `${VENDOR_BASE}/tasks-vision/vision_bundle.mjs`;
 const LOCAL_WASM = `${VENDOR_BASE}/tasks-vision/wasm`;
@@ -76,17 +70,6 @@ export function isLocalEnv() {
 }
 
 /**
- * 尝试从指定 URL 加载 ES 模块，超时则回退。
- */
-async function importWithTimeout(url, timeoutMs = 8000) {
-  const race = Promise.race([
-    import(url),
-    new Promise((_, reject) => setTimeout(() => reject(new Error('CDN_TIMEOUT')), timeoutMs)),
-  ]);
-  return race;
-}
-
-/**
  * 模型完整性校验（防 CDN 投毒/损坏，2026-09 安全审计新增）。
  *
  * 期望哈希来自同源 vendor/inventory.json（fetch-vendor.js 生成，
@@ -94,9 +77,9 @@ async function importWithTimeout(url, timeoutMs = 8000) {
  * 从本仓库同源读取，攻击者即使控制镜像也无法让哈希对上。
  * 校验失败的源按「源失败」处理：切换下一候选，最终回退同源。
  *
- * 已知边界（如实记录）：vision_bundle.mjs 与 wasm 走 MediaPipe
- * 内部加载，无法在此处拦截校验，其防护依赖版本锁定路径 +
- * index.html CSP 的 CDN 域白名单 + 同源兜底。
+ * 边界收敛（L-01 决策后）：vision_bundle.mjs 与 wasm 已改为全同源
+ * 加载（见文件头），不再有"未经校验的第三方可执行代码"；镜像链仅
+ * 承载数据文件（模型），且每个候选均经哈希校验。
  */
 
 /** 读同源 inventory.json 里模型的期望 SHA-256（小写十六进制）。失败返回 null（降级为不校验）。 */
@@ -199,36 +182,14 @@ export class FaceEngine {
    */
   async init(onProgress = () => {}) {
     try {
-      const local = isLocalEnv();
-
-      // --- 第一步：加载 vision_bundle.mjs ---
+      // --- 第一步：加载 vision_bundle.mjs（全同源，L-01 决策）---
       onProgress('正在载入推理运行时…', 10);
-      let bundleUrl, wasmBase, mod;
-      if (local) {
-        // 本地：直接用本地文件
-        bundleUrl = LOCAL_BUNDLE;
-        wasmBase = LOCAL_WASM;
-        mod = await import(bundleUrl);
-      } else {
-        // 线上：CDN 优先，超时回退同源
-        bundleUrl = CDN_BUNDLE;
-        wasmBase = CDN_WASM;
-        try {
-          mod = await importWithTimeout(CDN_BUNDLE, 8000);
-          onProgress('CDN 加载成功，正在初始化…', 20);
-        } catch (cdnErr) {
-          console.warn('[FaceEngine] CDN 加载失败，回退同源：', cdnErr.message);
-          onProgress('CDN 较慢，切换备用源…', 15);
-          bundleUrl = LOCAL_BUNDLE;
-          wasmBase = LOCAL_WASM;
-          mod = await import(LOCAL_BUNDLE);
-        }
-      }
+      const mod = await import(LOCAL_BUNDLE);
       const { FaceLandmarker, FilesetResolver } = mod;
 
       // --- 第二步：初始化 WASM ---
       onProgress('正在初始化 WebAssembly…', 30);
-      const fileset = await FilesetResolver.forVisionTasks(wasmBase);
+      const fileset = await FilesetResolver.forVisionTasks(LOCAL_WASM);
       this._vision = { FaceLandmarker, fileset };
 
       // --- 第三步：加载模型（镜像链下载 → modelAssetBuffer）---
