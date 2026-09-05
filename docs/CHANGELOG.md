@@ -24,6 +24,15 @@ fable5 审计台账最高优先级遗留项的决策与实施。决策：**可�
   jsdelivr 仅存于 connect-src（10/10 通过）。
 - README 隐私声明补充资源加载策略。
 - 验证：verify:full 全绿 + demo-url 26/26 + pwa-offline 12/12（本地服务器实测）。
+- 线上验证（gh-pages 1be06fa 部署后实测）：curl 确认 CSP 已收紧（script-src
+  仅 'self' 'wasm-unsafe-eval'，jsdelivr 仅存于 connect-src）、index 无第三方
+  script/link 引用、bundle/WASM/模型均 200 且字节级与仓库一致
+  （.mjs→text/javascript、.wasm→application/wasm MIME 正确）；无头浏览器走
+  真实 UI + 假摄像头实测线上引擎：vision_bundle.mjs 与 WASM 仅同源加载、模型
+  走 gcore 镜像并经同源 inventory.json 的 SHA-256 校验通过，GPU 委托
+  （WebGL 2.0）真实推理 20 FPS、约 13s 完成启动，控制台除 MediaPipe 原生
+  INFO 日志（与 e2e 白名单同款噪声）外零错误；PWA ?pwa=1 线上注册 SW
+  （v5-r2）成功，install 不预缓存属设计（运行时缓存按需填充）。
 
 ## [3.5.0] — 深度代码质量加固 r2（外部审计补丁合入，8 项修复 + 1 个回归测试文件）
 
