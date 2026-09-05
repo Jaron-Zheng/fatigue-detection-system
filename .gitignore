@@ -21,21 +21,15 @@ shot-*.png
 # 临时文件
 speed-test.txt
 
-# 临时调试脚本与中间产物
-_dump_tables.py
-_extract_structure.ps1
-_inspect_docx.py
-_inspect_flow.py
-_list.html
-_n_baidu.html
-_n_google.html
-_notice.html
-_notice2026.html
-_read_task.py
-_read_tpl.py
-_structure.txt
-_zcwj.html
-_tpl/
+# 一次性调试脚本与中间产物（已归档至 _scratch/，整目录不入库）
+_scratch/
+
+# 论文写作工作区（提取脚本、全文版本、AI 痕迹分析等个人工作文件，不入库）
+_论文工作区/
+
+# Python 字节码缓存
+__pycache__/
+*.pyc
 
 # 大体积交付包（不应入库）
 *.zip
