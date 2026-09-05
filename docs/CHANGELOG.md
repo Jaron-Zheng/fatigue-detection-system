@@ -4,6 +4,27 @@
 每一项均可在 `system-delivery/comparison/文件变更清单.md` 中找到对应文件，
 在 `docs/代码审计报告.md` 中找到问题编号。
 
+## [3.5.1] — L-01 决策落地：推理运行时全同源加载 + CSP 收紧（第三方可执行代码面归零）
+
+fable5 审计台账最高优先级遗留项的决策与实施。决策：**可执行代码（vision_bundle.mjs
+与 WASM）本地与线上统一从本仓库 vendor 目录同源加载**；模型文件保留 jsdelivr
+镜像链加速，但每个候选均经同源 inventory.json 的 SHA-256 校验（安全等价同源）。
+
+依据：实测 GitHub Pages 同源下载 11MB WASM 约 3.6s（≈3MB/s），历史"国内
+20KB/s"的顾虑已不成立；SW 缓存后离线免重载（pwa-offline 12/12 实证）。
+
+- `face-engine.js`：删除 npmmirror CDN 分支（CDN_BASE/CDN_BUNDLE/CDN_WASM/
+  importWithTimeout），init() 统一 `import(LOCAL_BUNDLE)` +
+  `FilesetResolver.forVisionTasks(LOCAL_WASM)`；模型镜像链与哈希校验保持不变。
+- `index.html` CSP：script-src/worker-src 移除全部第三方域（仅 'self'
+  'wasm-unsafe-eval'）；connect-src 保留 jsdelivr 三域（模型镜像，fetch 不执行）。
+- `sw.js`：CACHE_VERSION v5-r1 → v5-r2（线上强制刷新）。
+- 回归守护：`regression-quality-r2.mjs` 新增 Q-08 静态断言——运行时代码禁止
+  npmmirror import、bundle/wasm 必须同源、CSP script-src 无第三方域、
+  jsdelivr 仅存于 connect-src（10/10 通过）。
+- README 隐私声明补充资源加载策略。
+- 验证：verify:full 全绿 + demo-url 26/26 + pwa-offline 12/12（本地服务器实测）。
+
 ## [3.5.0] — 深度代码质量加固 r2（外部审计补丁合入，8 项修复 + 1 个回归测试文件）
 
 来源：外部模型（fable5）对 main@c0c590e 的深度质量审计交付（纯补丁形态，基线核对一致后按 9 个独立提交合入）。
@@ -73,6 +94,7 @@
   `demo-url-test.mjs` 26/26；`pwa-offline-test.mjs` 12/12（对本地服务器实测）。
 - 遗留决策项：线上版 vision_bundle/WASM 走 CDN 无完整性校验（L-01，
   属既有设计决策，待作者择一：同源加载 / fetch+integrity / 文档声明局限）。
+  → 已决策落地于 [3.5.1]（同源加载方案）。
 
 ## [3.4.1] — 安全审计四项修复（CSP meta / 模型哈希校验 / 部署令牌根修 / 测试钩子收口）
 

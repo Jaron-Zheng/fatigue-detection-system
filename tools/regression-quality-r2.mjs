@@ -199,6 +199,26 @@ await test('Q-06 sw.js：CACHE_VERSION 已递增、cache.put 走容错、导航�
   assert.match(src, /ignoreSearch: true/);
 });
 
+await test('Q-08 L-01 决策守护：可执行代码全同源，CSP script-src 无第三方域', () => {
+  // 1) 运行时代码里不允许出现推理运行时的第三方 CDN（可执行代码投毒面归零）
+  const engine = readFileSync(path.join(ROOT, 'web/js/core/face-engine.js'), 'utf8');
+  assert.ok(!/registry\.npmmirror\.com/.test(engine), 'face-engine 不得在运行时 import 第三方 CDN 的 bundle/wasm');
+  assert.match(engine, /await import\(LOCAL_BUNDLE\)/, 'vision_bundle 必须同源加载');
+  assert.match(engine, /forVisionTasks\(LOCAL_WASM\)/, 'wasm 基路径必须同源');
+  // 2) 线上 CSP：script-src 只许 self + wasm-unsafe-eval；jsdelivr 仅出现在 connect-src（模型镜像，全程 SHA-256 校验）
+  const html = readFileSync(path.join(ROOT, 'web/index.html'), 'utf8');
+  const csp = html.match(/Content-Security-Policy" content="([^"]+)"/);
+  assert.ok(csp, 'index.html 缺少 CSP meta');
+  const scriptSrc = (csp[1].match(/script-src ([^;]+);/) || [])[1] || '';
+  assert.ok(
+    scriptSrc.split(' ').every((d) => d === "'self'" || d === "'wasm-unsafe-eval'"),
+    `script-src 不得含第三方域（实际：${scriptSrc}）`,
+  );
+  const connectSrc = (csp[1].match(/connect-src ([^;]+);/) || [])[1] || '';
+  assert.ok(/cdn\.jsdelivr\.net/.test(connectSrc), '模型镜像域需保留在 connect-src');
+  assert.ok(!/npmmirror/.test(csp[1]), 'bundle/wasm 的 CDN 域应从 CSP 整体移除');
+});
+
 await test('Q-07 summary() 在 30 万采样点下不因 Math.max 展开栈溢出', () => {
   const r = new SessionRecorder();
   r.begin(null, null);
