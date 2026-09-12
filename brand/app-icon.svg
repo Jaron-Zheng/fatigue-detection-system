@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- 仪表盘 · GAUGE — 应用图标母版（透明底）
+       与概览页左上角导航 logo (#i-gauge) 同源：
+       半圆仪表弧 + 指针，无背景色，透明底
+       灰色弧线轨道 + Action Blue 填充弧 + 白色指针 + 中心轴 -->
+  <!-- 仪表弧轨道（灰色） -->
+  <path d="M96 380 A160 160 0 0 1 416 380"
+        fill="none" stroke="#86868b" stroke-width="36" stroke-linecap="round"/>
+  <!-- 仪表弧填充（Action Blue，约 70%） -->
+  <path d="M96 380 A160 160 0 0 1 382 294"
+        fill="none" stroke="#0071e3" stroke-width="36" stroke-linecap="round"/>
+  <!-- 指针（深灰色） -->
+  <line x1="256" y1="380" x2="376" y2="300"
+        stroke="#1d1d1f" stroke-width="18" stroke-linecap="round"/>
+  <!-- 中心轴（深灰色圆点） -->
+  <circle cx="256" cy="380" r="26" fill="#1d1d1f"/>
+  <circle cx="256" cy="380" r="12" fill="#86868b"/>
+</svg>

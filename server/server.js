@@ -1,0 +1,322 @@
+#!/usr/bin/env node
+/**
+ * server.js — 零依赖本地静态服务器
+ *
+ * 仅使用 Node 内置模块，无需 npm install。
+ * 仅监听 127.0.0.1，不暴露到局域网。
+ * 正确设置 .wasm/.task/.mjs 的 MIME，支持 Range 请求。
+ * 路径规范化 + 根目录越界校验，防止目录穿越。
+ */
+'use strict';
+
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+const { spawn } = require('child_process');
+const os = require('os');
+
+const ROOT = path.resolve(__dirname, '..', 'web');
+const HOST = '127.0.0.1';
+const DEFAULT_PORT = resolvePort();
+const MAX_PORT_TRY = 20;
+const NO_OPEN = process.argv.includes('--no-open') || process.env.NO_OPEN === '1';
+
+/**
+ * --dataset-dir <path>：评测工具专用开关。
+ * 把本地标注数据集以同源路径 /dataset/ 暴露给本机，
+ * 只读、仅白名单扩展名、路径越界一律 403。
+ */
+const DATASET_DIR = (() => {
+  const i = process.argv.indexOf('--dataset-dir');
+  if (i < 0 || i + 1 >= process.argv.length) return null;
+  const p = path.resolve(process.argv[i + 1]);
+  return fs.existsSync(p) && fs.statSync(p).isDirectory() ? p : null;
+})();
+const DATASET_EXT = new Set(['.jpg', '.jpeg', '.png', '.json']);
+
+const SECURITY_HEADERS = {
+  'Content-Security-Policy': [
+    "default-src 'self'",
+    "base-uri 'none'",
+    "object-src 'none'",
+    "script-src 'self' 'wasm-unsafe-eval'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: blob:",
+    "media-src 'self' blob:",
+    "connect-src 'self' blob:",
+    "worker-src 'self' blob:",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+  ].join('; '),
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'Cross-Origin-Resource-Policy': 'same-origin',
+  'Cross-Origin-Embedder-Policy': 'require-corp',
+  'Permissions-Policy': 'camera=(self), microphone=(), geolocation=(), payment=(), usb=()',
+  'Referrer-Policy': 'no-referrer',
+};
+
+const MIME = {
+  '.html': 'text/html; charset=utf-8',
+  '.htm': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.cjs': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.map': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+  '.wasm': 'application/wasm',
+  '.task': 'application/octet-stream',
+  '.tflite': 'application/octet-stream',
+  '.binarypb': 'application/octet-stream',
+  '.txt': 'text/plain; charset=utf-8',
+  '.md': 'text/markdown; charset=utf-8',
+};
+
+function contentType(filePath) {
+  return MIME[path.extname(filePath).toLowerCase()] || 'application/octet-stream';
+}
+
+/** 把 URL 路径安全解析为磁盘路径；越界返回 null */
+function resolveSafe(reqPath) {
+  let decoded;
+  try {
+    decoded = decodeURIComponent(reqPath.split('?')[0].split('#')[0]);
+  } catch {
+    return null;
+  }
+  if (!decoded.startsWith('/') || decoded.includes('\0') || decoded.includes('\\')) return null;
+  if (decoded.endsWith('/')) decoded += 'index.html';
+  const abs = path.resolve(ROOT, '.' + path.posix.normalize(decoded));
+  if (abs !== ROOT && !abs.startsWith(ROOT + path.sep)) return null;
+  return abs;
+}
+
+function send(res, status, headers, body) {
+  res.writeHead(status, {
+    'Cache-Control': 'no-store, must-revalidate',
+    'X-Content-Type-Options': 'nosniff',
+    ...SECURITY_HEADERS,
+    ...headers,
+  });
+  if (body) res.end(body);
+  else res.end();
+}
+
+const server = http.createServer((req, res) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    return send(res, 405, { 'Content-Type': 'text/plain; charset=utf-8', Allow: 'GET, HEAD' }, '405 Method Not Allowed');
+  }
+
+  let pathname;
+  try {
+    pathname = new URL(req.url, `http://${HOST}`).pathname;
+  } catch {
+    return send(res, 400, { 'Content-Type': 'text/plain; charset=utf-8' }, '400 Bad Request');
+  }
+
+  // 评测数据集同源路由
+  if (DATASET_DIR && (pathname === '/dataset' || pathname.startsWith('/dataset/'))) {
+    return serveDataset(pathname, req, res);
+  }
+
+  const filePath = resolveSafe(pathname === '/' ? '/index.html' : pathname);
+  if (!filePath) {
+    return send(res, 403, { 'Content-Type': 'text/plain; charset=utf-8' }, '403 Forbidden');
+  }
+
+  fs.stat(filePath, (err, stat) => {
+    if (err || !stat.isFile()) {
+      if (!err && stat.isDirectory()) {
+        const idx = path.join(filePath, 'index.html');
+        if (fs.existsSync(idx)) return streamFile(idx, fs.statSync(idx));
+      }
+      return send(res, 404, { 'Content-Type': 'text/html; charset=utf-8' }, notFoundPage(pathname));
+    }
+    streamFile(filePath, stat);
+  });
+
+  function streamFile(fp, stat) {
+    const type = contentType(fp);
+    const range = req.headers.range;
+    // vendor 下大文件允许强缓存，其余源码一律 no-store
+    const isVendor = fp.includes(`${path.sep}vendor${path.sep}`);
+    const baseHeaders = {
+      'Content-Type': type,
+      'Accept-Ranges': 'bytes',
+      'Last-Modified': stat.mtime.toUTCString(),
+      'Cache-Control': isVendor ? 'public, max-age=86400' : 'no-store, must-revalidate',
+      'X-Content-Type-Options': 'nosniff',
+      ...SECURITY_HEADERS,
+    };
+
+    if (range) {
+      const m = /^bytes=(\d*)-(\d*)$/.exec(range.trim());
+      if (m) {
+        let start = m[1] === '' ? null : parseInt(m[1], 10);
+        let end = m[2] === '' ? null : parseInt(m[2], 10);
+        if (start === null && end !== null) {
+          start = Math.max(0, stat.size - end);
+          end = stat.size - 1;
+        } else {
+          if (start === null) start = 0;
+          if (end === null || end >= stat.size) end = stat.size - 1;
+        }
+        if (start > end || start >= stat.size) {
+          return send(res, 416, { 'Content-Range': `bytes */${stat.size}` }, '');
+        }
+        res.writeHead(206, {
+          ...baseHeaders,
+          'Content-Range': `bytes ${start}-${end}/${stat.size}`,
+          'Content-Length': end - start + 1,
+        });
+        if (req.method === 'HEAD') return res.end();
+        return fs.createReadStream(fp, { start, end }).pipe(res);
+      }
+    }
+
+    res.writeHead(200, { ...baseHeaders, 'Content-Length': stat.size });
+    if (req.method === 'HEAD') return res.end();
+    fs.createReadStream(fp).pipe(res);
+  }
+});
+
+function notFoundPage(p) {
+  return `<!doctype html><html lang="zh-CN"><meta charset="utf-8">
+<title>404</title><style>
+body{font:400 17px/1.5 "SF Pro SC","PingFang SC",-apple-system,sans-serif;background:#f5f5f7;color:#1d1d1f;
+display:grid;place-items:center;height:100vh;margin:0}
+.box{text-align:center}h1{font-size:48px;font-weight:600;margin:0 0 8px}
+code{background:#e8e8ed;padding:2px 8px;border-radius:6px}
+a{color:#0066cc;text-decoration:none}</style>
+<div class="box"><h1>404</h1><p>找不到 <code>${String(p).replace(/[<>&"]/g, '')}</code></p>
+<p><a href="/">返回首页</a></p></div></html>`;
+}
+
+/**
+ * /dataset/<相对路径> → DATASET_DIR 下的同名文件
+ */
+function serveDataset(pathname, req, res) {
+  const deny = (code, msg) =>
+    send(res, code, { 'Content-Type': 'text/plain; charset=utf-8' }, msg);
+  const rel = pathname.slice('/dataset/'.length);
+  if (!rel || rel.includes('\0') || rel.includes('\\') || rel.includes('..')) {
+    return deny(403, '403 Forbidden');
+  }
+  const abs = path.resolve(DATASET_DIR, '.' + path.posix.normalize('/' + rel));
+  if (abs !== DATASET_DIR && !abs.startsWith(DATASET_DIR + path.sep)) {
+    return deny(403, '403 Forbidden');
+  }
+  if (!DATASET_EXT.has(path.extname(abs).toLowerCase())) {
+    return deny(403, '403 Forbidden');
+  }
+  fs.stat(abs, (err, stat) => {
+    if (err || !stat.isFile()) return deny(404, '404 Not Found');
+    res.writeHead(200, {
+      'Content-Type': contentType(abs),
+      'Content-Length': stat.size,
+      'Cache-Control': 'no-store, must-revalidate',
+      'X-Content-Type-Options': 'nosniff',
+      ...SECURITY_HEADERS,
+    });
+    if (req.method === 'HEAD') return res.end();
+    fs.createReadStream(abs).pipe(res);
+  });
+}
+
+function openBrowser(target) {
+  try {
+    if (process.platform === 'win32') {
+      spawn('cmd', ['/c', 'start', '""', target], { detached: true, stdio: 'ignore', windowsHide: true }).unref();
+    } else if (process.platform === 'darwin') {
+      spawn('open', [target], { detached: true, stdio: 'ignore' }).unref();
+    } else {
+      spawn('xdg-open', [target], { detached: true, stdio: 'ignore' }).unref();
+    }
+  } catch {
+    /* 打不开浏览器不影响服务本身 */
+  }
+}
+
+function resolvePort() {
+  const flagIndex = process.argv.indexOf('--port');
+  const raw = flagIndex >= 0 ? process.argv[flagIndex + 1] : process.env.PORT || '5180';
+  const port = Number(raw);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    console.error('服务器启动失败：端口必须是 1 到 65535 的整数。可使用 --port 5180 指定端口。');
+    process.exit(1);
+  }
+  return port;
+}
+
+/**
+ * 端口自选：占用时自动递增重试
+ * 显式成对注册/移除监听器，避免重复触发
+ */
+function listen(port, attempt = 0) {
+  const onError = (err) => {
+    server.removeListener('listening', onListening);
+    if (err.code === 'EADDRINUSE' && attempt < MAX_PORT_TRY) {
+      console.log(`  端口 ${port} 被占用，尝试 ${port + 1} ...`);
+      return listen(port + 1, attempt + 1);
+    }
+    console.error('服务器启动失败：', err.message);
+    process.exit(1);
+  };
+
+  const onListening = () => {
+    server.removeListener('error', onError);
+    const target = `http://${HOST}:${port}/`;
+    const missing = checkVendor();
+    console.log('');
+    console.log('  ┌──────────────────────────────────────────────────────┐');
+    console.log('  │   驾驶员疲劳检测系统 · 本地服务已启动                │');
+    console.log('  └──────────────────────────────────────────────────────┘');
+    console.log('');
+    console.log(`   访问地址 : ${target}`);
+    console.log(`   静态根目录: ${ROOT}`);
+    console.log(`   Node     : ${process.version}  平台: ${os.platform()} ${os.arch()}`);
+    if (missing.length) {
+      console.log('');
+      console.log('   [提示] 以下本地推理资源缺失，请先运行: node tools\\fetch-vendor.js');
+      missing.forEach((f) => console.log('          - ' + f));
+    } else {
+      console.log('   推理资源 : 已本地化，可离线运行 ✓');
+    }
+    console.log('');
+    console.log('   按 Ctrl+C 停止服务');
+    console.log('');
+    if (!NO_OPEN) openBrowser(target);
+  };
+
+  server.once('error', onError);
+  server.once('listening', onListening);
+  server.listen(port, HOST);
+}
+
+function checkVendor() {
+  const required = [
+    'vendor/tasks-vision/vision_bundle.mjs',
+    'vendor/tasks-vision/wasm/vision_wasm_internal.wasm',
+    'vendor/models/face_landmarker.task',
+  ];
+  return required.filter((r) => {
+    const p = path.join(ROOT, r);
+    return !fs.existsSync(p) || fs.statSync(p).size === 0;
+  });
+}
+
+process.on('SIGINT', () => {
+  console.log('\n  服务已停止。');
+  process.exit(0);
+});
+
+listen(DEFAULT_PORT);
