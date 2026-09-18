@@ -197,7 +197,7 @@ display:grid;place-items:center;height:100vh;margin:0}
 .box{text-align:center}h1{font-size:48px;font-weight:600;margin:0 0 8px}
 code{background:#e8e8ed;padding:2px 8px;border-radius:6px}
 a{color:#0066cc;text-decoration:none}</style>
-<div class="box"><h1>404</h1><p>找不到 <code>${String(p).replace(/[<>&"]/g, '')}</code></p>
+<div class="box"><h1>404</h1><p>找不到 <code>${String(p).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}</code></p>
 <p><a href="/">返回首页</a></p></div></html>`;
 }
 

@@ -129,13 +129,10 @@ async function main() {
   console.log('');
   console.log('[3] 准备 Git 推送...');
 
-  /* 令牌只经 push 命令参数传递，从不写入本仓库 git config 的 remote URL
-   * （旧版在此 git remote add deploy <token-url>，正是泄漏根因，已删）。 */
+  // 令牌只经 push 命令参数传递，从不写入本仓库 git config 的 remote URL
+  // （旧版在此 git remote add deploy <token-url>，正是泄漏根因，已删）。
+  // git config 仅在临时部署目录中设置（见下方 deployDir），不在本仓库残留。
   const remoteUrl = `https://${username}:${TOKEN}@github.com/${username}/${REPO_NAME}.git`;
-
-  // 配置 git
-  execSync('git config user.name "Jaron"', { cwd: ROOT });
-  execSync('git config user.email "Jaron-Zheng@users.noreply.github.com"', { cwd: ROOT });
 
   // 创建 .gitignore 确保不推送大文件
   const gitignorePath = path.join(ROOT, '.gitignore');

@@ -755,7 +755,7 @@ writeCsv('param-tuning-results.csv', tuningRows);
 
 console.log('\n=== 八、生成图表 ===');
 
-// 7.1 ROC 曲线
+// 8.1 ROC 曲线
 const rocSorted = [...rocpr.roc].sort((a, b) => a.fpr - b.fpr);
 writeSvg('ROC曲线.svg', lineChart({
   title: `ROC 曲线（AUC = ${rocpr.auc.toFixed(4)}）`,
@@ -769,7 +769,7 @@ writeSvg('ROC曲线.svg', lineChart({
   note: '10 种子 × 147s 模拟评估，按采样点计数口径',
 }));
 
-// 7.2 PR 曲线
+// 8.2 PR 曲线
 const prSorted = [...rocpr.pr].sort((a, b) => a.tpr - b.tpr);
 writeSvg('PR曲线.svg', lineChart({
   title: `PR 曲线（AP = ${rocpr.ap.toFixed(4)}）`,
@@ -780,7 +780,7 @@ writeSvg('PR曲线.svg', lineChart({
   note: `正例 ${rocpr.positives} 个 / 负例 ${rocpr.negatives} 个`,
 }));
 
-// 7.3 基线对比（灵敏度柱状图）
+// 8.3 基线对比（灵敏度柱状图）
 writeSvg('基线对比.svg', barChart({
   title: '基线对照：单 PERCLOS 阈值 vs 七特征融合（灵敏度）',
   items: [
@@ -792,7 +792,7 @@ writeSvg('基线对比.svg', barChart({
   note: '同一份标注数据上的对比；融合系统在对抗场景下保持零误报（见对抗场景测试）',
 }));
 
-// 7.4 检出延迟（每轮柱状图）
+// 8.4 检出延迟（每轮柱状图）
 writeSvg('检出延迟.svg', barChart({
   title: '响应延迟（10 轮 · 零漏检）',
   items: roundLatencies.map((r) => ({
@@ -804,7 +804,7 @@ writeSvg('检出延迟.svg', barChart({
   note: `均值 ${latency.meanLatencySec.toFixed(1)}s / 中位 ${latency.medianLatencySec.toFixed(1)}s；延迟主要来自 PERCLOS 滑动窗口累积`,
 }));
 
-// 7.5 消融实验（平均指数变化量柱状图）
+// 8.5 消融实验（平均指数变化量柱状图）
 writeSvg('消融实验.svg', barChart({
   title: '权重消融：逐项移除后平均疲劳指数变化量',
   items: ablationItems.map((it) => ({ ...it, color: it.value < -5 ? '#c2731a' : '#8e8e93' })),
@@ -812,7 +812,7 @@ writeSvg('消融实验.svg', barChart({
   note: '变化为负说明该指标有正贡献；哈欠频率对"疲劳占比"影响最大，PERCLOS/最长闭眼对分数贡献最大',
 }));
 
-// 7.6 对抗场景误报率
+// 8.6 对抗场景误报率
 writeSvg('对抗场景误报.svg', barChart({
   title: '对抗场景误报率（六场景全部零误报）',
   items: advChartItems.map((it) => ({ ...it, color: it.value === 0 ? '#28a745' : '#c11f1a' })),
@@ -821,7 +821,7 @@ writeSvg('对抗场景误报.svg', barChart({
   note: '多特征融合 + 持续时长判据 + 数据质量门控三层机制抑制干扰误报',
 }));
 
-// 7.7 调参实验图（10 组参数对比：灵敏度 / F1 / 灵敏特异散点）
+// 8.7 调参实验图（10 组参数对比：灵敏度 / F1 / 灵敏特异散点）
 const tuningBest = tuningStats.reduce((a, b) => (b.sensitivity > a.sensitivity ? b : a));
 const tuningBestF1 = tuningStats.reduce((a, b) => (b.f1 > a.f1 ? b : a));
 writeSvg('调优-灵敏度对比.svg', barChart({

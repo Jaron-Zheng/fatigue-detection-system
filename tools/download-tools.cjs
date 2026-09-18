@@ -13,23 +13,33 @@ function download(url, dest, redirects = 0) {
   return new Promise((resolve, reject) => {
     if (redirects > 5) return reject(new Error('Too many redirects'));
     const file = fs.createWriteStream(dest);
-    https.get(url, (res) => {
-      if (res.statusCode === 301 || res.statusCode === 302) {
+    const req = https.get(url, { timeout: 60000, headers: { 'user-agent': 'fatigue-detection-build/1.0' } }, (res) => {
+      if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
+        res.resume();
         file.close();
-        fs.unlinkSync(dest);
+        try { fs.unlinkSync(dest); } catch {}
         return download(res.headers.location, dest, redirects + 1).then(resolve).catch(reject);
       }
       if (res.statusCode !== 200) {
+        res.resume();
         file.close();
         try { fs.unlinkSync(dest); } catch {}
         return reject(new Error(`HTTP ${res.statusCode}`));
       }
       res.pipe(file);
       file.on('finish', () => file.close(resolve));
-    }).on('error', (e) => {
+      file.on('error', (e) => {
+        try { fs.unlinkSync(dest); } catch {}
+        reject(e);
+      });
+    });
+    req.on('error', (e) => {
       file.close();
       try { fs.unlinkSync(dest); } catch {}
       reject(e);
+    });
+    req.on('timeout', () => {
+      req.destroy(new Error('download timeout'));
     });
   });
 }

@@ -28,7 +28,7 @@
 'use strict';
 
 /* PRECACHE:BEGIN — 由 tools/gen-sw-precache.mjs 生成，勿手改 */
-const CACHE_FINGERPRINT = '163dbb00f4e4';
+const CACHE_FINGERPRINT = 'b3b0f90ad884';
 const PRECACHE_URLS = [
   './',
   './css/base.css',
@@ -91,8 +91,8 @@ const PRECACHE_URLS = [
 /* PRECACHE:END */
 
 // 2026-09 r3：install 预缓存 + 指纹版本 + inventory network-first（前缀手改可强制全量清缓存）
-const CACHE_VERSION = 'fatigue-v6-' + CACHE_FINGERPRINT;
-const CACHE_NAME = `fatigue-cache-${CACHE_VERSION}`;
+const CACHE_VERSION = `fatigue-v6-${CACHE_FINGERPRINT}`;
+const CACHE_NAME = CACHE_VERSION;
 
 /**
  * 缓存写入必须容错：Cache.put 在配额不足（vendor 单文件 22MB，受限存储环境常见）、

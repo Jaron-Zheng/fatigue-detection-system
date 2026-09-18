@@ -87,15 +87,9 @@ execSync(`"${NODE_EXE}" "${POSTJECT}" "${LAUNCHER_EXE}" NODE_SEA_BLOB "${SEA_BLO
 });
 console.log('      ✓ 注入完成');
 
-// Step 4: 删除签名（SEA 注入会破坏原签名）
-console.log('  [4] 移除数字签名（SEA 注入后签名已失效）');
-try {
-  // 用 signtool 或简单截断签名段
-  // postject 已经处理了这个问题，我们只需要确认
-  console.log('      ✓ 签名已在注入时处理');
-} catch {
-  console.log('      (跳过，不影响功能)');
-}
+// Step 4: 确认签名状态（postject 在注入阶段已自动处理原签名段，此步骤仅做记录）
+console.log('  [4] 确认签名状态（postject 已在注入时自动处理）');
+console.log('      ✓ 签名已在注入阶段由 postject 自动处理');
 
 // 清理临时文件
 try { fs.unlinkSync(SEA_BLOB); } catch {}

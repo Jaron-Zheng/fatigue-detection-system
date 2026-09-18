@@ -13,7 +13,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { findBrowser } from './cdp-util.mjs';
+import { findBrowser, Cdp, evalJs, sleep } from './cdp-util.mjs';
 
 const args = process.argv.slice(2);
 const get = (k, d) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : d; };
@@ -42,8 +42,6 @@ const proc = spawn(browser, [
   'about:blank',
 ], { stdio: 'ignore', detached: true });
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
 async function httpJson(url) {
   const res = await fetch(url);
   return res.json();
@@ -57,43 +55,12 @@ async function waitForDebugger() {
   throw new Error('远程调试端口未就绪');
 }
 
-class Cdp {
-  constructor(wsUrl) { this.wsUrl = wsUrl; this.id = 0; this.pending = new Map(); this.consoleErrors = []; }
-  async connect() {
-    this.ws = new WebSocket(this.wsUrl);
-    await new Promise((ok, fail) => { this.ws.onopen = ok; this.ws.onerror = fail; });
-    this.ws.onmessage = (m) => {
-      const msg = JSON.parse(m.data.toString());
-      if (msg.id && this.pending.has(msg.id)) {
-        const { resolve, reject } = this.pending.get(msg.id);
-        this.pending.delete(msg.id);
-        msg.error ? reject(new Error(JSON.stringify(msg.error))) : resolve(msg.result);
-      } else if (msg.method === 'Runtime.consoleAPICalled' && msg.params.type === 'error') {
-        this.consoleErrors.push(msg.params.args.map((a) => a.value ?? a.description ?? '').join(' '));
-      } else if (msg.method === 'Runtime.exceptionThrown') {
-        this.consoleErrors.push(msg.params.exceptionDetails?.exception?.description ?? 'uncaught exception');
-      }
-    };
-  }
-  send(method, params = {}) {
-    const id = ++this.id;
-    this.ws.send(JSON.stringify({ id, method, params }));
-    return new Promise((resolve, reject) => this.pending.set(id, { resolve, reject }));
-  }
-  close() { try { this.ws.close(); } catch { /* noop */ } }
-}
-
+/** 截图保存到 OUT_DIR（包装 cdp-util.shot 以使用本脚本的输出目录） */
 async function shot(cdp, name) {
   const { data } = await cdp.send('Page.captureScreenshot', { format: 'png' });
   const file = path.join(OUT_DIR, name);
   fs.writeFileSync(file, Buffer.from(data, 'base64'));
   console.log('  ✓', name);
-}
-
-async function evalJs(cdp, expression) {
-  const r = await cdp.send('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true });
-  if (r.exceptionDetails) throw new Error('页面脚本错误: ' + JSON.stringify(r.exceptionDetails));
-  return r.result.value;
 }
 
 async function setMetrics(cdp, width, height) {
