@@ -65,13 +65,13 @@ async function sha256Hex(buf) {
 
 /**
  * 下载模型文件为 Uint8Array。
- * 本地直接同源加载；线上按镜像链依次尝试，每个源下载后做 SHA-256 校验。
+ * 本地直接同源加载；线上优先同源，失败再按镜像链依次尝试，每个源下载后做 SHA-256 校验。
  */
 async function fetchModelBuffer(onProgress = () => {}) {
   const local = isLocalEnv();
   const expectedSha = await fetchExpectedModelSha();
   if (!expectedSha) console.warn('[FaceEngine] inventory.json 无模型哈希，跳过完整性校验');
-  const candidates = local ? [MODEL_URL] : [...MODEL_MIRRORS, MODEL_URL];
+  const candidates = local ? [MODEL_URL] : [MODEL_URL, ...MODEL_MIRRORS];
   let lastErr = null;
   for (let i = 0; i < candidates.length; i++) {
     const url = candidates[i];
