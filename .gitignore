@@ -1,0 +1,62 @@
+# 依赖（本项目零安装运行，node_modules 仅开发者工具链可选生成）
+node_modules/
+
+# 本地临时产物
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# 打包构建产物（由 tools/build-sea.cjs / build-installer.cjs 按需生成）
+_pack/
+_gh-pages-deploy/
+*.exe
+
+# 测试素材与输出（由 tools/ 各脚本按需生成）
+tools/fixtures/
+shots/
+screenshot-*.png
+shot-*.png
+
+# 临时文件
+speed-test.txt
+
+# 一次性调试脚本与中间产物（已归档至 _scratch/，整目录不入库）
+_scratch/
+
+# 审查/核查临时产物（解包的 docx、渲染页面等，不入库）
+.review-tmp/
+
+# 一次性论文提取/修复脚本（临时工具，不入库）
+_extract_docx.*
+_fix_paper*.cjs
+_fix_paper*.py
+
+# 临时截图目录
+截图/
+
+# 临时数据提取/可视化脚本
+docs-evidence/extract_data.py
+docs-evidence/memory-chart.html
+docs-evidence/perf-memory-*.json
+
+# 论文写作工作区（提取脚本、全文版本、AI 痕迹分析等个人工作文件，不入库）
+_论文工作区/
+
+# Python 字节码缓存
+__pycache__/
+*.pyc
+
+# 大体积交付包（不应入库）
+*.zip
+*.zip.sha256
+
+# 临时截图验证产物
+%TEMP%/
+
+# 本地评测数据集（tools/realdata-collect.mjs 按需下载，体积大不入库）
+_dataset/
+
+# 真实数据特征缓存（数据集派生的逐帧特征，不入库；D 盘原始数据集删除后
+# eval/diagnose 仍可从此处回放全部真实数据指标）
+_eval-cache/
