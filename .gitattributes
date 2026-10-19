@@ -1,0 +1,3 @@
+# vendor 目录的模型与推理运行库必须与原始下载内容逐字节一致
+# （inventory.json 的 SHA-256 按原始 LF 内容计算），禁止行尾自动转换
+web/vendor/** -text

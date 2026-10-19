@@ -1,0 +1,42 @@
+{
+  "name": "driver-fatigue-detection-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "基于面部多特征融合的 Web 端驾驶员疲劳检测系统（本科毕业设计）",
+  "scripts": {
+    "start": "node server/server.js",
+    "serve": "node server/server.js --no-open",
+    "vendor": "node tools/fetch-vendor.js",
+    "check": "node --experimental-vm-modules tools/project-check.mjs",
+    "test": "node tools/regression-test.mjs",
+    "test:integration": "node tools/integration-test.mjs",
+    "verify": "npm run check && npm run test",
+    "verify:full": "node tools/full-verify.mjs",
+    "build:sea": "node tools/build-sea.cjs",
+    "build:installer": "node tools/build-installer.cjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format:check": "prettier --check \"web/js/**/*.js\" \"tools/**/*.mjs\" \"server/**/*.js\""
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "fatigue-detection",
+    "PERCLOS",
+    "mediapipe",
+    "face-landmark",
+    "multi-feature-fusion"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "axe-core": "^4.13.0",
+    "eslint": "^10.8.1",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.9.0",
+    "playwright-core": "^1.62.1",
+    "prettier": "^3.9.6",
+    "typescript": "^7.0.2"
+  }
+}

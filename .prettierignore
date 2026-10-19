@@ -1,0 +1,7 @@
+node_modules/
+web/vendor/
+docs-evidence/
+docs/
+*.md
+package-lock.json
+一键启动.bat

@@ -1,0 +1,84 @@
+# 依赖（本项目零安装运行，node_modules 仅开发者工具链可选生成）
+node_modules/
+
+# 本地临时产物
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# 打包构建产物（由 tools/build-sea.cjs / build-installer.cjs 按需生成）
+_pack/
+_gh-pages-deploy/
+*.exe
+
+# 测试素材与输出（由 tools/ 各脚本按需生成）
+tools/fixtures/
+shots/
+screenshot-*.png
+shot-*.png
+
+# 临时文件
+speed-test.txt
+
+# 一次性调试脚本与中间产物
+_scratch/
+
+# 审查/核查临时产物
+.review-tmp/
+
+# 临时截图目录
+截图/
+
+# 临时数据提取/可视化脚本
+docs-evidence/extract_data.py
+docs-evidence/memory-chart.html
+docs-evidence/perf-memory-*.json
+
+# 论文写作工作区（提取脚本、全文版本等个人工作文件，不入库）
+_论文工作区/
+
+# Python 字节码缓存
+__pycache__/
+*.pyc
+
+# 大体积交付包
+*.zip
+*.zip.sha256
+
+# 本地评测数据集
+_dataset/
+
+# 真实数据特征缓存
+_eval-cache/
+
+# ===== 私密材料（不入公开仓库）=====
+
+# 软著申请材料（个人版权登记用途）
+软著材料/
+
+# 论文、答辩等个人私密材料
+_私密材料/
+
+# 软著/答辩材料生成脚本（一次性个人工具，不入库）
+tools/generate_srcdoc_pdf.py
+tools/generate_srcdoc_txt.py
+tools/generate_manual_txt.py
+tools/html-to-pdf.cjs
+tools/build-copyright-docs.cjs
+tools/gen-defense-ppt.py
+
+# 答辩、论文、任务台账等个人文档（已从 docs/ 移除，此规则防止误提交）
+docs/答辩问答准备.md
+docs/论文图表使用说明.md
+docs/第三轮优化提示词.md
+docs/第四轮优化提示词.md
+docs/第三轮任务台账.md
+docs/第四轮任务台账.md
+docs/第三轮交付报告.md
+docs/审查与交付报告.md
+docs/知情同意书模板.md
+docs-evidence/答辩要点与交付清单.md
+
+# 含个人信息的交付说明
+交付说明.txt
