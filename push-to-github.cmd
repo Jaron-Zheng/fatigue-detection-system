@@ -2,8 +2,8 @@
 setlocal enabledelayedexpansion
 cd /d "%~dp0"
 
-set "REPO=https://github.com/fatigue-detection-system/fatigue-detection-system.git"
-set "SITE=https://fatigue-detection-system.github.io/fatigue-detection-system/"
+set "REPO=https://github.com/Jaron-Zheng/fatigue-detection-system.git"
+set "SITE=https://Jaron-Zheng.github.io/fatigue-detection-system/"
 
 echo ============================================================
 echo   Push fatigue-detection-system to GitHub - main + gh-pages
@@ -26,8 +26,8 @@ if errorlevel 1 (
   if exist ".git" rmdir /s /q ".git"
   git init -b main
 )
-git config user.name "fatigue-detection-system"
-git config user.email "fatigue-detection-system@users.noreply.github.com"
+git config user.name "Jaron"
+git config user.email "Jaron-Zheng@users.noreply.github.com"
 
 echo [1/3] Committing full source to branch main ...
 git add -A
@@ -54,8 +54,8 @@ mkdir "%GHP%"
 robocopy "web" "%GHP%" /E /NFL /NDL /NJH /NJS /NP >nul
 pushd "%GHP%"
 git init -b gh-pages
-git config user.name "fatigue-detection-system"
-git config user.email "fatigue-detection-system@users.noreply.github.com"
+git config user.name "Jaron"
+git config user.email "Jaron-Zheng@users.noreply.github.com"
 git add -A
 git commit -m "deploy: GitHub Pages site"
 git remote add origin "%REPO%"

@@ -16,7 +16,7 @@ const path = require('path');
 
 const TOKEN = process.argv[2];
 const REPO = 'fatigue-detection-system';
-const OWNER = 'fatigue-detection-system';
+const OWNER = 'Jaron-Zheng';
 const ROOT = path.resolve(__dirname, '..');
 const WEB_DIR = path.join(ROOT, 'web');
 

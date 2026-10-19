@@ -19,7 +19,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 
-const URL_BASE = 'https://fatigue-detection-system.github.io/fatigue-detection-system/';
+const URL_BASE = 'https://jaron-zheng.github.io/fatigue-detection-system/';
 const OUT_DIR = path.join(os.homedir(), 'Desktop', '截图');
 const DEBUG_PORT = 9336;
 const WIDTH = 1920;

@@ -169,8 +169,8 @@ node_modules/
     // 初始化 git 并推送
     console.log('  初始化 Git 仓库...');
     execSync('git init', { cwd: deployDir, stdio: 'pipe' });
-    execSync('git config user.name "fatigue-detection-system"', { cwd: deployDir });
-    execSync('git config user.email "fatigue-detection-system@users.noreply.github.com"', { cwd: deployDir });
+    execSync('git config user.name "Jaron"', { cwd: deployDir });
+    execSync('git config user.email "Jaron-Zheng@users.noreply.github.com"', { cwd: deployDir });
     execSync('git add -A', { cwd: deployDir, stdio: 'pipe' });
 
     // 检查是否有文件可提交
