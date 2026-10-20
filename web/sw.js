@@ -28,7 +28,7 @@
 'use strict';
 
 /* PRECACHE:BEGIN — 由 tools/gen-sw-precache.mjs 生成，勿手改 */
-const CACHE_FINGERPRINT = 'e181a7ca0b06';
+const CACHE_FINGERPRINT = '60fac786be11';
 const PRECACHE_URLS = [
   './',
   './css/base.css',
