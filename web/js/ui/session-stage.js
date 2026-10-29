@@ -16,6 +16,14 @@ function calibInstructionText() {
 /* 校准完成反馈的停留时长（毫秒） */
 const CALIB_DONE_MS = 800;
 
+/* 启动步骤定义（key → 标签） */
+const BOOT_STEPS = [
+  { key: 'runtime', label: '加载推理运行时' },
+  { key: 'wasm',    label: '初始化 WebAssembly' },
+  { key: 'model',   label: '下载人脸关键点模型' },
+  { key: 'infer',   label: '创建推理引擎' },
+];
+
 export class SessionStage {
   constructor() {
     this.overlay = $('#stageOverlay');
@@ -25,12 +33,13 @@ export class SessionStage {
     this.title = $('#overlayTitle');
     this.text = $('#overlayText');
     this.actions = $('#overlayActions');
+    this.stepsEl = $('#bootSteps');
     this._calibFlashOn = false;
     this._calibFlashTimer = null;
   }
 
   /* 设置遮罩框架：标题、说明、遮罩类型 */
-  _frame(title, text, { ring = false, translucent = false } = {}) {
+  _frame(title, text, { ring = false, translucent = false, steps = false } = {}) {
     // 新阶段接管时撤销"校准完成"反馈的挂起状态
     this._cancelCalibFlash();
     this.overlay.hidden = false;
@@ -40,6 +49,7 @@ export class SessionStage {
     setText(this.title, title);
     setText(this.text, text);
     this.actions.innerHTML = '';
+    if (this.stepsEl) this.stepsEl.hidden = !steps;
   }
 
   /* 创建一个按钮并附加到操作区 */
@@ -74,8 +84,62 @@ export class SessionStage {
     this._frame(
       '正在准备视觉引擎',
       '模型和摄像头均在本机启动，不会上传任何影像数据。',
-      { translucent: true }
+      { translucent: true, steps: true }
     );
+    this._renderBootSteps(null);
+  }
+
+  /* 渲染启动步骤列表；activeStep 为当前激活的步骤 key */
+  _renderBootSteps(activeStep) {
+    if (!this.stepsEl) return;
+    this.stepsEl.innerHTML = '';
+    for (const s of BOOT_STEPS) {
+      const li = document.createElement('li');
+      li.className = 'boot-step';
+      li.dataset.key = s.key;
+      if (activeStep === s.key) li.classList.add('is-active');
+      const dot = document.createElement('span');
+      dot.className = 'boot-step-dot';
+      const label = document.createElement('span');
+      label.className = 'boot-step-label';
+      label.textContent = s.label;
+      const detail = document.createElement('span');
+      detail.className = 'boot-step-detail';
+      li.append(dot, label, detail);
+      this.stepsEl.appendChild(li);
+    }
+  }
+
+  /* 更新启动步骤进度：step=当前 key, status='active'|'done', detail=可选文案 */
+  updateBootStep(step, status, detail = '') {
+    if (!this.stepsEl || this.stepsEl.hidden) return;
+    for (const li of this.stepsEl.children) {
+      const key = li.dataset.key;
+      li.classList.remove('is-active', 'is-done', 'is-failed');
+      const detailEl = li.querySelector('.boot-step-detail');
+      if (detailEl) detailEl.textContent = '';
+    }
+    // 标记所有在 step 之前的步骤为 done
+    let reached = false;
+    for (const s of BOOT_STEPS) {
+      const li = this.stepsEl.querySelector(`[data-key="${s.key}"]`);
+      if (!li) continue;
+      if (s.key === step) {
+        reached = true;
+        if (status === 'done') {
+          li.classList.add('is-done');
+        } else if (status === 'failed') {
+          li.classList.add('is-failed');
+        } else {
+          li.classList.add('is-active');
+        }
+        const detailEl = li.querySelector('.boot-step-detail');
+        if (detailEl && detail) detailEl.textContent = detail;
+      } else if (!reached) {
+        // 之前的步骤标记为已完成
+        li.classList.add('is-done');
+      }
+    }
   }
 
   /* 校准中舞台 */
@@ -156,5 +220,6 @@ export class SessionStage {
     if (this._calibFlashOn) return;
     this.overlay.hidden = true;
     this.ring.hidden = true;
+    if (this.stepsEl) this.stepsEl.hidden = true;
   }
 }

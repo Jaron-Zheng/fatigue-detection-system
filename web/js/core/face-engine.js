@@ -26,7 +26,20 @@ const MODEL_MIRRORS = [
   `https://fastly.jsdelivr.net/gh/${GH_REF}/vendor/models/face_landmarker.task`,
   `https://cdn.jsdelivr.net/gh/${GH_REF}/vendor/models/face_landmarker.task`,
 ];
-const MIRROR_TIMEOUT_MS = 12000;
+const MIRROR_TIMEOUT_MS = 30000; // 并行竞速模式：给每个源更长的超时窗口
+
+/** 镜像短名（用于进度展示） */
+function mirrorShortName(url) {
+  try {
+    const h = new URL(url).host;
+    if (h.startsWith('gcore.')) return 'gcore';
+    if (h.startsWith('fastly.')) return 'fastly';
+    if (h.startsWith('cdn.')) return 'cdn.jsdelivr';
+    return h;
+  } catch {
+    return url;
+  }
+}
 
 /** 判断是否为本地运行环境 */
 export function isLocalEnv() {
@@ -64,41 +77,141 @@ async function sha256Hex(buf) {
 }
 
 /**
- * 下载模型文件为 Uint8Array。
- * 本地直接同源加载；线上按镜像链依次尝试，每个源下载后做 SHA-256 校验。
+ * 下载单个镜像，带实时字节进度。
+ * 返回 { buf, url } 或抛出错误。调用方通过 AbortController 取消。
  */
-async function fetchModelBuffer(onProgress = () => {}) {
-  const local = isLocalEnv();
-  const expectedSha = await fetchExpectedModelSha();
-  if (!expectedSha) console.warn('[FaceEngine] inventory.json 无模型哈希，跳过完整性校验');
-  const candidates = local ? [MODEL_URL] : [...MODEL_MIRRORS, MODEL_URL];
-  let lastErr = null;
-  for (let i = 0; i < candidates.length; i++) {
-    const url = candidates[i];
-    const isLast = i === candidates.length - 1;
-    const ctrl = new AbortController();
-    const timer = isLast ? null : setTimeout(() => ctrl.abort(), MIRROR_TIMEOUT_MS);
-    try {
-      const resp = await fetch(url, { signal: ctrl.signal });
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+async function fetchOneMirror(url, expectedSha, onProgress, index, total) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), MIRROR_TIMEOUT_MS);
+  try {
+    const resp = await fetch(url, { signal: ctrl.signal });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const totalBytes = Number(resp.headers.get('content-length')) || 0;
+    if (!resp.body) {
+      // 不支持流式读取的浏览器，直接 arrayBuffer
       const buf = new Uint8Array(await resp.arrayBuffer());
       if (buf.length < 1024) throw new Error('file too small: ' + buf.length);
       const gotSha = await sha256Hex(buf);
       if (expectedSha && gotSha && gotSha !== expectedSha) {
         throw new Error(`integrity mismatch: sha256 ${gotSha.slice(0, 12)}… ≠ 期望 ${expectedSha.slice(0, 12)}…`);
       }
-      if (i > 0) {
-        onProgress('主源较慢，已切换镜像源 ' + i + '/' + (candidates.length - 1), 58);
-      }
-      return buf;
-    } catch (e) {
-      lastErr = e;
-      console.warn('[FaceEngine] 模型源失败（' + new URL(url).host + '）：', e.message);
-    } finally {
-      if (timer) clearTimeout(timer);
+      return { buf, url };
     }
+    const reader = resp.body.getReader();
+    const chunks = [];
+    let received = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+      received += value.length;
+      if (totalBytes > 0) {
+        onProgress(received, totalBytes, mirrorShortName(url), index, total);
+      }
+    }
+    const merged = new Uint8Array(received);
+    let off = 0;
+    for (const c of chunks) {
+      merged.set(c, off);
+      off += c.length;
+    }
+    if (merged.length < 1024) throw new Error('file too small: ' + merged.length);
+    const gotSha = await sha256Hex(merged);
+    if (expectedSha && gotSha && gotSha !== expectedSha) {
+      throw new Error(`integrity mismatch: sha256 ${gotSha.slice(0, 12)}… ≠ 期望 ${expectedSha.slice(0, 12)}…`);
+    }
+    return { buf: merged, url };
+  } finally {
+    clearTimeout(timer);
   }
-  throw lastErr || new Error('model fetch failed');
+}
+
+/**
+ * 下载模型文件为 Uint8Array（并行竞速版）。
+ * 本地直接同源加载；线上同时向所有镜像发起请求，哪个先完成且校验通过就用哪个，
+ * 其余请求立即取消。进度回调实时报告最快源的下载百分比。
+ */
+async function fetchModelBuffer(onProgress = () => {}) {
+  const local = isLocalEnv();
+  const expectedSha = await fetchExpectedModelSha();
+  if (!expectedSha) console.warn('[FaceEngine] inventory.json 无模型哈希，跳过完整性校验');
+
+  // 本地环境：直接同源加载（无需竞速）
+  if (local) {
+    const { buf } = await fetchOneMirror(MODEL_URL, expectedSha, (recv, total, name) => {
+      const pct = total > 0 ? Math.round((recv / total) * 100) : 0;
+      onProgress({ phase: 'downloading', mirror: name, pct, received: recv, total });
+    }, 0, 1);
+    return buf;
+  }
+
+  // 线上环境：并行竞速
+  const candidates = [...MODEL_MIRRORS, MODEL_URL];
+  const total = candidates.length;
+  const ctrls = candidates.map(() => new AbortController());
+
+  // 跟踪每个源的进度，回调中报告最快的那个
+  const progState = candidates.map(() => ({ received: 0, total: 0, done: false, failed: false }));
+  const reportProgress = () => {
+    // 找进度最快的活跃源
+    let best = null;
+    let bestPct = -1;
+    for (let i = 0; i < progState.length; i++) {
+      const s = progState[i];
+      if (s.done || s.failed) continue;
+      const pct = s.total > 0 ? (s.received / s.total) * 100 : 0;
+      if (pct > bestPct) {
+        bestPct = pct;
+        best = i;
+      }
+    }
+    if (best !== null) {
+      const s = progState[best];
+      const name = mirrorShortName(candidates[best]);
+      const pct = s.total > 0 ? Math.round((s.received / s.total) * 100) : 0;
+      onProgress({ phase: 'downloading', mirror: name, pct, received: s.received, total: s.total });
+    }
+  };
+
+  const promises = candidates.map((url, i) =>
+    fetchOneMirror(
+      url,
+      expectedSha,
+      (recv, t) => {
+        progState[i].received = recv;
+        progState[i].total = t;
+        reportProgress();
+      },
+      i,
+      total,
+    )
+      .then((result) => {
+        // 标记完成，取消其余请求
+        progState[i].done = true;
+        for (let j = 0; j < candidates.length; j++) {
+          if (j !== i) ctrls[j].abort();
+        }
+        onProgress({ phase: 'downloaded', mirror: mirrorShortName(url) });
+        return result;
+      })
+      .catch((e) => {
+        progState[i].failed = true;
+        console.warn('[FaceEngine] 模型源失败（' + mirrorShortName(url) + '）：', e.message);
+        throw e;
+      }),
+  );
+
+  // 等待第一个成功的结果
+  try {
+    const result = await Promise.any(promises);
+    return result.buf;
+  } catch (aggregateErr) {
+    // 全部失败
+    const errors = (aggregateErr && aggregateErr.errors) || [aggregateErr];
+    const integrityErr = errors.find((e) => /integrity mismatch/.test(String(e && e.message)));
+    if (integrityErr) throw integrityErr;
+    throw new Error('所有模型镜像源均不可用（' + errors.length + ' 个源全部失败）');
+  }
 }
 
 export class FaceEngine {
@@ -122,21 +235,42 @@ export class FaceEngine {
     return Math.max(0, this.lastTimestamp + gapMs);
   }
 
-  /** 初始化模型：加载运行时 → 初始化 WASM → 下载模型 → 创建 landmarker */
+  /** 初始化模型：加载运行时 → 初始化 WASM → 下载模型 → 创建 landmarker
+   *
+   * onProgress 支持两种调用形式：
+   *   · (msg, pct)  —— 旧版兼容（字符串+百分比）
+   *   · ({step, pct, detail}) —— 新版（步骤 key + 百分比 + 详情）
+   */
   async init(onProgress = () => {}) {
     try {
-      onProgress('正在载入推理运行时…', 10);
+      onProgress('正在载入推理运行时…', 5, { step: 'runtime' });
       const mod = await import(LOCAL_BUNDLE);
       const { FaceLandmarker, FilesetResolver } = mod;
+      onProgress('推理运行时已就绪', 10, { step: 'runtime', status: 'done' });
 
-      onProgress('正在初始化 WebAssembly…', 30);
+      onProgress('正在初始化 WebAssembly…', 20, { step: 'wasm' });
       const fileset = await FilesetResolver.forVisionTasks(LOCAL_WASM);
       this._vision = { FaceLandmarker, fileset };
+      onProgress('WebAssembly 已就绪', 30, { step: 'wasm', status: 'done' });
 
-      onProgress('正在加载人脸关键点模型…', 55);
+      onProgress('正在下载人脸关键点模型…', 35, { step: 'model' });
       let modelBuffer = null;
       try {
-        modelBuffer = await fetchModelBuffer(onProgress);
+        modelBuffer = await fetchModelBuffer((info) => {
+          if (info.phase === 'downloading') {
+            // 下载阶段进度映射到 35→88
+            const pct = 35 + Math.round((info.pct / 100) * 53);
+            const mb = (info.received / 1048576).toFixed(1);
+            const tot = (info.total / 1048576).toFixed(1);
+            onProgress(
+              `正在下载模型… ${mb} / ${tot} MB（${info.mirror}）`,
+              pct,
+              { step: 'model', status: 'active', detail: `${info.pct}%` },
+            );
+          } else if (info.phase === 'downloaded') {
+            onProgress('模型下载完成', 88, { step: 'model', status: 'done', detail: info.mirror });
+          }
+        });
       } catch (modelErr) {
         if (/integrity mismatch/.test(String(modelErr && modelErr.message))) {
           throw new Error(
@@ -150,19 +284,20 @@ export class FaceEngine {
       this._modelBuffer = modelBuffer;
       const tryCreate = (delegate) => this._create(delegate);
 
+      onProgress('正在加载推理引擎…', 90, { step: 'infer' });
       const preferred = CONFIG.capture.delegate === 'CPU' ? 'CPU' : 'GPU';
       try {
         this.landmarker = await tryCreate(preferred);
         this.delegate = preferred;
       } catch (gpuErr) {
         console.warn('[FaceEngine] GPU 委托不可用，回退 CPU：', gpuErr);
-        onProgress('GPU 不可用，回退 CPU 推理…', 70);
+        onProgress('GPU 不可用，回退 CPU 推理…', 92, { step: 'infer', status: 'active', detail: 'CPU' });
         this.landmarker = await tryCreate('CPU');
         this.delegate = 'CPU';
       }
       this.consecutiveFailures = 0;
 
-      onProgress('模型就绪', 100);
+      onProgress('推理引擎就绪', 100, { step: 'infer', status: 'done' });
       this.ready = true;
       return true;
     } catch (err) {

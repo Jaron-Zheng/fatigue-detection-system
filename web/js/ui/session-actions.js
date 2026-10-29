@@ -24,10 +24,14 @@ export async function bootEngine(app) {
   if (app._engineBooting) return app._engineBooting;
   const box = $('#bootBox');
   box.hidden = false;
-  const setProgress = (msg, pct) => {
+  const setProgress = (msg, pct, meta = {}) => {
     setText($('#bootMsg'), msg);
     $('#bootBar').style.width = pct + '%';
     app.dash.setStatus(msg, 'var(--warn)', true);
+    // 同步到舞台遮罩的步骤列表
+    if (meta.step) {
+      app.stage.updateBootStep(meta.step, meta.status || 'active', meta.detail || '');
+    }
   };
   app._engineBooting = (async () => {
     try {
