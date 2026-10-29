@@ -28,8 +28,17 @@ export async function bootEngine(app) {
   // 用 rAF 节流进度更新：下载回调可能高频触发（每收到一个 chunk），
   // 直接同步写 DOM 会造成大量 layout thrash。用 rAF 合并到下一帧统一渲染，
   // 保证进度条平滑实时且不阻塞主线程。
+  //
+  // 移动端特殊处理：当标签页切到后台时 requestAnimationFrame 会被浏览器暂停
+  // （iOS Safari / Android Chrome 均如此），切回来时积压的回调可能丢失
+  // 或批量触发，导致进度条卡住不动。因此额外加一个 setTimeout 兜底：
+  // 如果 rAF 超过 500ms 还没执行，就立即同步 flush，确保进度不会丢。
   let pending = null;
+  let rafId = null;
+  let timerId = null;
   const flushProgress = () => {
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    if (timerId) { clearTimeout(timerId); timerId = null; }
     if (!pending) return;
     const { msg, pct, meta } = pending;
     pending = null;
@@ -42,8 +51,20 @@ export async function bootEngine(app) {
   };
   const setProgress = (msg, pct, meta = {}) => {
     pending = { msg, pct, meta };
-    requestAnimationFrame(flushProgress);
+    // rAF 驱动的平滑渲染（前台时优先走这条路径）
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(flushProgress);
+    // setTimeout 兜底：后台标签页 rAF 不执行时，500ms 后强制 flush
+    if (timerId) clearTimeout(timerId);
+    timerId = setTimeout(flushProgress, 500);
   };
+
+  // 移动端 visibilitychange 兜底：标签页从后台切回前台时，
+  // rAF 可能积压或丢失，立即同步 flush 一次确保进度不卡住。
+  const onVisChange = () => {
+    if (!document.hidden) flushProgress();
+  };
+  document.addEventListener('visibilitychange', onVisChange);
   app._engineBooting = (async () => {
     try {
       // 首屏可能已切走，仍然更新进度文本供状态栏使用
@@ -52,6 +73,7 @@ export async function bootEngine(app) {
       flushProgress();
       toastOk('推理引擎就绪', `委托 ${app.engine.delegate} · 模型已本地加载`);
     } finally {
+      document.removeEventListener('visibilitychange', onVisChange);
       box.hidden = true;
       app._engineBooting = null;
     }
