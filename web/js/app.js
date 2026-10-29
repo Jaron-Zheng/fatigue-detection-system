@@ -334,7 +334,19 @@ class App {
           throw engineErr;
         }
         if (this._cancelledStopCamera(gen)) return;
-        await cameraP;
+        // 给摄像头一个整体超时：引擎已就绪后，摄像头最多再等 40 秒
+        // （CameraSource 内部已有 15s getUserMedia 超时 + 12s 首帧等待，
+        //   加上权限弹窗、设备枚举等开销，正常情况最多 ~30 秒。
+        //   这里兜底处理权限对话框长时间不响应、video.play() 被自动播放策略阻塞等情况）
+        await Promise.race([
+          cameraP,
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error(
+              '摄像头启动超时（引擎已就绪，等待摄像头 40 秒无响应）。' +
+              '请确认已授权摄像头权限，关闭其他占用摄像头的程序后重试。',
+            )), 40000),
+          ),
+        ]);
         if (this._cancelledStopCamera(gen)) return;
       } else {
         // 模拟模式无需摄像头与模型

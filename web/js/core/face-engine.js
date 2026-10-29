@@ -26,7 +26,7 @@ const MODEL_MIRRORS = [
   `https://fastly.jsdelivr.net/gh/${GH_REF}/vendor/models/face_landmarker.task`,
   `https://cdn.jsdelivr.net/gh/${GH_REF}/vendor/models/face_landmarker.task`,
 ];
-const MIRROR_TIMEOUT_MS = 30000; // 并行竞速模式：给每个源更长的超时窗口
+const MIRROR_TIMEOUT_MS = 20000; // 并行竞速模式：每个源 20 秒超时
 
 /** 镜像短名（用于进度展示） */
 function mirrorShortName(url) {
@@ -74,6 +74,16 @@ async function fetchModelMeta() {
     _modelMeta = {};
     return _modelMeta;
   }
+}
+
+/** 给 Promise 套一个超时外壳，超时后 reject（不取消原 Promise，但调用方不会再等） */
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`${label}超时（${ms / 1000}秒无响应）`)), ms),
+    ),
+  ]);
 }
 
 /** 计算 Uint8Array 的 SHA-256 十六进制（非安全上下文返回 null） */
@@ -270,12 +280,16 @@ export class FaceEngine {
   async init(onProgress = () => {}) {
     try {
       onProgress('正在载入推理运行时…', 5, { step: 'runtime' });
-      const mod = await import(LOCAL_BUNDLE);
+      const mod = await withTimeout(import(LOCAL_BUNDLE), 30000, '加载推理运行时');
       const { FaceLandmarker, FilesetResolver } = mod;
       onProgress('推理运行时已就绪', 10, { step: 'runtime', status: 'done' });
 
       onProgress('正在初始化 WebAssembly…', 20, { step: 'wasm' });
-      const fileset = await FilesetResolver.forVisionTasks(LOCAL_WASM);
+      const fileset = await withTimeout(
+        FilesetResolver.forVisionTasks(LOCAL_WASM),
+        30000,
+        '初始化 WebAssembly',
+      );
       this._vision = { FaceLandmarker, fileset };
       onProgress('WebAssembly 已就绪', 30, { step: 'wasm', status: 'done' });
 
@@ -321,12 +335,12 @@ export class FaceEngine {
       onProgress('正在加载推理引擎…', 88, { step: 'infer' });
       const preferred = CONFIG.capture.delegate === 'CPU' ? 'CPU' : 'GPU';
       try {
-        this.landmarker = await tryCreate(preferred);
+        this.landmarker = await withTimeout(tryCreate(preferred), 60000, '创建推理引擎（GPU）');
         this.delegate = preferred;
       } catch (gpuErr) {
         console.warn('[FaceEngine] GPU 委托不可用，回退 CPU：', gpuErr);
         onProgress('GPU 不可用，回退 CPU 推理…', 92, { step: 'infer', status: 'active', detail: 'CPU' });
-        this.landmarker = await tryCreate('CPU');
+        this.landmarker = await withTimeout(tryCreate('CPU'), 60000, '创建推理引擎（CPU）');
         this.delegate = 'CPU';
       }
       this.consecutiveFailures = 0;
