@@ -78,10 +78,11 @@ async function sha256Hex(buf) {
 
 /**
  * 下载单个镜像，带实时字节进度。
- * 返回 { buf, url } 或抛出错误。调用方通过 AbortController 取消。
+ * 返回 { buf, url } 或抛出错误。
+ * externalCtrl：外部 AbortController，竞速模式中由调用方传入以便取消其他源。
  */
-async function fetchOneMirror(url, expectedSha, onProgress, index, total) {
-  const ctrl = new AbortController();
+async function fetchOneMirror(url, expectedSha, onProgress, externalCtrl = null) {
+  const ctrl = externalCtrl || new AbortController();
   const timer = setTimeout(() => ctrl.abort(), MIRROR_TIMEOUT_MS);
   try {
     const resp = await fetch(url, { signal: ctrl.signal });
@@ -91,6 +92,7 @@ async function fetchOneMirror(url, expectedSha, onProgress, index, total) {
       // 不支持流式读取的浏览器，直接 arrayBuffer
       const buf = new Uint8Array(await resp.arrayBuffer());
       if (buf.length < 1024) throw new Error('file too small: ' + buf.length);
+      onProgress({ phase: 'verifying', mirror: mirrorShortName(url) });
       const gotSha = await sha256Hex(buf);
       if (expectedSha && gotSha && gotSha !== expectedSha) {
         throw new Error(`integrity mismatch: sha256 ${gotSha.slice(0, 12)}… ≠ 期望 ${expectedSha.slice(0, 12)}…`);
@@ -106,9 +108,11 @@ async function fetchOneMirror(url, expectedSha, onProgress, index, total) {
       chunks.push(value);
       received += value.length;
       if (totalBytes > 0) {
-        onProgress(received, totalBytes, mirrorShortName(url), index, total);
+        onProgress({ phase: 'downloading', mirror: mirrorShortName(url), received, total: totalBytes, pct: Math.round((received / totalBytes) * 100) });
       }
     }
+    // 流读取完毕，但合并 + SHA-256 校验需要时间，立即通知调用方
+    onProgress({ phase: 'verifying', mirror: mirrorShortName(url), received, total: totalBytes });
     const merged = new Uint8Array(received);
     let off = 0;
     for (const c of chunks) {
@@ -138,27 +142,32 @@ async function fetchModelBuffer(onProgress = () => {}) {
 
   // 本地环境：直接同源加载（无需竞速）
   if (local) {
-    const { buf } = await fetchOneMirror(MODEL_URL, expectedSha, (recv, total, name) => {
-      const pct = total > 0 ? Math.round((recv / total) * 100) : 0;
-      onProgress({ phase: 'downloading', mirror: name, pct, received: recv, total });
-    }, 0, 1);
+    const { buf } = await fetchOneMirror(MODEL_URL, expectedSha, (info) => {
+      onProgress(info);
+    }, null);
     return buf;
   }
 
   // 线上环境：并行竞速
   const candidates = [...MODEL_MIRRORS, MODEL_URL];
-  const total = candidates.length;
   const ctrls = candidates.map(() => new AbortController());
 
-  // 跟踪每个源的进度，回调中报告最快的那个
-  const progState = candidates.map(() => ({ received: 0, total: 0, done: false, failed: false }));
+  // 跟踪每个源的状态
+  const progState = candidates.map(() => ({ received: 0, total: 0, phase: 'idle', done: false, failed: false }));
+
+  // 汇报进度：优先报告进度最快的活跃源
   const reportProgress = () => {
-    // 找进度最快的活跃源
     let best = null;
     let bestPct = -1;
     for (let i = 0; i < progState.length; i++) {
       const s = progState[i];
       if (s.done || s.failed) continue;
+      if (s.phase === 'verifying') {
+        // 正在校验的源优先级最高
+        best = i;
+        bestPct = 101;
+        break;
+      }
       const pct = s.total > 0 ? (s.received / s.total) * 100 : 0;
       if (pct > bestPct) {
         bestPct = pct;
@@ -167,24 +176,23 @@ async function fetchModelBuffer(onProgress = () => {}) {
     }
     if (best !== null) {
       const s = progState[best];
-      const name = mirrorShortName(candidates[best]);
-      const pct = s.total > 0 ? Math.round((s.received / s.total) * 100) : 0;
-      onProgress({ phase: 'downloading', mirror: name, pct, received: s.received, total: s.total });
+      onProgress({
+        phase: s.phase,
+        mirror: mirrorShortName(candidates[best]),
+        pct: s.total > 0 ? Math.round((s.received / s.total) * 100) : 0,
+        received: s.received,
+        total: s.total,
+      });
     }
   };
 
   const promises = candidates.map((url, i) =>
-    fetchOneMirror(
-      url,
-      expectedSha,
-      (recv, t) => {
-        progState[i].received = recv;
-        progState[i].total = t;
-        reportProgress();
-      },
-      i,
-      total,
-    )
+    fetchOneMirror(url, expectedSha, (info) => {
+      progState[i].received = info.received || 0;
+      progState[i].total = info.total || 0;
+      progState[i].phase = info.phase;
+      reportProgress();
+    }, ctrls[i])
       .then((result) => {
         // 标记完成，取消其余请求
         progState[i].done = true;
@@ -196,7 +204,10 @@ async function fetchModelBuffer(onProgress = () => {}) {
       })
       .catch((e) => {
         progState[i].failed = true;
-        console.warn('[FaceEngine] 模型源失败（' + mirrorShortName(url) + '）：', e.message);
+        // 被 abort 取消的不算失败（是被竞速淘汰）
+        if (e && e.name !== 'AbortError') {
+          console.warn('[FaceEngine] 模型源失败（' + mirrorShortName(url) + '）：', e.message);
+        }
         throw e;
       }),
   );
@@ -258,8 +269,8 @@ export class FaceEngine {
       try {
         modelBuffer = await fetchModelBuffer((info) => {
           if (info.phase === 'downloading') {
-            // 下载阶段进度映射到 35→88
-            const pct = 35 + Math.round((info.pct / 100) * 53);
+            // 下载阶段进度映射到 35→80
+            const pct = 35 + Math.round((info.pct / 100) * 45);
             const mb = (info.received / 1048576).toFixed(1);
             const tot = (info.total / 1048576).toFixed(1);
             onProgress(
@@ -267,8 +278,16 @@ export class FaceEngine {
               pct,
               { step: 'model', status: 'active', detail: `${info.pct}%` },
             );
+          } else if (info.phase === 'verifying') {
+            // 流读取完毕，正在合并+校验
+            const tot = info.total > 0 ? (info.total / 1048576).toFixed(1) : '';
+            onProgress(
+              `正在校验模型完整性…${tot ? `（${tot} MB）` : ''}`,
+              82,
+              { step: 'model', status: 'active', detail: '校验中' },
+            );
           } else if (info.phase === 'downloaded') {
-            onProgress('模型下载完成', 88, { step: 'model', status: 'done', detail: info.mirror });
+            onProgress('模型下载完成', 85, { step: 'model', status: 'done', detail: info.mirror });
           }
         });
       } catch (modelErr) {
@@ -284,7 +303,7 @@ export class FaceEngine {
       this._modelBuffer = modelBuffer;
       const tryCreate = (delegate) => this._create(delegate);
 
-      onProgress('正在加载推理引擎…', 90, { step: 'infer' });
+      onProgress('正在加载推理引擎…', 88, { step: 'infer' });
       const preferred = CONFIG.capture.delegate === 'CPU' ? 'CPU' : 'GPU';
       try {
         this.landmarker = await tryCreate(preferred);
