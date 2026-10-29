@@ -8,7 +8,7 @@
      本标签让线上版获得与本地版同源的 CSP 防护（外链脚本拦截、注入面收敛）。
      资源加载策略（2026-09 L-01 决策）：可执行代码（vision_bundle + wasm）
      一律同源加载，不允许任何第三方域出现在 script-src——第三方投毒面归零；
-     模型文件（3.7MB）保留 jsdelivr 镜像链加速（gcore/fastly/cdn 三域，
+     模型文件（3.6MB）保留 jsdelivr 镜像链加速（gcore/fastly/cdn 三域，
      仅 connect-src），每个候选都经同源 inventory.json 的 SHA-256 校验，
      未通过即拒载，安全等价于同源。
      注：frame-ancestors 在 meta 中被规范忽略，防嵌点击劫持仅由本地响应头承担。 -->

@@ -54,16 +54,25 @@ export function isLocalEnv() {
   );
 }
 
-/** 读同源 inventory.json 里模型的期望 SHA-256 */
-async function fetchExpectedModelSha() {
+/** 读同源 inventory.json 里模型的元信息（SHA-256 + 实际字节数）
+ *  返回 { sha, size } 或 null。size 用于进度条显示——CDN 传输时可能
+ *  启用 brotli/gzip 压缩，content-length 返回的是压缩后大小（如 3.2 MB），
+ *  而实际文件是 3.6 MB，导致进度条总量与文件实际大小不一致。 */
+let _modelMeta = null;
+async function fetchModelMeta() {
+  if (_modelMeta !== null) return _modelMeta;
   try {
     const r = await fetch(`${VENDOR_BASE}/inventory.json`);
-    if (!r.ok) return null;
+    if (!r.ok) { _modelMeta = {}; return _modelMeta; }
     const inv = await r.json();
     const m = (inv.files || []).find((f) => f.file === 'models/face_landmarker.task');
-    return m && typeof m.sha256 === 'string' ? m.sha256.toLowerCase() : null;
+    _modelMeta = m && typeof m.sha256 === 'string'
+      ? { sha: m.sha256.toLowerCase(), size: typeof m.size === 'number' ? m.size : 0 }
+      : {};
+    return _modelMeta;
   } catch {
-    return null;
+    _modelMeta = {};
+    return _modelMeta;
   }
 }
 
@@ -81,13 +90,16 @@ async function sha256Hex(buf) {
  * 返回 { buf, url } 或抛出错误。
  * externalCtrl：外部 AbortController，竞速模式中由调用方传入以便取消其他源。
  */
-async function fetchOneMirror(url, expectedSha, onProgress, externalCtrl = null) {
+async function fetchOneMirror(url, expectedSha, onProgress, externalCtrl = null, knownSize = 0) {
   const ctrl = externalCtrl || new AbortController();
   const timer = setTimeout(() => ctrl.abort(), MIRROR_TIMEOUT_MS);
   try {
     const resp = await fetch(url, { signal: ctrl.signal });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
-    const totalBytes = Number(resp.headers.get('content-length')) || 0;
+    // CDN 可能启用传输压缩，content-length 是压缩后大小；
+    // 优先使用 inventory.json 记录的实际文件大小作为进度条总量
+    const contentLength = Number(resp.headers.get('content-length')) || 0;
+    const totalBytes = knownSize || contentLength;
     if (!resp.body) {
       // 不支持流式读取的浏览器，直接 arrayBuffer
       const buf = new Uint8Array(await resp.arrayBuffer());
@@ -108,7 +120,8 @@ async function fetchOneMirror(url, expectedSha, onProgress, externalCtrl = null)
       chunks.push(value);
       received += value.length;
       if (totalBytes > 0) {
-        onProgress({ phase: 'downloading', mirror: mirrorShortName(url), received, total: totalBytes, pct: Math.round((received / totalBytes) * 100) });
+        const pct = Math.min(100, Math.round((received / totalBytes) * 100));
+        onProgress({ phase: 'downloading', mirror: mirrorShortName(url), received, total: totalBytes, pct });
       }
     }
     // 流读取完毕，但合并 + SHA-256 校验需要时间，立即通知调用方
@@ -137,14 +150,16 @@ async function fetchOneMirror(url, expectedSha, onProgress, externalCtrl = null)
  */
 async function fetchModelBuffer(onProgress = () => {}) {
   const local = isLocalEnv();
-  const expectedSha = await fetchExpectedModelSha();
+  const meta = await fetchModelMeta();
+  const expectedSha = meta.sha || null;
+  const expectedSize = meta.size || 0;
   if (!expectedSha) console.warn('[FaceEngine] inventory.json 无模型哈希，跳过完整性校验');
 
   // 本地环境：直接同源加载（无需竞速）
   if (local) {
     const { buf } = await fetchOneMirror(MODEL_URL, expectedSha, (info) => {
       onProgress(info);
-    }, null);
+    }, null, expectedSize);
     return buf;
   }
 
@@ -179,7 +194,7 @@ async function fetchModelBuffer(onProgress = () => {}) {
       onProgress({
         phase: s.phase,
         mirror: mirrorShortName(candidates[best]),
-        pct: s.total > 0 ? Math.round((s.received / s.total) * 100) : 0,
+        pct: s.total > 0 ? Math.min(100, Math.round((s.received / s.total) * 100)) : 0,
         received: s.received,
         total: s.total,
       });
@@ -192,7 +207,7 @@ async function fetchModelBuffer(onProgress = () => {}) {
       progState[i].total = info.total || 0;
       progState[i].phase = info.phase;
       reportProgress();
-    }, ctrls[i])
+    }, ctrls[i], expectedSize)
       .then((result) => {
         // 标记完成，取消其余请求
         progState[i].done = true;
