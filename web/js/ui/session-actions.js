@@ -24,19 +24,32 @@ export async function bootEngine(app) {
   if (app._engineBooting) return app._engineBooting;
   const box = $('#bootBox');
   box.hidden = false;
-  const setProgress = (msg, pct, meta = {}) => {
+
+  // 用 rAF 节流进度更新：下载回调可能高频触发（每收到一个 chunk），
+  // 直接同步写 DOM 会造成大量 layout thrash。用 rAF 合并到下一帧统一渲染，
+  // 保证进度条平滑实时且不阻塞主线程。
+  let pending = null;
+  const flushProgress = () => {
+    if (!pending) return;
+    const { msg, pct, meta } = pending;
+    pending = null;
     setText($('#bootMsg'), msg);
     $('#bootBar').style.width = pct + '%';
     app.dash.setStatus(msg, 'var(--warn)', true);
-    // 同步到舞台遮罩的步骤列表
-    if (meta.step) {
+    if (meta && meta.step) {
       app.stage.updateBootStep(meta.step, meta.status || 'active', meta.detail || '');
     }
+  };
+  const setProgress = (msg, pct, meta = {}) => {
+    pending = { msg, pct, meta };
+    requestAnimationFrame(flushProgress);
   };
   app._engineBooting = (async () => {
     try {
       // 首屏可能已切走，仍然更新进度文本供状态栏使用
       await app.engine.init(setProgress);
+      // 确保最后一帧进度被渲染
+      flushProgress();
       toastOk('推理引擎就绪', `委托 ${app.engine.delegate} · 模型已本地加载`);
     } finally {
       box.hidden = true;
